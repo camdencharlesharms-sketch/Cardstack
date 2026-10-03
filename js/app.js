@@ -1,4 +1,47 @@
 
+
+
+
+
+
+
+
+
+
+
+
+function updatePackPriceLabels(){
+  const userPacks = (currentUser && accounts[currentUser] && accounts[currentUser].freePacks) ? accounts[currentUser].freePacks : {};
+  Object.keys(packTiers).forEach(key => {
+    const tier = packTiers[key];
+    const actual = getActualPackCost(tier.baseCost);
+    const label = document.getElementById("price-" + key);
+    if(label){
+      if((userPacks[key] || 0) > 0){
+        label.innerHTML = `🎁 <b style="color:#38bdf8">FREE GIFT PACK (${userPacks[key]} left)</b>`;
+      } else if(eventPackDiscount > 0){
+        label.innerHTML = `Open • <s style="opacity:0.6">${tier.baseCost}</s> <b style="color:#4ade80">${actual} 🪙</b>`;
+      } else {
+        label.textContent = `Open • ${actual} 🪙`;
+      }
+    }
+  });
+
+  const eventBanner = document.getElementById("serverEventBanner");
+  if(eventCoinMultiplier > 1 || eventPackDiscount > 0){
+    eventBanner.style.display = "block";
+    let desc = [];
+    if(eventCoinMultiplier > 1) desc.push(`${eventCoinMultiplier}X COINS ACTIVE`);
+    if(eventPackDiscount > 0) desc.push(`${eventPackDiscount}% OFF PACK SALE`);
+    eventBanner.textContent = `🎉 SPECIAL EVENT: ${desc.join(" + ")}!`;
+  } else {
+    eventBanner.style.display = "none";
+  }
+
+  const maintBanner = document.getElementById("maintenanceBanner");
+  maintBanner.style.display = isMaintenanceMode ? "block" : "none";
+}
+
 function save(){
   if(currentUser && accounts[currentUser]){
     accounts[currentUser].owned = owned;
@@ -10,11 +53,16 @@ function save(){
 
 function loadAccount(username){
   currentUser = username;
+  if(!accounts[username]){
+    accounts[username] = { password: "password", owned: [], coins: 100, freePacks: {} };
+  }
+  if(!accounts[username].freePacks) accounts[username].freePacks = {};
   owned = Array.isArray(accounts[username].owned) ? accounts[username].owned : [];
   coins = Number.isFinite(accounts[username].coins) ? accounts[username].coins : 100;
   save();
   updateAccountUI();
   render();
+  checkUserGiftsInbox();
 }
 
 function updateAccountUI(){
@@ -90,16 +138,25 @@ function startPackOpening(tierKey){
   const pack = packTiers[tierKey];
   if(!pack) return;
 
-  const actualCost = getActualPackCost(pack.baseCost);
+  const userPacks = (currentUser && accounts[currentUser] && accounts[currentUser].freePacks) ? accounts[currentUser].freePacks : {};
+  const hasFreeGiftPack = (userPacks[tierKey] || 0) > 0;
 
-  if(coins < actualCost){
-    document.getElementById("message").textContent = `Insufficient coins: You need ${actualCost} 🪙 to open this pack! (You have: ${coins.toLocaleString()} 🪙)`;
-    return;
+  if(!hasFreeGiftPack){
+    const actualCost = getActualPackCost(pack.baseCost);
+    if(coins < actualCost){
+      document.getElementById("message").textContent = `Insufficient coins: You need ${actualCost} 🪙 to open this pack! (You have: ${coins.toLocaleString()} 🪙)`;
+      return;
+    }
+    coins -= actualCost;
+  } else {
+    userPacks[tierKey]--;
+    accounts[currentUser].freePacks = userPacks;
+    document.getElementById("message").textContent = `Opened free gift ${pack.name}! (${userPacks[tierKey]} free remaining)`;
   }
 
-  coins -= actualCost;
   save();
   render();
+  updatePackPriceLabels();
 
   const overlay = document.getElementById("packOverlay");
   const stage = document.getElementById("packAnimStage");
@@ -280,6 +337,15 @@ document.getElementById("accountCancel").onclick = ()=>{
   document.getElementById("accountModal").classList.remove("show");
 };
 
+const quickCamBtn = document.getElementById("quickCamLoginBtn");
+if(quickCamBtn){
+  quickCamBtn.onclick = ()=>{
+    document.getElementById("usernameInput").value = "Cam";
+    document.getElementById("passwordInput").value = "admin123";
+    document.getElementById("accountSubmit").click();
+  };
+}
+
 document.getElementById("accountSubmit").onclick = ()=>{
   const user = document.getElementById("usernameInput").value.trim();
   const pass = document.getElementById("passwordInput").value;
@@ -291,7 +357,7 @@ document.getElementById("accountSubmit").onclick = ()=>{
   }
 
   if(!accounts[user]){
-    accounts[user] = { password: pass, owned: [], coins: 100 };
+    accounts[user] = { password: pass, owned: [], coins: 100, freePacks: {} };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   } else if(accounts[user].password !== pass){
     err.textContent = "Invalid passcode supplied.";
@@ -303,6 +369,259 @@ document.getElementById("accountSubmit").onclick = ()=>{
   document.getElementById("message").textContent = `Loaded identity profile: ${user}`;
 };
 
+/* Gift Voucher Redeem & Claim Logic */
+document.getElementById("redeemCodeBtn").onclick = ()=>{
+  document.getElementById("redeemCodeInput").value = "";
+  document.getElementById("redeemModalError").textContent = "";
+  document.getElementById("redeemModal").classList.add("show");
+};
+document.getElementById("redeemCancelBtn").onclick = ()=>{
+  document.getElementById("redeemModal").classList.remove("show");
+};
+document.getElementById("redeemSubmitBtn").onclick = ()=>{
+  const code = document.getElementById("redeemCodeInput").value.trim();
+  const res = redeemGiftCode(code);
+  const err = document.getElementById("redeemModalError");
+  if(!res.success){
+    err.textContent = res.msg;
+  } else {
+    document.getElementById("redeemModal").classList.remove("show");
+    alert("🎉 Code successfully redeemed!");
+  }
+};
+document.getElementById("giftInboxBtn").onclick = ()=>{
+  checkUserGiftsInbox(true);
+};
 
+function redeemGiftCode(codeStr){
+  if(!codeStr) return { success: false, msg: "Please enter a code." };
+  const cleanCode = codeStr.trim().toUpperCase();
+  const codeData = giftCodes[cleanCode];
+  if(!codeData){
+    return { success: false, msg: "Invalid or expired gift voucher code." };
+  }
 
-if(currentUser && accounts[currentUser]){loadAccount(currentUser)}else{updateAccountUI();render()}
+  const userKey = (currentUser || "Guest").toLowerCase();
+  if(!codeData.usedBy) codeData.usedBy = [];
+
+  if(codeData.usedBy.map(u => u.toLowerCase()).includes(userKey)){
+    return { success: false, msg: "You have already redeemed this gift code!" };
+  }
+
+  if(codeData.usedBy.length >= (codeData.maxUses || 1)){
+    return { success: false, msg: "This voucher code has reached its maximum redemptions limit." };
+  }
+
+  codeData.usedBy.push(currentUser || "Guest");
+  localStorage.setItem("cardCollectorGiftCodes", JSON.stringify(giftCodes));
+
+  const giftItem = {
+    id: "code_" + Date.now(),
+    from: `Promo Code: ${cleanCode}`,
+    to: currentUser || "Guest",
+    coins: codeData.coins || 0,
+    cardIdx: (codeData.cardIdx !== undefined && codeData.cardIdx !== null && codeData.cardIdx !== "") ? parseInt(codeData.cardIdx, 10) : null,
+    packTier: codeData.packTier || null,
+    packCount: codeData.packCount || (codeData.packTier ? 1 : 0),
+    note: `Redeemed voucher code: ${cleanCode}`,
+    date: new Date().toLocaleDateString(),
+    timestamp: Date.now(),
+    claimed: false
+  };
+
+  const targetKey = (currentUser || "Guest").toLowerCase();
+  if(!giftsInbox[targetKey]) giftsInbox[targetKey] = [];
+  giftsInbox[targetKey].push(giftItem);
+  localStorage.setItem("cardCollectorGifts", JSON.stringify(giftsInbox));
+
+  checkUserGiftsInbox(true);
+  refreshAdminPlayerData();
+  return { success: true, msg: "Code redeemed!" };
+}
+
+function checkUserGiftsInbox(forceOpen = false){
+  const userKey = (currentUser || "Guest").toLowerCase();
+  const inbox = giftsInbox[userKey] || [];
+  const pending = inbox.filter(g => !g.claimed);
+
+  const inboxBtn = document.getElementById("giftInboxBtn");
+  const inboxCount = document.getElementById("giftInboxCount");
+
+  if(pending.length > 0){
+    if(inboxBtn) inboxBtn.style.display = "inline-block";
+    if(inboxCount) inboxCount.textContent = pending.length;
+    showGiftClaimModal(pending);
+  } else {
+    if(inboxBtn) inboxBtn.style.display = "none";
+    if(forceOpen){
+      alert("No pending gifts found in your inbox right now.");
+    }
+  }
+}
+
+function showGiftClaimModal(pendingGifts){
+  const modal = document.getElementById("giftClaimModal");
+  if(!modal) return;
+  const senderLabel = document.getElementById("giftClaimSenderLabel");
+  const msgBox = document.getElementById("giftClaimMessage");
+  const container = document.getElementById("giftClaimItemsContainer");
+
+  container.innerHTML = "";
+
+  const senders = [...new Set(pendingGifts.map(g => g.from))].join(", ");
+  senderLabel.textContent = `From: ${senders || "Master Admin"}`;
+
+  const notes = pendingGifts.map(g => g.note).filter(Boolean);
+  if(notes.length > 0){
+    msgBox.style.display = "block";
+    msgBox.textContent = `"${notes.join(' • ')}"`;
+  } else {
+    msgBox.style.display = "none";
+  }
+
+  let totalCoins = 0;
+  let allCards = [];
+  let allPacks = {};
+
+  pendingGifts.forEach(g => {
+    if(g.coins) totalCoins += g.coins;
+    if(g.cardIdx !== null && g.cardIdx !== undefined && cards[g.cardIdx]){
+      allCards.push(cards[g.cardIdx]);
+    }
+    if(g.packTier && (g.packCount || 1)){
+      allPacks[g.packTier] = (allPacks[g.packTier] || 0) + (g.packCount || 1);
+    }
+  });
+
+  if(totalCoins > 0){
+    const d = document.createElement("div");
+    d.style = "background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);padding:12px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:16px;font-weight:800;color:#fbbf24";
+    d.innerHTML = `🪙 +${totalCoins.toLocaleString()} Coins`;
+    container.appendChild(d);
+  }
+
+  allCards.forEach(c => {
+    const d = document.createElement("div");
+    d.style = "background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);padding:10px 14px;border-radius:12px;display:flex;align-items:center;gap:12px;text-align:left";
+    d.innerHTML = `
+      <img src="${c.image}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.2)">
+      <div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#38bdf8">${c.rarity} Card</div>
+        <b style="font-size:15px;color:#fff">${c.name}</b>
+      </div>
+    `;
+    container.appendChild(d);
+  });
+
+  Object.keys(allPacks).forEach(tier => {
+    const tierInfo = packTiers[tier] || { name: tier, icon: "📦" };
+    const d = document.createElement("div");
+    d.style = "background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);padding:12px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;font-weight:800;color:#e9d5ff";
+    d.innerHTML = `${tierInfo.icon} ${allPacks[tier]}x ${tierInfo.name}`;
+    container.appendChild(d);
+  });
+
+  modal.classList.add("show");
+
+  document.getElementById("giftClaimConfirmBtn").onclick = ()=>{
+    if(totalCoins > 0){
+      coins += totalCoins;
+    }
+    allCards.forEach(c => {
+      const idx = cards.indexOf(c);
+      if(idx !== -1 && !owned.includes(idx)){
+        owned.push(idx);
+      }
+    });
+
+    if(currentUser && accounts[currentUser]){
+      if(!accounts[currentUser].freePacks) accounts[currentUser].freePacks = {};
+      Object.keys(allPacks).forEach(t => {
+        accounts[currentUser].freePacks[t] = (accounts[currentUser].freePacks[t] || 0) + allPacks[t];
+      });
+      accounts[currentUser].coins = coins;
+      accounts[currentUser].owned = owned;
+    }
+
+    pendingGifts.forEach(g => {
+      g.claimed = true;
+    });
+
+    localStorage.setItem("cardCollectorGifts", JSON.stringify(giftsInbox));
+    save();
+    render();
+    updatePackPriceLabels();
+    checkUserGiftsInbox();
+
+    modal.classList.remove("show");
+    alert("🎉 All gifts successfully claimed and added to your collection!");
+  };
+}
+
+/* Canvas Drawing Logic */
+const canvas = document.getElementById("artCanvas");
+const ctx = canvas.getContext("2d");
+let isDrawing = false;
+let uploadedImageData = null;
+
+function clearCanvas(){
+  ctx.fillStyle = "#0f172a";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+clearCanvas();
+
+canvas.addEventListener("mousedown", (e)=>{
+  isDrawing = true;
+  draw(e);
+});
+canvas.addEventListener("mousemove", draw);
+window.addEventListener("mouseup", ()=>isDrawing = false);
+
+function draw(e){
+  if(!isDrawing) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  ctx.lineWidth = document.getElementById("brushSize").value;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = document.getElementById("brushColor").value;
+
+  ctx.lineTo(x, y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+}
+
+document.getElementById("clearCanvasBtn").onclick = clearCanvas;
+
+document.getElementById("imageFileInput").addEventListener("change", (e)=>{
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = (event)=>{
+      uploadedImageData = event.target.result;
+      const img = new Image();
+      img.onload = ()=>ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      img.src = uploadedImageData;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+function getFinalArtworkSrc(){
+  const urlVal = document.getElementById("newCardImageUrl").value.trim();
+  if(urlVal) return urlVal;
+  if(uploadedImageData) return uploadedImageData;
+  return canvas.toDataURL("image/png");
+}
+
+// Bootstrap Game Initialization
+initCardSelect();
+if(currentUser && accounts[currentUser]){
+  loadAccount(currentUser);
+} else {
+  updateAccountUI();
+  render();
+  checkUserGiftsInbox();
+}

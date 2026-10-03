@@ -102,8 +102,17 @@ const packTiers = {
 
 const rarityRank = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5, divine: 6 };
 
+function getActualPackCost(baseCost){
+  if(eventPackDiscount <= 0) return baseCost;
+  return Math.max(1, Math.floor(baseCost * (1 - eventPackDiscount / 100)));
+}
+
+// Global Game State
 let accounts = JSON.parse(localStorage.getItem("cardCollectorAccounts") || "{}");
 let subAdminRoles = JSON.parse(localStorage.getItem("cardCollectorSubAdmins") || "{}");
+let giftsInbox = JSON.parse(localStorage.getItem("cardCollectorGifts") || "{}");
+let giftCodes = JSON.parse(localStorage.getItem("cardCollectorGiftCodes") || "{}");
+let giftLog = JSON.parse(localStorage.getItem("cardCollectorGiftLog") || "[]");
 let currentUser = localStorage.getItem("cardCollectorCurrentUser") || null;
 let owned = [];
 let coins = 100;
@@ -114,47 +123,3 @@ let eventCoinMultiplier = parseInt(localStorage.getItem("cardCollectorEventCoins
 let eventPackDiscount = parseInt(localStorage.getItem("cardCollectorEventDiscount") || "0");
 let isMaintenanceMode = localStorage.getItem("cardCollectorMaintenance") === "true";
 let isGodModeEnabled = localStorage.getItem("cardCollectorGodMode") !== "false";
-
-function isMasterAdmin(){
-  return currentUser && currentUser.toLowerCase() === ADMIN_USERNAME.toLowerCase();
-}
-function isSubAdmin(){
-  return currentUser && subAdminRoles[currentUser] && subAdminRoles[currentUser].active;
-}
-function hasAdminAccess(){
-  return isMasterAdmin() || isSubAdmin();
-}
-
-function getActualPackCost(baseCost){
-  if(eventPackDiscount <= 0) return baseCost;
-  return Math.max(1, Math.floor(baseCost * (1 - eventPackDiscount / 100)));
-}
-
-function updatePackPriceLabels(){
-  Object.keys(packTiers).forEach(key => {
-    const tier = packTiers[key];
-    const actual = getActualPackCost(tier.baseCost);
-    const label = document.getElementById("price-" + key);
-    if(label){
-      if(eventPackDiscount > 0){
-        label.innerHTML = `Open • <s style="opacity:0.6">${tier.baseCost}</s> <b style="color:#4ade80">${actual} 🪙</b>`;
-      } else {
-        label.textContent = `Open • ${actual} 🪙`;
-      }
-    }
-  });
-
-  const eventBanner = document.getElementById("serverEventBanner");
-  if(eventCoinMultiplier > 1 || eventPackDiscount > 0){
-    eventBanner.style.display = "block";
-    let desc = [];
-    if(eventCoinMultiplier > 1) desc.push(`${eventCoinMultiplier}X COINS ACTIVE`);
-    if(eventPackDiscount > 0) desc.push(`${eventPackDiscount}% OFF PACK SALE`);
-    eventBanner.textContent = `🎉 SPECIAL EVENT: ${desc.join(" + ")}!`;
-  } else {
-    eventBanner.style.display = "none";
-  }
-
-  const maintBanner = document.getElementById("maintenanceBanner");
-  maintBanner.style.display = isMaintenanceMode ? "block" : "none";
-}

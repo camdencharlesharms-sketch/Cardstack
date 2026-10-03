@@ -382,4 +382,3 @@ document.getElementById("godModeStrikeBtn").onclick = ()=>{
   if(!hasAdminAccess()) return;
   performPlayerAttack({ name: "⚡ OMNIPOTENT GOD STRIKE", dmg: 9999 });
 };
-
