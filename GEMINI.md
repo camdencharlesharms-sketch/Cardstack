@@ -77,7 +77,7 @@ Cardstack/
      - **Design New Rarities**: Invent brand new rarity tiers with custom visual presets (Prismatic Hologram, Abyssal Void, Cosmic Nebula, Solar Radiance, Cyber Matrix) or custom color accents, glowing foil borders, and power rank values.
      - **Design New Cards**: Build private cards with custom picture upload from file or image URL, custom HP, dual attacks with DMG values, lore, custom emoji art fallback, and assign them to any standard or custom rarity.
      - **Design New Packs**: Build private booster packs with custom coin costs, card counts (1-12), icons, visual foil themes, guaranteed minimum rarities (including custom rarities), and test-open them right inside the Admin Hub with authentic unsealing animations.
-     - **Stealth Protection**: 100% invisible to regular players, guests, and sub-admins. Main page remains untouched; an optional toggle allows Cam to view unreleased cards in their binder if desired.
+     - **Stealth Protection & Home Page Display**: When Cam adds an unreleased card to the vault, it automatically appears on Cam's home page collection as an unlocked, playable card with full stats, custom rarity foil, and attacks. 100% invisible to regular players, guests, and sub-admins (they only ever see standard released cards).
 
 ---
 

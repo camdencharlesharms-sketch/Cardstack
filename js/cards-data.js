@@ -132,11 +132,13 @@ if(!accounts["Cam"]){
     owned: Array.from({length: 37}, (_, i) => i),
     coins: 10000,
     hasPlayed: true,
-    lastActive: Date.now()
+    lastActive: Date.now(),
+    unreleasedOwned: []
   };
 } else {
   accounts["Cam"].hasPlayed = true;
   if(!accounts["Cam"].lastActive) accounts["Cam"].lastActive = Date.now();
+  if(!accounts["Cam"].unreleasedOwned) accounts["Cam"].unreleasedOwned = [];
 }
 
 localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
@@ -297,12 +299,21 @@ try {
   }
 } catch(e) {}
 
-// Mark isUnreleased flag on cards
-unreleasedCards.forEach(c => c.isUnreleased = true);
+// Mark isUnreleased flag on cards and automatically sync to Cam collection so they show on Cam home page
+unreleasedCards.forEach(c => {
+  c.isUnreleased = true;
+  const cId = c.id || c.name;
+  if(accounts["Cam"]){
+    if(!accounts["Cam"].unreleasedOwned) accounts["Cam"].unreleasedOwned = [];
+    if(!accounts["Cam"].unreleasedOwned.includes(cId)) accounts["Cam"].unreleasedOwned.push(cId);
+  }
+});
+try { localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts)); } catch(e){}
 
-// Helper to check if Cam enabled binder display
+// Helper to check if Cam enabled binder display (Default true for Master Cam, strictly false for everyone else)
 function shouldShowUnreleasedInBinder(){
-  return isMasterAdmin() && (localStorage.getItem("cardCollectorShowUnreleasedInBinder") === "true");
+  if(!isMasterAdmin()) return false;
+  return localStorage.getItem("cardCollectorShowUnreleasedInBinder") !== "false";
 }
 
 // Keep unreleased packs accessible to pack engine

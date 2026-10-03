@@ -909,7 +909,7 @@ function renderUnreleasedAdminUI(){
   const binderCheck = document.getElementById("toggleShowUnreleasedInBinderCheck");
 
   if(binderCheck){
-    binderCheck.checked = (localStorage.getItem("cardCollectorShowUnreleasedInBinder") === "true");
+    binderCheck.checked = (localStorage.getItem("cardCollectorShowUnreleasedInBinder") !== "false");
     binderCheck.onchange = ()=>{
       localStorage.setItem("cardCollectorShowUnreleasedInBinder", binderCheck.checked ? "true" : "false");
       render();
@@ -1126,6 +1126,19 @@ if(createCardBtn){
 
     unreleasedCards.push(newCard);
     localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards));
+
+    // Automatically add to Cam's collection so it shows immediately on Cam's home page
+    const newCardId = newCard.id || newCard.name;
+    if(accounts["Cam"]){
+      if(!accounts["Cam"].unreleasedOwned) accounts["Cam"].unreleasedOwned = [];
+      if(!accounts["Cam"].unreleasedOwned.includes(newCardId)) accounts["Cam"].unreleasedOwned.push(newCardId);
+    }
+    if(currentUser && accounts[currentUser]){
+      if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
+      if(!accounts[currentUser].unreleasedOwned.includes(newCardId)) accounts[currentUser].unreleasedOwned.push(newCardId);
+    }
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    localStorage.setItem("cardCollectorShowUnreleasedInBinder", "true");
 
     render();
     renderUnreleasedAdminUI();

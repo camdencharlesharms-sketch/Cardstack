@@ -257,7 +257,7 @@ function render(){
     let has = false;
     if(isUnrel){
       const cardId = c.id || c.name;
-      has = !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
+      has = isMasterAdmin() || !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
     } else {
       has = owned.includes(i);
     }
@@ -286,13 +286,18 @@ function render(){
     let has = false;
     if(isUnrel){
       const cardId = c.id || c.name;
-      has = !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
+      has = isMasterAdmin() || !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
     } else {
       const i = cards.indexOf(c);
       has = owned.includes(i);
     }
     const el = document.createElement("div");
     el.className = "card" + (has ? "" : " locked");
+
+    let rarityDisplayName = c.rarity;
+    if(typeof customRarities === "object" && customRarities[c.rarity]){
+      rarityDisplayName = customRarities[c.rarity].name;
+    }
 
     const attacksHtml = has ? c.attacks.map(atk => `
       <div class="attack-preview">
@@ -308,7 +313,7 @@ function render(){
     el.innerHTML = `
       <div class="face ${has ? c.rarity : ''}">
         <div class="card-top">
-          <span class="rarity">${has ? c.rarity : 'Locked'}${unreleasedBadge}</span>
+          <span class="rarity">${has ? rarityDisplayName : 'Locked'}${unreleasedBadge}</span>
           <span style="font-size:11px;font-weight:800;color:#fca5a5">${has ? (c.hp || 80) + ' HP' : '???'}</span>
         </div>
         <div class="card-art-frame">
