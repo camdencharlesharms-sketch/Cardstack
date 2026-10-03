@@ -16,6 +16,9 @@ description: Workflow preferences, git rules, and architecture for the Cardstack
 - **Routing**: Static clean URLs configured via `vercel.json` (`cleanUrls: true`, `trailingSlash: false`).
 - **Entry point**: `index.html` is the primary application root. `cardstack.html` acts as a fallback redirect.
 
+## Persistent Documentation Maintenance
+- **Keep `GEMINI.md` Up to Date**: Whenever new features are built, architectural decisions are made, files are added or restructured, or data/`localStorage` schemas change, **always update `GEMINI.md`** to reflect those changes in the same commit before pushing.
+
 ## Codebase Architecture
 - `index.html`: Clean HTML structure referencing external CSS and JS modules.
 - `css/styles.css`: Centralized styles, responsive layouts, theme tokens, animations.
