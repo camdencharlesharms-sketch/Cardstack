@@ -75,7 +75,7 @@ Cardstack/
   6. `🛡 Sub-Admin Roles` *(Master Cam only)*: Appoint sub-admins with daily coin gifting caps and skin gifting allowances.
   7. `🔒 Creator Vault` *(Master Cam only)*: Private studio located strictly inside the Admin Hub. Allows Cam to:
      - **Design New Rarities**: Invent brand new rarity tiers with custom visual presets (Prismatic Hologram, Abyssal Void, Cosmic Nebula, Solar Radiance, Cyber Matrix) or custom color accents, glowing foil borders, and power rank values.
-     - **Design New Cards**: Build private unreleased cards with custom HP, dual attacks with DMG values, lore, custom emoji art, and assign them to any standard or newly designed custom rarity.
+     - **Design New Cards**: Build private cards with custom picture upload from file or image URL, custom HP, dual attacks with DMG values, lore, custom emoji art fallback, and assign them to any standard or custom rarity.
      - **Design New Packs**: Build private booster packs with custom coin costs, card counts (1-12), icons, visual foil themes, guaranteed minimum rarities (including custom rarities), and test-open them right inside the Admin Hub with authentic unsealing animations.
      - **Stealth Protection**: 100% invisible to regular players, guests, and sub-admins. Main page remains untouched; an optional toggle allows Cam to view unreleased cards in their binder if desired.
 
@@ -87,7 +87,7 @@ All application state is persisted client-side in the browser's `localStorage`:
 
 | Key | Type | Description |
 | :--- | :--- | :--- |
-| `cardCollectorAccounts` | `Object` | Keyed by username: `{ password, owned: number[], coins: number }`. Pre-populated with active community players (Alex, Jordan, Elena, Kai, Morgan, Sam, Taylor, Riley, Aria, Leo, Zane, Maya, Finn, Chloe, Noah, Liam, Sophia) for admin player management & gifting |
+| `cardCollectorAccounts` | `Object` | Keyed by username: `{ password, owned: number[], coins: number, hasPlayed?: boolean, lastActive?: number }`. Contains only real accounts that have logged in, played, or connected via P2P. No made-up bot names. |
 | `cardCollectorCurrentUser` | `string` | Currently active session username |
 | `cardCollectorCustomCards` | `Array` | Custom cards created via Card Studio |
 | `cardCollectorSubAdmins` | `Object` | Sub-admin configurations: `{ active, dailyCap, canGiftSkins, allowedSkinIds, giftedToday, lastGiftDate }` |

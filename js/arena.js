@@ -187,6 +187,15 @@ function setupP2PListeners(isHost){
   p2pConnection.on("data", (data)=>{
     if(data.type === "init"){
       battleOppCard = data.card;
+      if(data.user && data.user !== "Challenger" && data.user !== "Host"){
+        if(!accounts[data.user]){
+          accounts[data.user] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+        } else {
+          accounts[data.user].hasPlayed = true;
+          accounts[data.user].lastActive = Date.now();
+        }
+        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      }
       if(isHost){
         p2pConnection.send({
           type: "init_reply",
@@ -198,6 +207,15 @@ function setupP2PListeners(isHost){
       }
     } else if(data.type === "init_reply"){
       battleOppCard = data.card;
+      if(data.user && data.user !== "Challenger" && data.user !== "Host"){
+        if(!accounts[data.user]){
+          accounts[data.user] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+        } else {
+          accounts[data.user].hasPlayed = true;
+          accounts[data.user].lastActive = Date.now();
+        }
+        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      }
       setupCombatInterface("YOU (CHALLENGER)", `${data.user.toUpperCase()}`, false);
       appendBattleLog(`<div style="color:#4ade80">Connected to Host! <b>${data.user}</b> takes first turn.</div>`);
     } else if(data.type === "attack"){

@@ -67,50 +67,84 @@ document.querySelectorAll(".admin-tab-btn").forEach(btn => {
   };
 });
 
+function isAccountOnline(name){
+  if(!name) return false;
+  if(currentUser && currentUser.toLowerCase() === name.toLowerCase()) return true;
+  const data = accounts[name];
+  if(!data) return false;
+  return (Date.now() - (data.lastActive || 0)) < 60000;
+}
+
 function refreshAdminPlayerData(){
   const playerSelect = document.getElementById("skinPlayerSelect");
   const subAdminSelect = document.getElementById("subAdminTargetSelect");
   const ecoPlayerSelect = document.getElementById("economyPlayerSelect");
   const tableBody = document.getElementById("playerTableBody");
+  const onlineOnlyFilter = document.getElementById("adminFilterOnlineOnly");
+
+  if(onlineOnlyFilter && !onlineOnlyFilter._hasListener){
+    onlineOnlyFilter._hasListener = true;
+    onlineOnlyFilter.onchange = refreshAdminPlayerData;
+  }
+
+  const isFilterOnline = onlineOnlyFilter ? onlineOnlyFilter.checked : false;
 
   playerSelect.innerHTML = '<option value="">Select Target Player...</option>';
   subAdminSelect.innerHTML = '<option value="">Select Player...</option>';
   ecoPlayerSelect.innerHTML = '<option value="">Select Target Player...</option>';
   tableBody.innerHTML = "";
 
-  const allNames = Object.keys(accounts);
+  // Always sanitize against fake / made-up names
+  const fakeNames = ["Alex", "Jordan", "Elena", "Kai", "Morgan", "Sam", "Taylor", "Riley", "Aria", "Leo", "Zane", "Maya", "Finn", "Chloe", "Noah", "Liam", "Sophia"];
+  fakeNames.forEach(fn => {
+    delete accounts[fn];
+    if(subAdminRoles && subAdminRoles[fn]) delete subAdminRoles[fn];
+  });
+
+  let allNames = Object.keys(accounts);
+
+  if(isFilterOnline){
+    allNames = allNames.filter(name => isAccountOnline(name));
+  }
+
   if(allNames.length === 0){
-    tableBody.innerHTML = '<tr><td colspan="5" style="color:#64748b;padding:8px">No registered player accounts.</td></tr>';
+    tableBody.innerHTML = `<tr><td colspan="6" style="color:#64748b;padding:8px">${isFilterOnline ? "No accounts currently online." : "No registered player accounts."}</td></tr>`;
     return;
   }
 
   allNames.forEach(name => {
-    const data = accounts[name];
+    const data = accounts[name] || {};
     const isCurrent = currentUser && currentUser.toLowerCase() === name.toLowerCase();
     const isMaster = name.toLowerCase() === ADMIN_USERNAME.toLowerCase();
     const isSub = subAdminRoles[name] && subAdminRoles[name].active;
+    const isOnline = isAccountOnline(name);
 
     let roleText = "Player";
     if(isMaster) roleText = "Master";
     else if(isSub) roleText = "Sub-Admin";
 
+    const statusBadge = isOnline 
+      ? '<span style="color:#4ade80;font-weight:700">🟢 Online</span>' 
+      : '<span style="color:#64748b">⚪ Offline</span>';
+    const statusText = isOnline ? "🟢 Online" : "Offline";
+
     // Player Skins selector
     const opt = document.createElement("option");
     opt.value = name;
-    opt.textContent = name + (isCurrent ? " (You)" : "");
+    opt.textContent = `${name} [${statusText}]${isCurrent ? " (You)" : ""}`;
     playerSelect.appendChild(opt);
 
     // Economy Target selector
     const ecoOpt = document.createElement("option");
     ecoOpt.value = name;
-    ecoOpt.textContent = name + (isCurrent ? " (You)" : "");
+    ecoOpt.textContent = `${name} [${statusText}]${isCurrent ? " (You)" : ""}`;
     ecoPlayerSelect.appendChild(ecoOpt);
 
     // Sub-Admin role assignment selector
     if(!isMaster){
       const opt2 = document.createElement("option");
       opt2.value = name;
-      opt2.textContent = name;
+      opt2.textContent = `${name} [${statusText}]`;
       subAdminSelect.appendChild(opt2);
     }
 
@@ -119,6 +153,7 @@ function refreshAdminPlayerData(){
     tr.innerHTML = `
       <td style="padding:8px 6px"><b>${name}</b></td>
       <td><span style="color:${isMaster ? '#f43f5e' : (isSub ? '#38bdf8' : '#64748b')}">${roleText}</span></td>
+      <td>${statusBadge}</td>
       <td>🪙 ${(data.coins || 0).toLocaleString()}</td>
       <td>${(data.owned || []).length} / ${cards.length}</td>
       <td>
@@ -222,6 +257,19 @@ document.getElementById("imageFileInput").addEventListener("change", (e)=>{
     reader.readAsDataURL(file);
   }
 });
+
+const studioUrlInput = document.getElementById("newCardImageUrl");
+if(studioUrlInput){
+  studioUrlInput.addEventListener("input", ()=>{
+    const url = studioUrlInput.value.trim();
+    if(url){
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = ()=>ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      img.src = url;
+    }
+  });
+}
 
 function getFinalArtworkSrc(){
   const urlVal = document.getElementById("newCardImageUrl").value.trim();
@@ -888,6 +936,51 @@ window.deleteUnreleasedPack = function(packKey){
   renderUnreleasedAdminUI();
 };
 
+let unreleasedCardUploadedImg = "";
+
+const unreleasedCardFileEl = document.getElementById("unreleasedCardFileInput");
+const unreleasedCardUrlEl = document.getElementById("unreleasedCardImageUrl");
+const unreleasedCardPreviewWrap = document.getElementById("unreleasedCardImagePreviewWrap");
+const unreleasedCardPreviewImg = document.getElementById("unreleasedCardImagePreview");
+const unreleasedCardClearBtn = document.getElementById("unreleasedCardImageClearBtn");
+
+function updateUnreleasedCardPreview(){
+  const url = (unreleasedCardUrlEl ? unreleasedCardUrlEl.value.trim() : "") || unreleasedCardUploadedImg;
+  if(url && unreleasedCardPreviewImg && unreleasedCardPreviewWrap){
+    unreleasedCardPreviewImg.src = url;
+    unreleasedCardPreviewWrap.style.display = "flex";
+  } else if(unreleasedCardPreviewWrap){
+    unreleasedCardPreviewWrap.style.display = "none";
+  }
+}
+
+if(unreleasedCardUrlEl){
+  unreleasedCardUrlEl.addEventListener("input", updateUnreleasedCardPreview);
+}
+
+if(unreleasedCardFileEl){
+  unreleasedCardFileEl.addEventListener("change", (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(file){
+      const reader = new FileReader();
+      reader.onload = (event)=>{
+        unreleasedCardUploadedImg = event.target.result;
+        updateUnreleasedCardPreview();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+if(unreleasedCardClearBtn){
+  unreleasedCardClearBtn.addEventListener("click", ()=>{
+    unreleasedCardUploadedImg = "";
+    if(unreleasedCardUrlEl) unreleasedCardUrlEl.value = "";
+    if(unreleasedCardFileEl) unreleasedCardFileEl.value = "";
+    updateUnreleasedCardPreview();
+  });
+}
+
 const createCardBtn = document.getElementById("createUnreleasedCardBtn");
 if(createCardBtn){
   createCardBtn.onclick = ()=>{
@@ -904,13 +997,20 @@ if(createCardBtn){
 
     if(!name) return alert("Please specify card name.");
 
-    let c1 = "#4c0519", c2 = "#0f172a", textC = "#fda4af", glowC = "rgba(244, 63, 94, 0.6)";
-    if(theme === "glitch"){ c1 = "#064e3b"; c2 = "#022c22"; textC = "#6ee7b7"; glowC = "rgba(16, 185, 129, 0.6)"; }
-    else if(theme === "abyss"){ c1 = "#1e1b4b"; c2 = "#09090b"; textC = "#c084fc"; glowC = "rgba(168, 85, 247, 0.6)"; }
-    else if(theme === "celestial"){ c1 = "#78350f"; c2 = "#1c0901"; textC = "#fde047"; glowC = "rgba(250, 204, 21, 0.6)"; }
-    else if(theme === "emerald"){ c1 = "#065f46"; c2 = "#022c22"; textC = "#a7f3d0"; glowC = "rgba(52, 211, 153, 0.6)"; }
-
-    const image = makeSvgArt(c1, c2, emoji, textC, glowC);
+    let image = "";
+    const typedUrl = (unreleasedCardUrlEl ? unreleasedCardUrlEl.value.trim() : "");
+    if(typedUrl){
+      image = typedUrl;
+    } else if(unreleasedCardUploadedImg){
+      image = unreleasedCardUploadedImg;
+    } else {
+      let c1 = "#4c0519", c2 = "#0f172a", textC = "#fda4af", glowC = "rgba(244, 63, 94, 0.6)";
+      if(theme === "glitch"){ c1 = "#064e3b"; c2 = "#022c22"; textC = "#6ee7b7"; glowC = "rgba(168, 85, 247, 0.6)"; }
+      else if(theme === "abyss"){ c1 = "#1e1b4b"; c2 = "#09090b"; textC = "#c084fc"; glowC = "rgba(168, 85, 247, 0.6)"; }
+      else if(theme === "celestial"){ c1 = "#78350f"; c2 = "#1c0901"; textC = "#fde047"; glowC = "rgba(250, 204, 21, 0.6)"; }
+      else if(theme === "emerald"){ c1 = "#065f46"; c2 = "#022c22"; textC = "#a7f3d0"; glowC = "rgba(52, 211, 153, 0.6)"; }
+      image = makeSvgArt(c1, c2, emoji, textC, glowC);
+    }
 
     const newCard = {
       id: "unreleased_" + Date.now(),
@@ -934,6 +1034,11 @@ if(createCardBtn){
 
     document.getElementById("unreleasedCardName").value = "";
     document.getElementById("unreleasedCardDesc").value = "";
+    unreleasedCardUploadedImg = "";
+    if(unreleasedCardUrlEl) unreleasedCardUrlEl.value = "";
+    if(unreleasedCardFileEl) unreleasedCardFileEl.value = "";
+    updateUnreleasedCardPreview();
+
     alert(`Created unreleased card "${name}" with rarity "${rarity}"!`);
   };
 }

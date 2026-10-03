@@ -199,12 +199,17 @@
         </div>
 
         <div class="adminCard">
-          <h4>👥 Registered Players</h4>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <h4 style="margin:0">👥 Active Players</h4>
+            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:5px;cursor:pointer">
+              <input type="checkbox" id="adminFilterOnlineOnly"> 🟢 Online Only
+            </label>
+          </div>
           <div style="max-height:220px;overflow-y:auto">
             <table style="width:100%;border-collapse:collapse;font-size:13px">
               <thead>
                 <tr style="text-align:left;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.1)">
-                  <th style="padding:6px">User</th><th>Role</th><th>Coins</th><th>Cards</th><th>Action</th>
+                  <th style="padding:6px">User</th><th>Role</th><th>Status</th><th>Coins</th><th>Cards</th><th>Action</th>
                 </tr>
               </thead>
               <tbody id="playerTableBody"></tbody>
@@ -463,6 +468,22 @@
           <div style="display:flex;gap:8px">
             <input id="unreleasedCardAtk2Name" class="adminInput" placeholder="Attack 2 (e.g. Cosmic Rift)" style="flex:2">
             <input type="number" id="unreleasedCardAtk2Dmg" class="adminInput" placeholder="DMG" value="85" min="1" max="500" style="flex:1">
+          </div>
+
+          <label style="font-size:11px;color:#cbd5e1;font-weight:700;display:block;margin-top:6px">Card Artwork / Picture:</label>
+          <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:8px 10px;margin-bottom:6px">
+            <input id="unreleasedCardImageUrl" class="adminInput" placeholder="Paste Image URL (https://... or upload below)" style="margin-bottom:6px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer">
+                <span>📁 Upload Picture:</span>
+                <input type="file" id="unreleasedCardFileInput" accept="image/*" style="font-size:11px;color:#cbd5e1">
+              </label>
+              <div id="unreleasedCardImagePreviewWrap" style="display:none;align-items:center;gap:6px">
+                <img id="unreleasedCardImagePreview" src="" style="width:36px;height:48px;border-radius:6px;object-fit:cover;border:1px solid #f43f5e">
+                <button type="button" id="unreleasedCardImageClearBtn" style="padding:2px 6px;font-size:10px;background:#ef4444;border-radius:4px;border:none;color:#fff;cursor:pointer">✕</button>
+              </div>
+            </div>
+            <div style="font-size:10px;color:#64748b;margin-top:4px">Upload any picture file from device, or paste a link. (Fallback: emoji icon below).</div>
           </div>
 
           <div style="display:flex;gap:8px">

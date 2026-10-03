@@ -384,4 +384,22 @@ document.getElementById("accountSubmit").onclick = ()=>{
 
 
 
-if(currentUser && accounts[currentUser]){loadAccount(currentUser)}else{updateAccountUI();render()}
+function touchUserActive(){
+  if(currentUser && accounts[currentUser]){
+    accounts[currentUser].lastActive = Date.now();
+    accounts[currentUser].hasPlayed = true;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  }
+}
+
+setInterval(touchUserActive, 15000);
+window.addEventListener("pointerdown", touchUserActive);
+window.addEventListener("keydown", touchUserActive);
+
+if(currentUser && accounts[currentUser]){
+  loadAccount(currentUser);
+} else {
+  updateAccountUI();
+  render();
+}
+touchUserActive();
