@@ -7,6 +7,11 @@ description: Workflow preferences, git rules, and architecture for the Cardstack
 
 ## Git & Deployment Workflow
 - **Branch & PR Policy**: Push directly to `main`. Do not create pull requests unless explicitly asked.
+- **Automatic Deployment on Changes**: Whenever changes are made and the user wants to test or see the changes, automatically stage, commit, and push directly to `origin main` so Vercel deploys immediately.
+- **GitHub CLI & Credentials**:
+  - `gh` is installed locally at `~/.local/bin/gh`.
+  - Authentication is already configured via `gh auth setup-git`.
+  - Always run git push commands with PATH including `~/.local/bin`: `PATH="$HOME/.local/bin:$PATH" git push origin main`.
 - **Hosting & CI/CD**: Connected directly to Vercel via GitHub. Pushes to `main` trigger production deployments automatically.
 - **Routing**: Static clean URLs configured via `vercel.json` (`cleanUrls: true`, `trailingSlash: false`).
 - **Entry point**: `index.html` is the primary application root. `cardstack.html` acts as a fallback redirect.
