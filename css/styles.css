@@ -408,7 +408,7 @@ button:active{transform:translateY(0)}
 .reveal-badge.new{background:#16a34a;color:#fff;box-shadow:0 4px 12px rgba(22,163,74,0.4)}
 .reveal-badge.dup{background:#334155;color:#94a3b8}
 
-#accountModal, #adminModal, #battleModal, #redeemModal, #giftClaimModal{
+#accountModal, #adminModal, #battleModal{
   position:fixed;
   inset:0;
   background:rgba(2,4,12,0.85);
@@ -418,7 +418,7 @@ button:active{transform:translateY(0)}
   align-items:center;
   justify-content:center;
 }
-#accountModal.show, #adminModal.show, #battleModal.show, #redeemModal.show, #giftClaimModal.show{display:flex}
+#accountModal.show, #adminModal.show, #battleModal.show{display:flex}
 .accountBox, .adminDashboard, .battleBox{
   background:linear-gradient(160deg, #16203c 0%, #0d1326 100%);
   border:1px solid rgba(255,255,255,0.15);

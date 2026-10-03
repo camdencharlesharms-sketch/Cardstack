@@ -26,8 +26,6 @@
   <div class="accountArea">
     <span class="accountName" id="accountLabel">Guest</span>
     <button class="accountBtn" id="accountBtn">Account</button>
-    <button class="accountBtn" id="redeemCodeBtn" style="background:rgba(234, 88, 12, 0.2);border:1px solid rgba(249, 115, 22, 0.4);color:#fdba74">🎁 Redeem Code</button>
-    <button class="accountBtn" id="giftInboxBtn" style="display:none;background:rgba(168, 85, 247, 0.25);border:1px solid rgba(192, 132, 252, 0.5);color:#e9d5ff">🎁 Gifts (<span id="giftInboxCount">0</span>)</button>
     <button id="arenaBtn">⚔ Arena</button>
     <button id="adminOpenBtn">⚡ Admin Hub</button>
   </div>
@@ -63,39 +61,6 @@
       <button id="accountSubmit" style="flex:1">Sign In</button>
       <button id="accountCancel" class="accountBtn" style="flex:1">Cancel</button>
     </div>
-    <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);text-align:center">
-      <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">👑 Master Admin: Username <b>Cam</b> (Any password)</div>
-      <button type="button" class="accountBtn" id="quickCamLoginBtn" style="width:100%;background:rgba(244,63,94,0.18);border:1px solid rgba(244,63,94,0.4);color:#fb7185;font-weight:700">⚡ Sign In as Admin (Cam)</button>
-    </div>
-  </div>
-</div>
-
-<!-- Gift Voucher Code Redeem Modal -->
-<div id="redeemModal">
-  <div class="accountBox" style="width:min(440px,90vw);text-align:center">
-    <div style="font-size:36px">🎁</div>
-    <h2 style="margin:6px 0 10px;color:#f59e0b">Redeem Gift Voucher</h2>
-    <p style="font-size:13px;color:#94a3b8;margin:0 0 16px">Enter your promo code or voucher code to claim free rewards!</p>
-    <input id="redeemCodeInput" class="adminInput" placeholder="e.g. DRAGON500" maxlength="16" style="text-transform:uppercase;text-align:center;font-size:18px;letter-spacing:2px;font-weight:800;margin-bottom:10px">
-    <div id="redeemModalError" style="color:#f87171;font-size:13px;min-height:20px;margin-bottom:10px"></div>
-    <div style="display:flex;gap:10px">
-      <button id="redeemSubmitBtn" style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:900">Claim Reward</button>
-      <button id="redeemCancelBtn" class="accountBtn" style="flex:1">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- Player Gift Claim Modal -->
-<div id="giftClaimModal">
-  <div class="accountBox" style="width:min(480px,92vw);text-align:center">
-    <div style="font-size:44px;margin-bottom:6px">🎁</div>
-    <h2 style="margin:0 0 6px;background:linear-gradient(135deg,#f59e0b,#f43f5e);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Special Gift Incoming!</h2>
-    <div id="giftClaimSenderLabel" style="font-size:13px;color:#38bdf8;font-weight:700">From: Cam</div>
-    <div id="giftClaimMessage" style="font-style:italic;color:#cbd5e1;background:rgba(0,0,0,0.35);padding:10px 14px;border-radius:10px;margin:12px 0;font-size:13px;border-left:3px solid #f59e0b;display:none;text-align:left"></div>
-    
-    <div id="giftClaimItemsContainer" style="display:flex;flex-direction:column;gap:10px;margin:16px 0"></div>
-
-    <button id="giftClaimConfirmBtn" style="width:100%;padding:14px;font-size:16px;background:linear-gradient(135deg,#10b981,#059669);font-weight:900;letter-spacing:0.5px">Claim All Items Now 🚀</button>
   </div>
 </div>
 
@@ -208,7 +173,6 @@
 
     <div class="admin-tabs">
       <button class="admin-tab-btn active" data-tab="tabPlayers">👥 Player Manager</button>
-      <button class="admin-tab-btn" data-tab="tabGifting">🎁 Gifting Station</button>
       <button class="admin-tab-btn" data-tab="tabEconomy">🪙 Economy & RNG</button>
       <button class="admin-tab-btn" data-tab="tabStudio">🎨 Card Studio</button>
       <button class="admin-tab-btn" data-tab="tabEvents">🌪️ World Events</button>
@@ -248,174 +212,6 @@
           <div class="adminBtnGroup" style="margin-top:10px" id="adminWipeSection">
             <button id="adminUnlockAllCamBtn" style="background:#2563eb">Unlock All For Master</button>
             <button id="adminWipeOtherAccountsBtn" style="background:#991b1b">Delete All Other Accounts</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 2: GIFTING STATION -->
-    <div class="admin-tab-content" id="tabGifting">
-      <div class="adminGrid">
-        <!-- Direct Gifting Card -->
-        <div class="adminCard">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h4 style="color:#f59e0b">🎁 Dispatch Direct Gift</h4>
-            <span id="subAdminGiftingBudgetBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3)">Budget: 500 🪙</span>
-          </div>
-
-          <!-- Recipient -->
-          <div>
-            <label style="font-size:12px;color:#94a3b8">Recipient Player:</label>
-            <div style="display:flex;gap:6px;margin-top:4px">
-              <select id="giftTargetSelect" class="adminSelect" style="flex:1"></select>
-              <button type="button" class="accountBtn" id="giftToggleCustomUserBtn" style="padding:6px 10px;font-size:11px;white-space:nowrap">Type Username</button>
-            </div>
-            <input id="giftTargetCustomInput" class="adminInput" placeholder="Enter recipient username (e.g. ShadowKnight)" maxlength="20" style="display:none;margin-top:6px">
-          </div>
-
-          <!-- Gift Type Category selector tabs/pills -->
-          <div>
-            <label style="font-size:12px;color:#94a3b8">Gift Type:</label>
-            <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap" id="giftTypePills">
-              <button type="button" class="admin-tab-btn active" data-gifttype="card" style="padding:6px 12px;font-size:12px">🃏 Card</button>
-              <button type="button" class="admin-tab-btn" data-gifttype="coins" style="padding:6px 12px;font-size:12px">🪙 Coins</button>
-              <button type="button" class="admin-tab-btn" data-gifttype="pack" style="padding:6px 12px;font-size:12px">📦 Booster Pack</button>
-              <button type="button" class="admin-tab-btn" data-gifttype="bundle" style="padding:6px 12px;font-size:12px">🎁 Gift Bundle</button>
-            </div>
-          </div>
-
-          <!-- Gift Card Section -->
-          <div id="giftCardSection">
-            <label style="font-size:12px;color:#94a3b8">Select Card to Gift:</label>
-            <select id="giftCardSelect" class="adminSelect" style="margin-top:4px"></select>
-          </div>
-
-          <!-- Gift Coins Section -->
-          <div id="giftCoinsSection" style="display:none">
-            <label style="font-size:12px;color:#94a3b8">Coin Amount:</label>
-            <input type="number" id="giftCoinsAmount" class="adminInput" min="1" value="250" style="margin-top:4px">
-            <div style="display:flex;gap:6px;margin-top:4px">
-              <button type="button" class="accountBtn" style="flex:1;padding:4px;font-size:11px" onclick="document.getElementById('giftCoinsAmount').value=100">+100</button>
-              <button type="button" class="accountBtn" style="flex:1;padding:4px;font-size:11px" onclick="document.getElementById('giftCoinsAmount').value=250">+250</button>
-              <button type="button" class="accountBtn" style="flex:1;padding:4px;font-size:11px" onclick="document.getElementById('giftCoinsAmount').value=500">+500</button>
-              <button type="button" class="accountBtn" style="flex:1;padding:4px;font-size:11px" onclick="document.getElementById('giftCoinsAmount').value=1000">+1,000</button>
-            </div>
-          </div>
-
-          <!-- Gift Pack Section -->
-          <div id="giftPackSection" style="display:none">
-            <label style="font-size:12px;color:#94a3b8">Booster Pack Tier:</label>
-            <select id="giftPackTierSelect" class="adminSelect" style="margin-top:4px">
-              <option value="common">📦 Common Booster Pack</option>
-              <option value="rare">🔷 Rare Booster Pack</option>
-              <option value="epic">🔮 Epic Booster Pack</option>
-              <option value="legendary">🟠 Gilded Legendary Vault</option>
-              <option value="mythic">🔴 Cosmic Mythic Archive</option>
-              <option value="divine">🌟 Celestial Divine Reliquary</option>
-            </select>
-            <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-              <label style="font-size:12px;color:#94a3b8">Quantity:</label>
-              <input type="number" id="giftPackQuantity" class="adminInput" min="1" max="10" value="1" style="width:80px">
-            </div>
-          </div>
-
-          <!-- Bundle Section -->
-          <div id="giftBundleSection" style="display:none;background:rgba(0,0,0,0.25);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);flex-direction:column;gap:8px">
-            <label style="font-size:11px;font-weight:700;color:#f59e0b">Bundle Components:</label>
-            <div>
-              <span style="font-size:11px;color:#94a3b8">Bundle Coins:</span>
-              <input type="number" id="giftBundleCoins" class="adminInput" value="500" min="0">
-            </div>
-            <div>
-              <span style="font-size:11px;color:#94a3b8">Bundle Card:</span>
-              <select id="giftBundleCardSelect" class="adminSelect"></select>
-            </div>
-            <div>
-              <span style="font-size:11px;color:#94a3b8">Bundle Pack:</span>
-              <select id="giftBundlePackSelect" class="adminSelect">
-                <option value="none">No Pack in Bundle</option>
-                <option value="common">📦 Common Pack</option>
-                <option value="rare">🔷 Rare Pack</option>
-                <option value="epic">🔮 Epic Pack</option>
-                <option value="legendary">🟠 Legendary Vault</option>
-                <option value="mythic">🔴 Cosmic Archive</option>
-                <option value="divine" selected>🌟 Divine Reliquary</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Personalized Note -->
-          <div>
-            <label style="font-size:12px;color:#94a3b8">Gift Note / Message (Optional):</label>
-            <input id="giftNoteInput" class="adminInput" placeholder="e.g. Welcome to the game! Or: Epic tournament reward!" maxlength="80" style="margin-top:4px">
-          </div>
-
-          <button id="adminSendGiftBtn" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#000;font-weight:900;padding:12px;font-size:14px;box-shadow:0 6px 18px rgba(245,158,11,0.35);margin-top:4px">🎁 Dispatch Gift Now</button>
-        </div>
-
-        <!-- Right Column: Gift Codes & Audit Log -->
-        <div style="display:flex;flex-direction:column;gap:20px">
-          <!-- Gift Code Voucher Generator -->
-          <div class="adminCard">
-            <h4 style="color:#38bdf8">🎟️ Generate Gift Voucher Code</h4>
-            <p style="font-size:12px;color:#94a3b8;margin:0">Create redeemable promo codes for players across all devices.</p>
-            <div style="display:flex;gap:6px">
-              <input id="giftCodeCustomInput" class="adminInput" placeholder="Code name (e.g. DRAGON500)" style="text-transform:uppercase" maxlength="16">
-              <button type="button" class="accountBtn" id="giftCodeRandomBtn" style="white-space:nowrap;padding:6px 12px;font-size:12px">🎲 Random</button>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div>
-                <label style="font-size:11px;color:#94a3b8">Coins:</label>
-                <input type="number" id="giftCodeCoinsInput" class="adminInput" value="300" min="0">
-              </div>
-              <div>
-                <label style="font-size:11px;color:#94a3b8">Max Uses:</label>
-                <input type="number" id="giftCodeMaxUses" class="adminInput" value="10" min="1" max="999">
-              </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div>
-                <label style="font-size:11px;color:#94a3b8">Include Card (Optional):</label>
-                <select id="giftCodeCardSelect" class="adminSelect">
-                  <option value="">(None)</option>
-                </select>
-              </div>
-              <div>
-                <label style="font-size:11px;color:#94a3b8">Include Pack (Optional):</label>
-                <select id="giftCodePackSelect" class="adminSelect">
-                  <option value="">(None)</option>
-                  <option value="common">Common Pack</option>
-                  <option value="rare">Rare Pack</option>
-                  <option value="epic">Epic Pack</option>
-                  <option value="legendary">Legendary Vault</option>
-                  <option value="mythic">Mythic Archive</option>
-                  <option value="divine">Divine Reliquary</option>
-                </select>
-              </div>
-            </div>
-            <button id="adminGenerateCodeBtn" style="background:#0284c7;font-size:13px;padding:10px">Create Gift Code</button>
-
-            <!-- Active Codes List -->
-            <label style="font-size:11px;font-weight:700;color:#94a3b8;margin-top:6px">Active Voucher Codes:</label>
-            <div id="activeGiftCodesList" style="max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
-          </div>
-
-          <!-- Audit Log -->
-          <div class="adminCard">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <h4 style="color:#a855f7">📜 Recent Gifting Audit Log</h4>
-              <button class="accountBtn" id="clearGiftLogBtn" style="padding:4px 8px;font-size:10px">Clear Log</button>
-            </div>
-            <div style="max-height:150px;overflow-y:auto">
-              <table style="width:100%;border-collapse:collapse;font-size:12px">
-                <thead>
-                  <tr style="text-align:left;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.1)">
-                    <th style="padding:4px">To</th><th>Gift</th><th>By</th><th>Date</th><th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="giftLogTableBody"></tbody>
-              </table>
-            </div>
           </div>
         </div>
       </div>
@@ -570,11 +366,6 @@
           <div style="display:flex;align-items:center;gap:8px;margin:4px 0">
             <input type="checkbox" id="subAdminAllowSkinsCheck" checked style="width:16px;height:16px">
             <label for="subAdminAllowSkinsCheck" style="font-size:13px;font-weight:700">Allow Gifting Card Skins</label>
-          </div>
-
-          <div style="display:flex;align-items:center;gap:8px;margin:4px 0">
-            <input type="checkbox" id="subAdminAllowPacksCheck" checked style="width:16px;height:16px">
-            <label for="subAdminAllowPacksCheck" style="font-size:13px;font-weight:700">Allow Gifting Booster Packs</label>
           </div>
 
           <label style="font-size:12px;color:#94a3b8">Allowed Skins Sub-Admin Can Gift:</label>
