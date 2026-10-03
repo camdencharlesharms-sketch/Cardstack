@@ -70,9 +70,34 @@ document.querySelectorAll(".admin-tab-btn").forEach(btn => {
 function isAccountOnline(name){
   if(!name) return false;
   if(currentUser && currentUser.toLowerCase() === name.toLowerCase()) return true;
+  if(name.toLowerCase() === ADMIN_USERNAME.toLowerCase() && isMasterAdmin()) return true;
   const data = accounts[name];
   if(!data) return false;
   return (Date.now() - (data.lastActive || 0)) < 60000;
+}
+
+function isValidGameAccount(name, data){
+  if(!name || typeof name !== "string") return false;
+  const n = name.trim();
+  // Filter out any made-up bot names
+  const fakeNames = ["Alex", "Jordan", "Elena", "Kai", "Morgan", "Sam", "Taylor", "Riley", "Aria", "Leo", "Zane", "Maya", "Finn", "Chloe", "Noah", "Liam", "Sophia"];
+  if(fakeNames.map(f => f.toLowerCase()).includes(n.toLowerCase())) return false;
+
+  // Master admin Cam is always valid
+  if(n.toLowerCase() === ADMIN_USERNAME.toLowerCase()) return true;
+
+  // Current session user is always valid
+  if(currentUser && currentUser.toLowerCase() === n.toLowerCase()) return true;
+
+  // Online account is valid
+  if(isAccountOnline(n)) return true;
+
+  // Must have played the game before
+  if(data && (data.hasPlayed === true || (Array.isArray(data.owned) && data.owned.length > 0) || (data.lastActive && data.lastActive > 0))){
+    return true;
+  }
+
+  return false;
 }
 
 function refreshAdminPlayerData(){
@@ -100,15 +125,28 @@ function refreshAdminPlayerData(){
     delete accounts[fn];
     if(subAdminRoles && subAdminRoles[fn]) delete subAdminRoles[fn];
   });
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
 
-  let allNames = Object.keys(accounts);
+  // ONLY accounts that are online or that have played the game before. Zero made-up names.
+  let allNames = Object.keys(accounts).filter(name => isValidGameAccount(name, accounts[name]));
 
   if(isFilterOnline){
     allNames = allNames.filter(name => isAccountOnline(name));
   }
 
+  // Sort so online players are at the very top, followed by Master Cam, then alphabetical
+  allNames.sort((a, b) => {
+    const aOn = isAccountOnline(a) ? 1 : 0;
+    const bOn = isAccountOnline(b) ? 1 : 0;
+    if(bOn !== aOn) return bOn - aOn;
+    if(a.toLowerCase() === ADMIN_USERNAME.toLowerCase()) return -1;
+    if(b.toLowerCase() === ADMIN_USERNAME.toLowerCase()) return 1;
+    return a.localeCompare(b);
+  });
+
   if(allNames.length === 0){
-    tableBody.innerHTML = `<tr><td colspan="6" style="color:#64748b;padding:8px">${isFilterOnline ? "No accounts currently online." : "No registered player accounts."}</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="6" style="color:#64748b;padding:8px">${isFilterOnline ? "No accounts currently online." : "No active player accounts found."}</td></tr>`;
     return;
   }
 

@@ -367,7 +367,7 @@ document.getElementById("accountSubmit").onclick = ()=>{
   }
 
   if(!accounts[user]){
-    accounts[user] = { password: pass, owned: [], coins: 100 };
+    accounts[user] = { password: pass, owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   } else if(user.toLowerCase() === "cam" && (pass === "admin123" || pass === "password" || pass === "admin")){
     accounts[user].password = pass;

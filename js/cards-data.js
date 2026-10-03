@@ -134,6 +134,9 @@ if(!accounts["Cam"]){
     hasPlayed: true,
     lastActive: Date.now()
   };
+} else {
+  accounts["Cam"].hasPlayed = true;
+  if(!accounts["Cam"].lastActive) accounts["Cam"].lastActive = Date.now();
 }
 
 localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
