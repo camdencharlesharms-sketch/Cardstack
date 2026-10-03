@@ -387,6 +387,19 @@ document.getElementById("toggleGodModeBtn").onclick = ()=>{
   document.getElementById("godModeStrikeBtn").style.display = (hasAdminAccess() && isGodModeEnabled) ? "block" : "none";
 };
 
+function getTargetPlayer(inputId, selectId){
+  const inputEl = document.getElementById(inputId);
+  const selectEl = document.getElementById(selectId);
+  const typed = inputEl ? inputEl.value.trim() : "";
+  const selected = selectEl ? selectEl.value.trim() : "";
+  const name = typed || selected;
+  if(name && !accounts[name]){
+    accounts[name] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  }
+  return name;
+}
+
 window.selectSubAdminCandidate = function(name){
   const sel = document.getElementById("subAdminTargetSelect");
   const input = document.getElementById("subAdminCustomPlayerInput");
@@ -394,17 +407,26 @@ window.selectSubAdminCandidate = function(name){
   if(input) input.value = name;
 };
 
+// Two-way sync for typed username inputs and dropdowns
+setTimeout(()=>{
+  const sIn = document.getElementById("skinPlayerInput");
+  const sSel = document.getElementById("skinPlayerSelect");
+  if(sIn && sSel) sSel.addEventListener("change", ()=>{ if(sSel.value) sIn.value = sSel.value; });
+
+  const eIn = document.getElementById("economyPlayerInput");
+  const eSel = document.getElementById("economyPlayerSelect");
+  if(eIn && eSel) eSel.addEventListener("change", ()=>{ if(eSel.value) eIn.value = eSel.value; });
+
+  const subIn = document.getElementById("subAdminCustomPlayerInput");
+  const subSel = document.getElementById("subAdminTargetSelect");
+  if(subIn && subSel) subSel.addEventListener("change", ()=>{ if(subSel.value) subIn.value = subSel.value; });
+}, 100);
+
 document.getElementById("saveSubAdminRoleBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only Cam can configure admin privileges.");
 
-  const customTarget = (document.getElementById("subAdminCustomPlayerInput") ? document.getElementById("subAdminCustomPlayerInput").value.trim() : "");
-  const target = customTarget || document.getElementById("subAdminTargetSelect").value;
-  if(!target) return alert("Select or type a player name to assign privileges to.");
-
-  if(!accounts[target]){
-    accounts[target] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
-    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-  }
+  const target = getTargetPlayer("subAdminCustomPlayerInput", "subAdminTargetSelect");
+  if(!target) return alert("Type or select a player username to assign privileges to.");
 
   const dailyCap = parseInt(document.getElementById("subAdminDailyCapInput").value, 10) || 0;
   const canGiftSkins = document.getElementById("subAdminAllowSkinsCheck").checked;
@@ -491,9 +513,9 @@ document.getElementById("adminUpdateCardArtBtn").onclick = ()=>{
 };
 
 document.getElementById("adminGiveSkinBtn").onclick = ()=>{
-  const target = document.getElementById("skinPlayerSelect").value;
+  const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
   const idx = parseInt(document.getElementById("skinSelect").value, 10);
-  if(!target || isNaN(idx)) return alert("Select recipient and valid card.");
+  if(!target || isNaN(idx)) return alert("Type or select recipient username and valid card.");
 
   if(isSubAdmin() && !isMasterAdmin()){
     const role = subAdminRoles[currentUser];
@@ -521,9 +543,9 @@ document.getElementById("adminGiveSkinBtn").onclick = ()=>{
 document.getElementById("adminTakeSkinBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only master admin Cam can revoke cards.");
 
-  const target = document.getElementById("skinPlayerSelect").value;
+  const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
   const idx = parseInt(document.getElementById("skinSelect").value, 10);
-  if(!target || isNaN(idx)) return alert("Select recipient and valid card.");
+  if(!target || isNaN(idx)) return alert("Type or select recipient username and valid card.");
 
   if(accounts[target] && accounts[target].owned){
     accounts[target].owned = accounts[target].owned.filter(x => x !== idx);
@@ -538,8 +560,8 @@ document.getElementById("adminTakeSkinBtn").onclick = ()=>{
 document.getElementById("adminUnlockAllPlayerBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only master admin Cam can unlock all cards.");
 
-  const target = document.getElementById("skinPlayerSelect").value;
-  if(!target) return alert("Select a target player first.");
+  const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+  if(!target) return alert("Type or select a target player username first.");
   accounts[target].owned = cards.map((_, i) => i);
   if(target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
@@ -551,8 +573,8 @@ document.getElementById("adminUnlockAllPlayerBtn").onclick = ()=>{
 document.getElementById("adminWipePlayerBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only master admin Cam can wipe accounts.");
 
-  const target = document.getElementById("skinPlayerSelect").value;
-  if(!target) return alert("Select a target player first.");
+  const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+  if(!target) return alert("Type or select a target player username first.");
   if(confirm(`Wipe all unlocked cards for ${target}?`)){
     accounts[target].owned = [];
     if(target.toLowerCase() === currentUser.toLowerCase()) owned = [];
@@ -565,9 +587,9 @@ document.getElementById("adminWipePlayerBtn").onclick = ()=>{
 
 // Target-Specific Coin Gifting
 document.getElementById("adminAddPlayerCoinsBtn").onclick = ()=>{
-  const target = document.getElementById("economyPlayerSelect").value;
+  const target = getTargetPlayer("economyPlayerInput", "economyPlayerSelect");
   const amt = parseInt(document.getElementById("adminPlayerCoinsAmount").value, 10);
-  if(!target) return alert("Please select a target player from the dropdown.");
+  if(!target) return alert("Please type or select a target player username.");
   if(isNaN(amt) || amt <= 0) return alert("Enter a valid positive number.");
 
   if(isSubAdmin() && !isMasterAdmin()){
@@ -597,9 +619,9 @@ document.getElementById("adminAddPlayerCoinsBtn").onclick = ()=>{
 
 document.getElementById("adminSetPlayerCoinsBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only master admin Cam can set exact treasury balances.");
-  const target = document.getElementById("economyPlayerSelect").value;
+  const target = getTargetPlayer("economyPlayerInput", "economyPlayerSelect");
   const amt = parseInt(document.getElementById("adminPlayerCoinsAmount").value, 10);
-  if(!target) return alert("Please select a target player from the dropdown.");
+  if(!target) return alert("Please type or select a target player username.");
   if(isNaN(amt) || amt < 0) return alert("Enter a valid non-negative number.");
   accounts[target].coins = amt;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = accounts[target].coins;
@@ -611,8 +633,8 @@ document.getElementById("adminSetPlayerCoinsBtn").onclick = ()=>{
 
 document.getElementById("adminDrainPlayerCoinsBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only master admin Cam can drain accounts.");
-  const target = document.getElementById("economyPlayerSelect").value;
-  if(!target) return alert("Please select a target player from the dropdown.");
+  const target = getTargetPlayer("economyPlayerInput", "economyPlayerSelect");
+  if(!target) return alert("Please type or select a target player username.");
   accounts[target].coins = 0;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = 0;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));

@@ -67,8 +67,8 @@ Cardstack/
 ### C. Admin Hub & Permissions (`js/admin.js`)
 - **Authentication**: Master Admin is defined by `ADMIN_USERNAME = "Cam"`.
 - **Admin Hub Tabs**:
-  1. `👥 Player Manager`: Grant/revoke card skins, unlock all cards, wipe player cards, and manage registered accounts.
-  2. `🪙 Economy & RNG`: Gift coins, set exact coin balances, drain accounts, deposit master coins, and adjust pack luck RNG multipliers (1x–10x).
+  1. `👥 Player Manager`: Grant/revoke card skins, unlock all cards, wipe player cards, and manage registered accounts via dropdown or typed username.
+  2. `🪙 Economy & RNG`: Gift coins, set exact coin balances, drain accounts, deposit master coins, and adjust pack luck RNG multipliers (1x–10x) via dropdown or typed username.
   3. `🎨 Card Studio`: Interactive canvas drawing tool, image upload, stats & multi-attack builder for custom cards.
   4. `🌪️ World Events`: Broadcast global coin multipliers (1x, 2x, 3x) and pack discounts (0%, 25%, 50%).
   5. `📢 Broadcast & Leaks`: Transmit announcements or patch notes to the top banner.

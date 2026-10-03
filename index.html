@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <!-- Free WebRTC P2P library to connect two devices via room codes -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<link rel="stylesheet" href="css/styles.css?v=2.3">
+<link rel="stylesheet" href="css/styles.css?v=2.4">
 </head>
 <body>
 
@@ -186,7 +186,12 @@
       <div class="adminGrid">
         <div class="adminCard">
           <h4>🎭 Player Skins Dispatcher</h4>
-          <select id="skinPlayerSelect" class="adminSelect"></select>
+          <label style="font-size:12px;color:#94a3b8">Target Player:</label>
+          <div style="display:flex;gap:8px;margin-bottom:6px">
+            <input id="skinPlayerInput" class="adminInput" placeholder="Type player username..." style="flex:1;margin:0">
+            <select id="skinPlayerSelect" class="adminSelect" style="flex:1;margin:0"></select>
+          </div>
+          <label style="font-size:12px;color:#94a3b8">Select Skin:</label>
           <select id="skinSelect" class="adminSelect"></select>
           <div class="adminBtnGroup">
             <button id="adminGiveSkinBtn" style="background:#059669">Grant Skin</button>
@@ -229,7 +234,10 @@
         <div class="adminCard">
           <h4>🪙 Player Treasury Operations</h4>
           <label style="font-size:12px;color:#94a3b8">Target Player:</label>
-          <select id="economyPlayerSelect" class="adminSelect"></select>
+          <div style="display:flex;gap:8px;margin-bottom:6px">
+            <input id="economyPlayerInput" class="adminInput" placeholder="Type player username..." style="flex:1;margin:0">
+            <select id="economyPlayerSelect" class="adminSelect" style="flex:1;margin:0"></select>
+          </div>
           <label style="font-size:12px;color:#94a3b8">Coin Amount:</label>
           <input type="number" id="adminPlayerCoinsAmount" class="adminInput" placeholder="Coin amount" min="0" value="500">
           <div class="adminBtnGroup">
@@ -655,9 +663,9 @@
 </main>
 
 
-<script src="js/cards-data.js?v=2.3"></script>
-<script src="js/admin.js?v=2.3"></script>
-<script src="js/arena.js?v=2.3"></script>
-<script src="js/app.js?v=2.3"></script>
+<script src="js/cards-data.js?v=2.4"></script>
+<script src="js/admin.js?v=2.4"></script>
+<script src="js/arena.js?v=2.4"></script>
+<script src="js/app.js?v=2.4"></script>
 </body>
 </html>
