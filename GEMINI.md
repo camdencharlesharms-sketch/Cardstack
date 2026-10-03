@@ -1,6 +1,6 @@
-# Cardstack (Aetheria Cards) – Project Guide & Architecture
+# Card Stack (Cardstack) – Project Guide & Architecture
 
-Welcome to **Cardstack** (also titled **Aetheria Cards: Season One - Genesis**). This document serves as the persistent system overview, architectural guide, and operational runbook for future development sessions.
+Welcome to **Cardstack** (branded as **Card Stack**). This document serves as the persistent system overview, architectural guide, and operational runbook for future development sessions.
 
 ---
 
