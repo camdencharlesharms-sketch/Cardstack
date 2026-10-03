@@ -645,22 +645,70 @@ window.deleteCustomRarity = function(rarityId){
   render();
 };
 
+// Rarity Custom Color & Preview Handlers
+const rarityColorInput = document.getElementById("customRarityColor");
+const rarityHexInput = document.getElementById("customRarityHex");
+const rarityPreviewBox = document.getElementById("customRarityColorPreview");
+const rarityPresetSelect = document.getElementById("customRarityPreset");
+
+function updateRarityColorPreview(hex){
+  if(!hex || !hex.startsWith("#")) hex = "#ec4899";
+  if(rarityColorInput) rarityColorInput.value = hex;
+  if(rarityHexInput && rarityHexInput.value !== hex) rarityHexInput.value = hex.toUpperCase();
+  if(rarityPreviewBox){
+    rarityPreviewBox.style.borderColor = hex;
+    rarityPreviewBox.style.color = hex;
+    rarityPreviewBox.style.background = `radial-gradient(ellipse at 50% 15%, ${hex}55 0%, #030712 100%)`;
+    rarityPreviewBox.style.boxShadow = `0 0 14px ${hex}88`;
+  }
+}
+
+if(rarityColorInput){
+  rarityColorInput.oninput = ()=>{
+    updateRarityColorPreview(rarityColorInput.value);
+    if(rarityPresetSelect) rarityPresetSelect.value = "custom";
+  };
+}
+
+if(rarityHexInput){
+  rarityHexInput.oninput = ()=>{
+    let val = rarityHexInput.value.trim();
+    if(!val.startsWith("#")) val = "#" + val;
+    if(/^#[0-9a-fA-F]{6}$/.test(val)){
+      updateRarityColorPreview(val);
+      if(rarityPresetSelect) rarityPresetSelect.value = "custom";
+    }
+  };
+}
+
+if(rarityPresetSelect){
+  rarityPresetSelect.onchange = ()=>{
+    const p = rarityPresetSelect.value;
+    if(p === "prismatic") updateRarityColorPreview("#38bdf8");
+    else if(p === "void") updateRarityColorPreview("#f43f5e");
+    else if(p === "nebula") updateRarityColorPreview("#c084fc");
+    else if(p === "solar") updateRarityColorPreview("#fbbf24");
+    else if(p === "cyber") updateRarityColorPreview("#10b981");
+  };
+}
+
 const createRarityBtn = document.getElementById("createCustomRarityBtn");
 if(createRarityBtn){
   createRarityBtn.onclick = ()=>{
     const name = document.getElementById("customRarityName").value.trim();
+    const hexVal = (document.getElementById("customRarityHex") ? document.getElementById("customRarityHex").value.trim() : "") || document.getElementById("customRarityColor").value || "#ec4899";
+    const customColor = hexVal.startsWith("#") ? hexVal : ("#" + hexVal);
     const preset = document.getElementById("customRarityPreset").value;
-    const accentColor = document.getElementById("customRarityColor").value;
     const rank = parseInt(document.getElementById("customRarityRank").value, 10) || 7;
 
-    if(!name) return alert("Please specify a rarity name.");
+    if(!name) return alert("Please type a name for the new rarity.");
 
     const rarityId = name.toLowerCase().replace(/[^a-z0-9]/g, "_");
 
-    let color = accentColor;
-    let border = accentColor;
-    let bg = `radial-gradient(ellipse at 50% 15%, ${accentColor}44 0%, #030712 100%)`;
-    let glow = `${accentColor}aa`;
+    let color = customColor;
+    let border = customColor;
+    let bg = `radial-gradient(ellipse at 50% 15%, ${customColor}55 0%, #030712 100%)`;
+    let glow = `${customColor}aa`;
 
     if(preset === "prismatic"){
       color = "#38bdf8";
@@ -705,7 +753,7 @@ if(createRarityBtn){
     renderCustomRaritiesList();
 
     document.getElementById("customRarityName").value = "";
-    alert(`Created custom rarity "${name}" (Rank ${rank})!`);
+    alert(`Created custom rarity "${name}" with color ${color} (Rank ${rank})!`);
   };
 }
 
