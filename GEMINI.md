@@ -73,6 +73,7 @@ Cardstack/
   4. `🌪️ World Events`: Broadcast global coin multipliers (1x, 2x, 3x) and pack discounts (0%, 25%, 50%).
   5. `📢 Broadcast & Leaks`: Transmit announcements or patch notes to the top banner.
   6. `🛡 Sub-Admin Roles` *(Master Cam only)*: Appoint sub-admins with daily coin gifting caps and skin gifting allowances.
+  7. `🔒 Unreleased Vault` *(Master Cam only)*: Create and manage unreleased prototype cards and packs hidden completely from normal players. Unreleased cards appear only in Cam's collection binder, and unreleased packs are openable directly from Cam's creator shelf.
 
 ---
 
@@ -92,6 +93,8 @@ All application state is persisted client-side in the browser's `localStorage`:
 | `cardCollectorEventDiscount`| `string` | Pack discount percentage (`"0"`, `"25"`, `"50"`) |
 | `cardCollectorLuck` | `string` | Opening luck multiplier (`"1"`, `"2"`, `"5"`, `"10"`) |
 | `cardCollectorLeak` | `string` | Active broadcast text |
+| `cardCollectorUnreleasedCards` | `Array` | Unreleased prototype cards visible exclusively to Master Admin (`Cam`) |
+| `cardCollectorUnreleasedPacks` | `Object` | Unreleased prototype booster packs openable exclusively by Master Admin (`Cam`) |
 
 ---
 

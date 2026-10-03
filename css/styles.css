@@ -124,6 +124,15 @@ main{max-width:1250px;margin:auto;padding:32px 24px}
   box-shadow:0 10px 40px rgba(56, 189, 248, 0.35);
   background:linear-gradient(170deg, rgba(14, 116, 144, 0.4) 0%, rgba(30, 27, 75, 0.85) 100%);
 }
+.pack-card.pack-unreleased{
+  border-color:#f43f5e;
+  box-shadow:0 10px 35px rgba(244,63,94,0.3);
+  background:linear-gradient(170deg, rgba(136, 19, 55, 0.45) 0%, rgba(15, 23, 42, 0.9) 100%);
+}
+.pack-card.pack-unreleased:hover{
+  border-color:#fb7185;
+  box-shadow:0 16px 45px rgba(244,63,94,0.45);
+}
 
 .pack-title{font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px}
 .pack-info{color:#94a3b8;font-size:13px;line-height:1.45;margin:8px 0 0}

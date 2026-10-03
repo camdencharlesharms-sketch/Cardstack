@@ -234,6 +234,7 @@ function getFinalArtworkSrc(){
 /* Admin Controls & Actions */
 document.getElementById("adminOpenBtn").onclick = ()=>{
   refreshAdminPlayerData();
+  renderUnreleasedAdminUI();
   document.getElementById("adminLeakInput").value = localStorage.getItem("cardCollectorLeak") || "";
   document.getElementById("adminLuckSelect").value = adminLuckMultiplier.toString();
   document.getElementById("eventCoinMultiplierSelect").value = eventCoinMultiplier.toString();
@@ -554,3 +555,230 @@ document.getElementById("adminWipeOtherAccountsBtn").onclick = ()=>{
     alert("Purged all player accounts except Cam.");
   }
 };
+
+/* Unreleased Content Controls (Master Cam Only) */
+function renderUnreleasedAdminUI(){
+  const cardListEl = document.getElementById("unreleasedCardsList");
+  const packListEl = document.getElementById("unreleasedPacksList");
+  if(!cardListEl || !packListEl) return;
+
+  // 1. Render Unreleased Cards List
+  cardListEl.innerHTML = "";
+  if(!Array.isArray(unreleasedCards) || unreleasedCards.length === 0){
+    cardListEl.innerHTML = "<div style="color:#64748b;font-size:12px;padding:8px">No unreleased cards created yet.</div>";
+  } else {
+    unreleasedCards.forEach((c, idx) => {
+      const cardIdxInMain = cards.findIndex(x => x.name === c.name);
+      const isOwnedByCam = (currentUser && accounts[currentUser] && accounts[currentUser].owned && accounts[currentUser].owned.includes(cardIdxInMain));
+      
+      const item = document.createElement("div");
+      item.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px";
+      item.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px">
+          <img src="${c.image}" style="width:34px;height:46px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.15)">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#f1f5f9">${c.name} <span style="font-size:10px;text-transform:uppercase;color:#f43f5e;font-weight:800">${c.rarity}</span></div>
+            <div style="font-size:11px;color:#94a3b8">${c.hp} HP • ${c.attacks ? c.attacks.map(a => a.name + " (" + a.dmg + ")").join(", ") : ""}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:${isOwnedByCam ? "rgba(16,185,129,0.2)" : "rgba(56,189,248,0.2)"};border-color:${isOwnedByCam ? "#10b981" : "#38bdf8"};color:${isOwnedByCam ? "#6ee7b7" : "#38bdf8"}" onclick="toggleUnreleasedCardOwnership(${cardIdxInMain})">
+            ${isOwnedByCam ? "✓ In Binder" : "+ Add to Cam"}
+          </button>
+          <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5" onclick="deleteUnreleasedCard(${idx})">
+            ✕
+          </button>
+        </div>
+      `;
+      cardListEl.appendChild(item);
+    });
+  }
+
+  // 2. Render Unreleased Packs List
+  packListEl.innerHTML = "";
+  const packKeys = Object.keys(unreleasedPacks || {});
+  if(packKeys.length === 0){
+    packListEl.innerHTML = "<div style="color:#64748b;font-size:12px;padding:8px">No unreleased packs created yet.</div>";
+  } else {
+    packKeys.forEach(k => {
+      const p = unreleasedPacks[k];
+      const item = document.createElement("div");
+      item.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px";
+      item.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:24px">${p.icon || "🔒"}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#fb7185">${p.name}</div>
+            <div style="font-size:11px;color:#94a3b8">${p.baseCost} 🪙 • ${p.count} Cards • ${p.dropMode || "unreleased"}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:rgba(244,63,94,0.2);border-color:#f43f5e;color:#fda4af" onclick="document.getElementById('adminModal').classList.remove('show'); startPackOpening('${k}');">
+            ✨ Test Open
+          </button>
+          <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5" onclick="deleteUnreleasedPack('${k}')">
+            ✕
+          </button>
+        </div>
+      `;
+      packListEl.appendChild(item);
+    });
+  }
+}
+
+window.toggleUnreleasedCardOwnership = function(cardIdx){
+  if(cardIdx < 0 || cardIdx >= cards.length) return;
+  if(!currentUser || !accounts[currentUser]) return;
+
+  if(!accounts[currentUser].owned) accounts[currentUser].owned = [];
+  const cardOwned = accounts[currentUser].owned;
+  const existingPos = cardOwned.indexOf(cardIdx);
+  if(existingPos > -1){
+    cardOwned.splice(existingPos, 1);
+    if(currentUser === "Cam") owned = cardOwned;
+  } else {
+    cardOwned.push(cardIdx);
+    if(currentUser === "Cam") owned = cardOwned;
+  }
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  render();
+  renderUnreleasedAdminUI();
+};
+
+window.deleteUnreleasedCard = function(idx){
+  if(idx < 0 || idx >= unreleasedCards.length) return;
+  const cardToDelete = unreleasedCards[idx];
+  if(!confirm(`Delete unreleased card "${cardToDelete.name}"?`)) return;
+
+  const mainIdx = cards.findIndex(c => c.name === cardToDelete.name && c.isUnreleased);
+  if(mainIdx > -1){
+    cards.splice(mainIdx, 1);
+  }
+  unreleasedCards.splice(idx, 1);
+  localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards));
+
+  // Re-index accounts owned arrays
+  Object.keys(accounts).forEach(u => {
+    if(accounts[u] && accounts[u].owned){
+      accounts[u].owned = accounts[u].owned.filter(o => o !== mainIdx).map(o => o > mainIdx ? o - 1 : o);
+    }
+  });
+  if(currentUser && accounts[currentUser]) owned = accounts[currentUser].owned;
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+
+  initCardSelect();
+  render();
+  renderUnreleasedAdminUI();
+};
+
+window.deleteUnreleasedPack = function(packKey){
+  if(!unreleasedPacks[packKey]) return;
+  if(!confirm(`Delete unreleased pack "${unreleasedPacks[packKey].name}"?`)) return;
+
+  delete unreleasedPacks[packKey];
+  delete packTiers[packKey];
+  localStorage.setItem("cardCollectorUnreleasedPacks", JSON.stringify(unreleasedPacks));
+
+  if(typeof renderUnreleasedPacksShelf === "function") renderUnreleasedPacksShelf();
+  renderUnreleasedAdminUI();
+};
+
+const createCardBtn = document.getElementById("createUnreleasedCardBtn");
+if(createCardBtn){
+  createCardBtn.onclick = ()=>{
+    const name = document.getElementById("unreleasedCardName").value.trim();
+    const rarity = document.getElementById("unreleasedCardRarity").value;
+    const hp = parseInt(document.getElementById("unreleasedCardHp").value, 10) || 180;
+    const atk1Name = document.getElementById("unreleasedCardAtk1Name").value.trim() || "Void Strike";
+    const atk1Dmg = parseInt(document.getElementById("unreleasedCardAtk1Dmg").value, 10) || 45;
+    const atk2Name = document.getElementById("unreleasedCardAtk2Name").value.trim() || "Cataclysm";
+    const atk2Dmg = parseInt(document.getElementById("unreleasedCardAtk2Dmg").value, 10) || 85;
+    const emoji = document.getElementById("unreleasedCardEmoji").value.trim() || "🗝️";
+    const theme = document.getElementById("unreleasedCardTheme").value;
+    const desc = document.getElementById("unreleasedCardDesc").value.trim() || "A classified unreleased prototype card.";
+
+    if(!name) return alert("Please specify card name.");
+
+    let c1 = "#4c0519", c2 = "#0f172a", textC = "#fda4af", glowC = "rgba(244, 63, 94, 0.6)";
+    if(theme === "glitch"){ c1 = "#064e3b"; c2 = "#022c22"; textC = "#6ee7b7"; glowC = "rgba(16, 185, 129, 0.6)"; }
+    else if(theme === "abyss"){ c1 = "#1e1b4b"; c2 = "#09090b"; textC = "#c084fc"; glowC = "rgba(168, 85, 247, 0.6)"; }
+    else if(theme === "celestial"){ c1 = "#78350f"; c2 = "#1c0901"; textC = "#fde047"; glowC = "rgba(250, 204, 21, 0.6)"; }
+    else if(theme === "emerald"){ c1 = "#065f46"; c2 = "#022c22"; textC = "#a7f3d0"; glowC = "rgba(52, 211, 153, 0.6)"; }
+
+    const image = makeSvgArt(c1, c2, emoji, textC, glowC);
+
+    const newCard = {
+      id: "unreleased_" + Date.now(),
+      name,
+      rarity,
+      hp,
+      attacks: [
+        { name: atk1Name, dmg: atk1Dmg },
+        { name: atk2Name, dmg: atk2Dmg }
+      ],
+      desc,
+      image,
+      isUnreleased: true
+    };
+
+    unreleasedCards.push(newCard);
+    cards.push(newCard);
+    localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards));
+
+    initCardSelect();
+    render();
+    renderUnreleasedAdminUI();
+
+    document.getElementById("unreleasedCardName").value = "";
+    document.getElementById("unreleasedCardDesc").value = "";
+    alert(`Created unreleased card "${name}"!`);
+  };
+}
+
+const createPackBtn = document.getElementById("createUnreleasedPackBtn");
+if(createPackBtn){
+  createPackBtn.onclick = ()=>{
+    const name = document.getElementById("unreleasedPackName").value.trim();
+    const cost = parseInt(document.getElementById("unreleasedPackCost").value, 10) || 100;
+    const count = parseInt(document.getElementById("unreleasedPackCardCount").value, 10) || 5;
+    const icon = document.getElementById("unreleasedPackIcon").value.trim() || "🔒";
+    const visual = document.getElementById("unreleasedPackVisual").value;
+    const dropMode = document.getElementById("unreleasedPackDropMode").value;
+    const desc = document.getElementById("unreleasedPackDesc").value.trim() || "Experimental booster pack.";
+
+    if(!name) return alert("Please specify pack name.");
+
+    let bg = "radial-gradient(circle, #881337, #0f172a)";
+    let border = "#f43f5e";
+    if(visual === "violet"){ bg = "radial-gradient(circle, #581c87, #0f172a)"; border = "#a855f7"; }
+    else if(visual === "gold"){ bg = "radial-gradient(circle, #78350f, #1c0901)"; border = "#f59e0b"; }
+    else if(visual === "cyber"){ bg = "radial-gradient(circle, #065f46, #022c22)"; border = "#10b981"; }
+
+    const packId = "unreleased_pack_" + Date.now();
+    const newPack = {
+      id: packId,
+      name,
+      baseCost: cost,
+      count,
+      icon,
+      bg,
+      border,
+      weights: { common: 0, rare: 10, epic: 25, legendary: 35, mythic: 20, divine: 10 },
+      minRarity: "rare",
+      dropMode,
+      isUnreleased: true,
+      desc
+    };
+
+    unreleasedPacks[packId] = newPack;
+    packTiers[packId] = newPack;
+    localStorage.setItem("cardCollectorUnreleasedPacks", JSON.stringify(unreleasedPacks));
+
+    if(typeof renderUnreleasedPacksShelf === "function") renderUnreleasedPacksShelf();
+    renderUnreleasedAdminUI();
+
+    document.getElementById("unreleasedPackName").value = "";
+    alert(`Created unreleased pack "${name}"!`);
+  };
+}
+

@@ -99,8 +99,10 @@ document.getElementById("startAiMatchBtn").onclick = ()=>{
   battlePlayerCard = cards[selectedChampionIndex];
   isMultiplayerMode = false;
 
-  const aiIdx = Math.floor(Math.random() * cards.length);
-  battleOppCard = cards[aiIdx];
+  const publicCards = cards.filter(c => !c.isUnreleased);
+  const aiPool = publicCards.length > 0 ? publicCards : cards;
+  const aiIdx = Math.floor(Math.random() * aiPool.length);
+  battleOppCard = aiPool[aiIdx];
 
   setupCombatInterface("YOUR CHAMPION", "AI COMBATANT", true);
   appendBattleLog(`<div style="color:#38bdf8">⚔️ Combat started! Your <b>${battlePlayerCard.name}</b> vs AI's <b>${battleOppCard.name}</b>.</div>`);

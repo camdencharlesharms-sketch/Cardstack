@@ -130,3 +130,75 @@ function getActualPackCost(baseCost){
   return Math.max(1, Math.floor(baseCost * (1 - eventPackDiscount / 100)));
 }
 
+// Unreleased / Classified Cards & Packs (Master Cam Exclusive)
+let unreleasedCards = [];
+try {
+  const savedUnreleased = JSON.parse(localStorage.getItem("cardCollectorUnreleasedCards"));
+  if (Array.isArray(savedUnreleased) && savedUnreleased.length > 0) {
+    unreleasedCards = savedUnreleased;
+  } else {
+    unreleasedCards = [
+      {
+        id: "unreleased_cipher",
+        name: "Cipher",
+        rarity: "mythic",
+        hp: 185,
+        attacks: [{ name: "Encryption Wave", dmg: 48 }, { name: "Zero-Day Breaker", dmg: 92 }],
+        desc: "A classified prototype card locked in the creator vault. Unreleased to public sets.",
+        image: makeSvgArt("#4c0519", "#0f172a", "🔐", "#fda4af", "rgba(244, 63, 94, 0.6)"),
+        isUnreleased: true
+      },
+      {
+        id: "unreleased_spectra",
+        name: "Spectra",
+        rarity: "divine",
+        hp: 215,
+        attacks: [{ name: "Phantom Phase", dmg: 65 }, { name: "Dimensional Tear", dmg: 105 }],
+        desc: "An unreleased phantom entity visible only to the creator. Hidden from public sets.",
+        image: makeSvgArt("#1e1b4b", "#09090b", "🫥", "#c084fc", "rgba(168, 85, 247, 0.6)"),
+        isUnreleased: true
+      }
+    ];
+    localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards));
+  }
+} catch(e) {}
+
+let unreleasedPacks = {};
+try {
+  const savedPacks = JSON.parse(localStorage.getItem("cardCollectorUnreleasedPacks"));
+  if (savedPacks && typeof savedPacks === "object" && Object.keys(savedPacks).length > 0) {
+    unreleasedPacks = savedPacks;
+  } else {
+    unreleasedPacks = {
+      unreleased_proto_pack: {
+        id: "unreleased_proto_pack",
+        name: "Creator Prototype Pack",
+        baseCost: 50,
+        count: 4,
+        icon: "🔒",
+        bg: "radial-gradient(circle, #881337, #0f172a)",
+        border: "#f43f5e",
+        weights: { common: 0, rare: 5, epic: 25, legendary: 35, mythic: 25, divine: 10 },
+        minRarity: "epic",
+        dropMode: "unreleased_guaranteed",
+        isUnreleased: true,
+        desc: "Classified developer booster pack. Drops unreleased prototypes."
+      }
+    };
+    localStorage.setItem("cardCollectorUnreleasedPacks", JSON.stringify(unreleasedPacks));
+  }
+} catch(e) {}
+
+// Mark isUnreleased flag on cards
+unreleasedCards.forEach(c => c.isUnreleased = true);
+
+// Integrate unreleased cards into cards array
+unreleasedCards.forEach(c => {
+  if(!cards.some(existing => existing.name === c.name)){
+    cards.push(c);
+  }
+});
+
+// Integrate unreleased packs into packTiers
+Object.assign(packTiers, unreleasedPacks);
+
