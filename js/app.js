@@ -56,13 +56,6 @@ function updateAccountUI(){
   if(unreleasedTabBtn){
     unreleasedTabBtn.style.display = isMaster ? "block" : "none";
   }
-  const unreleasedShelf = document.getElementById("unreleasedPacksShelf");
-  if(unreleasedShelf){
-    unreleasedShelf.style.display = isMaster ? "block" : "none";
-    if(isMaster && typeof renderUnreleasedPacksShelf === "function"){
-      renderUnreleasedPacksShelf();
-    }
-  }
 
   const godBtn = document.getElementById("godModeStrikeBtn");
   godBtn.style.display = (hasAdminAccess() && isGodModeEnabled) ? "block" : "none";
@@ -161,28 +154,43 @@ function startPackOpening(tierKey){
         const guarantee = (i === 0 && pack.minRarity) ? pack.minRarity : null;
         let card;
         if(pack.dropMode === "unreleased_only"){
-          const unreleasedPool = cards.filter(c => c.isUnreleased);
-          if(unreleasedPool.length > 0){
-            card = unreleasedPool[Math.floor(Math.random() * unreleasedPool.length)];
+          if(Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
+            card = unreleasedCards[Math.floor(Math.random() * unreleasedCards.length)];
           } else {
-            card = chooseCardFromWeights(pack.weights, guarantee, true);
+            card = chooseCardFromWeights(pack.weights, guarantee);
           }
         } else if(pack.dropMode === "unreleased_guaranteed" && i === 0){
-          const unreleasedPool = cards.filter(c => c.isUnreleased);
-          if(unreleasedPool.length > 0){
-            card = unreleasedPool[Math.floor(Math.random() * unreleasedPool.length)];
+          if(Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
+            card = unreleasedCards[Math.floor(Math.random() * unreleasedCards.length)];
           } else {
-            card = chooseCardFromWeights(pack.weights, guarantee, true);
+            card = chooseCardFromWeights(pack.weights, guarantee);
           }
         } else {
-          card = chooseCardFromWeights(pack.weights, guarantee, !!pack.isUnreleased);
+          if(pack.isUnreleased && Array.isArray(unreleasedCards) && unreleasedCards.length > 0 && Math.random() < 0.4){
+            card = unreleasedCards[Math.floor(Math.random() * unreleasedCards.length)];
+          } else {
+            card = chooseCardFromWeights(pack.weights, guarantee);
+          }
         }
-        const cardIndex = cards.indexOf(card);
-        const isNew = !owned.includes(cardIndex);
 
-        if(isNew){
-          owned.push(cardIndex);
-          newCards++;
+        const isUnrel = !!card.isUnreleased;
+        let isNew = false;
+        if(isUnrel){
+          const cardId = card.id || card.name;
+          if(!accounts[currentUser]) accounts[currentUser] = { owned: [], coins: 100, unreleasedOwned: [] };
+          if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
+          isNew = !accounts[currentUser].unreleasedOwned.includes(cardId);
+          if(isNew){
+            accounts[currentUser].unreleasedOwned.push(cardId);
+            newCards++;
+          }
+        } else {
+          const cardIndex = cards.indexOf(card);
+          isNew = !owned.includes(cardIndex);
+          if(isNew){
+            owned.push(cardIndex);
+            newCards++;
+          }
         }
 
         const attacksHtml = card.attacks.map(atk => `
@@ -237,19 +245,32 @@ document.getElementById("packCollectBtn").onclick = ()=>{
 
 function render(){
   document.getElementById("coins").textContent = coins.toLocaleString();
-  const isMaster = isMasterAdmin();
+  const showUnreleasedInBinder = (typeof shouldShowUnreleasedInBinder === "function") && shouldShowUnreleasedInBinder();
 
-  const visible = cards.filter((c,i)=>{
-    if(c.isUnreleased && !isMaster) return false;
-    const has = owned.includes(i);
+  let binderPool = [...cards];
+  if(showUnreleasedInBinder && Array.isArray(unreleasedCards)){
+    binderPool = [...cards, ...unreleasedCards];
+  }
+
+  const visible = binderPool.filter((c, i)=>{
+    const isUnrel = !!c.isUnreleased;
+    let has = false;
+    if(isUnrel){
+      const cardId = c.id || c.name;
+      has = !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
+    } else {
+      has = owned.includes(i);
+    }
     return filter === "all" || (filter === "collected" && has) || (filter === "missing" && !has);
   });
 
-  const totalCount = cards.filter(c => !c.isUnreleased || isMaster).length;
   const totalCountEl = document.getElementById("totalCardsCount");
-  if(totalCountEl) totalCountEl.textContent = totalCount;
+  if(totalCountEl) totalCountEl.textContent = binderPool.length;
   
-  const ownedCount = owned.filter(idx => cards[idx] && (!cards[idx].isUnreleased || isMaster)).length;
+  let ownedCount = owned.filter(idx => idx < cards.length).length;
+  if(showUnreleasedInBinder && currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned){
+    ownedCount += accounts[currentUser].unreleasedOwned.length;
+  }
   document.getElementById("count").textContent = ownedCount;
 
   const grid = document.getElementById("grid");
@@ -261,7 +282,15 @@ function render(){
   }
 
   visible.forEach(c=>{
-    const i = cards.indexOf(c), has = owned.includes(i);
+    const isUnrel = !!c.isUnreleased;
+    let has = false;
+    if(isUnrel){
+      const cardId = c.id || c.name;
+      has = !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
+    } else {
+      const i = cards.indexOf(c);
+      has = owned.includes(i);
+    }
     const el = document.createElement("div");
     el.className = "card" + (has ? "" : " locked");
 
@@ -275,7 +304,7 @@ function render(){
       <div class="attack-preview"><span class="attack-name">⚔️ ???</span><span class="attack-dmg">?? DMG</span></div>
     `;
 
-    const unreleasedBadge = (c.isUnreleased && has) ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : "";
+    const unreleasedBadge = (isUnrel && has) ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : "";
     el.innerHTML = `
       <div class="face ${has ? c.rarity : ''}">
         <div class="card-top">
@@ -353,57 +382,3 @@ document.getElementById("accountSubmit").onclick = ()=>{
 
 
 if(currentUser && accounts[currentUser]){loadAccount(currentUser)}else{updateAccountUI();render()}
-
-function renderUnreleasedPacksShelf(){
-  const shelf = document.getElementById("unreleasedPacksShelf");
-  const grid = document.getElementById("unreleasedPackGrid");
-  if(!shelf || !grid) return;
-
-  if(!isMasterAdmin()){
-    shelf.style.display = "none";
-    return;
-  }
-
-  const packKeys = Object.keys(unreleasedPacks || {});
-  if(packKeys.length === 0){
-    shelf.style.display = "none";
-    return;
-  }
-
-  shelf.style.display = "block";
-  grid.innerHTML = "";
-
-  packKeys.forEach(k => {
-    const p = unreleasedPacks[k];
-    const actualCost = getActualPackCost(p.baseCost);
-    const cardEl = document.createElement("div");
-    cardEl.className = "pack-card pack-unreleased";
-    cardEl.style.borderColor = p.border || "#f43f5e";
-    cardEl.style.boxShadow = "0 10px 30px rgba(244,63,94,0.25)";
-
-    let dropLabel = "Classified Pool";
-    if(p.dropMode === "unreleased_only") dropLabel = "Unreleased Cards Only";
-    else if(p.dropMode === "unreleased_guaranteed") dropLabel = "Guaranteed Unreleased";
-    else if(p.dropMode === "high_tier") dropLabel = "High-Tier Focus";
-
-    cardEl.innerHTML = `
-      <div>
-        <div class="pack-title" style="color:#fb7185">
-          <span>${p.icon || "🔒"}</span>
-          <span>${p.name}</span>
-        </div>
-        <p class="pack-info">${p.desc || "Classified experimental prototype booster pack."}</p>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-          <span class="pack-badge" style="background:rgba(244,63,94,0.2);color:#fda4af;border-color:rgba(244,63,94,0.3)">${p.count} Cards</span>
-          <span class="pack-badge" style="background:rgba(168,85,247,0.2);color:#e9d5ff;border-color:rgba(168,85,247,0.3)">${dropLabel}</span>
-        </div>
-      </div>
-      <button class="pack-btn" style="background:linear-gradient(135deg,#f43f5e,#be123c);font-weight:800" onclick="startPackOpening('${k}')">
-        <span>Open • ${actualCost} 🪙</span>
-      </button>
-    `;
-    grid.appendChild(cardEl);
-  });
-}
-window.renderUnreleasedPacksShelf = renderUnreleasedPacksShelf;
-

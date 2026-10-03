@@ -177,8 +177,8 @@
       <button class="admin-tab-btn" data-tab="tabStudio">🎨 Card Studio</button>
       <button class="admin-tab-btn" data-tab="tabEvents">🌪️ World Events</button>
       <button class="admin-tab-btn" data-tab="tabBroadcast">📢 Broadcast & Leaks</button>
-      <button class="admin-tab-btn" data-tab="tabPermissions" id="permissionsTabBtn">🛡 Sub-Admin Roles</button>
-      <button class="admin-tab-btn" data-tab="tabUnreleased" id="unreleasedTabBtn" style="color:#fb7185">🔒 Unreleased Vault</button>
+      <button class="admin-tab-btn" data-tab="tabPermissions" id="permissionsTabBtn" style="display:none">🛡 Sub-Admin Roles</button>
+      <button class="admin-tab-btn" data-tab="tabUnreleased" id="unreleasedTabBtn" style="display:none;color:#fb7185">🔒 Unreleased Vault</button>
     </div>
 
     <!-- TAB 1: PLAYER MANAGER -->
@@ -384,25 +384,64 @@
 
     <!-- TAB 7: UNRELEASED VAULT (Master Cam Only) -->
     <div class="admin-tab-content" id="tabUnreleased">
+      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);padding:12px 16px;border-radius:12px;margin-bottom:18px">
+        <div>
+          <b style="color:#fb7185;font-size:14px">🔒 Stealth Mode Creator Studio</b>
+          <div style="font-size:12px;color:#94a3b8">Everything designed here is 100% private to Cam. Invisible to normal players, guests, and sub-admins.</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:#cbd5e1;font-weight:700">
+          <input type="checkbox" id="toggleShowUnreleasedInBinderCheck" style="width:16px;height:16px">
+          <span>Show in Cam's Collection Binder</span>
+        </label>
+      </div>
+
       <div class="adminGrid">
-        <!-- Card 1: Unreleased Card Creator -->
+        <!-- Card 1: Custom Rarity Designer -->
         <div class="adminCard">
-          <h4>🎴 Unreleased Card Creator</h4>
-          <p style="font-size:12px;color:#94a3b8;margin:0">Create classified cards hidden from the public. Only Cam can see, own, and test these cards.</p>
+          <h4>🌟 Custom Rarity Designer</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0">Invent brand new rarity tiers with custom colors, glowing foils, and power rank values.</p>
+
+          <input id="customRarityName" class="adminInput" placeholder="Rarity Name (e.g. Transcendent, Prismatic, Void)">
+
+          <div style="display:flex;gap:8px">
+            <div style="flex:2">
+              <label style="font-size:11px;color:#94a3b8">Visual Theme Preset:</label>
+              <select id="customRarityPreset" class="adminSelect">
+                <option value="prismatic">Prismatic Hologram (Cyan / Indigo / Gold)</option>
+                <option value="void">Abyssal Void (Obsidian / Crimson Glow)</option>
+                <option value="nebula">Cosmic Nebula (Deep Violet / Neon Magenta)</option>
+                <option value="solar">Solar Radiance (Amber / Flaming Gold)</option>
+                <option value="cyber">Cyber Matrix (Matrix Emerald / Neon Green)</option>
+                <option value="custom">Custom Color Accent</option>
+              </select>
+            </div>
+            <div style="flex:1">
+              <label style="font-size:11px;color:#94a3b8">Accent Color:</label>
+              <input type="color" id="customRarityColor" value="#c084fc" class="adminInput" style="height:38px;padding:2px">
+            </div>
+            <div style="flex:1">
+              <label style="font-size:11px;color:#94a3b8">Power Rank:</label>
+              <input type="number" id="customRarityRank" class="adminInput" value="7" min="1" max="25">
+            </div>
+          </div>
+
+          <button id="createCustomRarityBtn" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);font-weight:700">✨ Create Custom Rarity</button>
+
+          <h5 style="margin:12px 0 4px;color:#cbd5e1;font-size:13px">Active Custom Rarities</h5>
+          <div id="customRaritiesList" style="display:flex;flex-wrap:wrap;gap:8px;max-height:160px;overflow-y:auto"></div>
+        </div>
+
+        <!-- Card 2: Unreleased Card Designer -->
+        <div class="adminCard">
+          <h4>🎴 Card Designer</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0">Create private cards with custom stats, HP, and attacks using any standard or custom rarity.</p>
           
           <input id="unreleasedCardName" class="adminInput" placeholder="Card Name (e.g. Chronos Eclipse)">
           
           <div style="display:flex;gap:8px">
             <div style="flex:1">
-              <label style="font-size:11px;color:#94a3b8">Rarity:</label>
-              <select id="unreleasedCardRarity" class="adminSelect">
-                <option value="common">Common</option>
-                <option value="rare">Rare</option>
-                <option value="epic">Epic</option>
-                <option value="legendary">Legendary</option>
-                <option value="mythic" selected>Mythic</option>
-                <option value="divine">Divine</option>
-              </select>
+              <label style="font-size:11px;color:#94a3b8">Rarity Tier:</label>
+              <select id="unreleasedCardRarity" class="adminSelect"></select>
             </div>
             <div style="flex:1">
               <label style="font-size:11px;color:#94a3b8">Health Points (HP):</label>
@@ -441,58 +480,67 @@
           
           <button id="createUnreleasedCardBtn" style="background:linear-gradient(135deg,#f43f5e,#be123c);font-weight:700">✨ Create Unreleased Card</button>
 
-          <h5 style="margin:10px 0 4px;color:#cbd5e1;font-size:13px">Active Unreleased Cards</h5>
-          <div id="unreleasedCardsList" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto"></div>
+          <h5 style="margin:10px 0 4px;color:#cbd5e1;font-size:13px">Active Private Cards</h5>
+          <div id="unreleasedCardsList" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto"></div>
         </div>
 
-        <!-- Card 2: Unreleased Pack Creator -->
-        <div class="adminCard">
-          <h4>📦 Unreleased Pack Creator</h4>
-          <p style="font-size:12px;color:#94a3b8;margin:0">Create private booster packs visible and openable exclusively by Cam.</p>
+        <!-- Card 3: Pack Designer & Vault Rack (Full Width) -->
+        <div class="adminCard" style="grid-column:1/-1">
+          <h4>📦 Pack Designer & Vault Rack</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0">Design custom booster packs with custom card counts, guaranteed rarities, and test-open them right here.</p>
 
-          <input id="unreleasedPackName" class="adminInput" placeholder="Pack Name (e.g. Classified Black Ops Vault)">
-
-          <div style="display:flex;gap:8px">
-            <div style="flex:1">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:10px">
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Pack Name:</label>
+              <input id="unreleasedPackName" class="adminInput" placeholder="Pack Name (e.g. Classified Black Ops Vault)">
+            </div>
+            <div>
               <label style="font-size:11px;color:#94a3b8">Coin Cost:</label>
               <input type="number" id="unreleasedPackCost" class="adminInput" value="100" min="0" max="99999">
             </div>
-            <div style="flex:1">
+            <div>
               <label style="font-size:11px;color:#94a3b8">Cards Count:</label>
-              <input type="number" id="unreleasedPackCardCount" class="adminInput" value="5" min="1" max="10">
+              <input type="number" id="unreleasedPackCardCount" class="adminInput" value="5" min="1" max="12">
             </div>
-            <div style="flex:1">
-              <label style="font-size:11px;color:#94a3b8">Pack Icon:</label>
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Pack Icon (Emoji):</label>
               <input id="unreleasedPackIcon" class="adminInput" value="🔒" placeholder="Icon" style="text-align:center">
             </div>
           </div>
 
-          <div style="display:flex;gap:8px">
-            <div style="flex:1">
-              <label style="font-size:11px;color:#94a3b8">Pack Theme Styling:</label>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:8px">
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Foil Visual Styling:</label>
               <select id="unreleasedPackVisual" class="adminSelect">
                 <option value="crimson">Crimson Obsidian</option>
                 <option value="violet">Void Neon Violet</option>
                 <option value="gold">Classified Gilded</option>
                 <option value="cyber">Matrix Cyber Glitch</option>
+                <option value="prismatic">Prismatic Rainbow</option>
               </select>
             </div>
-            <div style="flex:1">
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Guaranteed Minimum Rarity:</label>
+              <select id="unreleasedPackMinRarity" class="adminSelect"></select>
+            </div>
+            <div>
               <label style="font-size:11px;color:#94a3b8">Card Drop Mode:</label>
               <select id="unreleasedPackDropMode" class="adminSelect">
                 <option value="unreleased_only">Unreleased Cards Only</option>
                 <option value="unreleased_guaranteed">Guaranteed Unreleased + All Tiers</option>
-                <option value="high_tier">High-Tier Mythic / Divine Focus</option>
+                <option value="high_tier">High-Tier Mythic / Divine / Custom Focus</option>
               </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Pack Description:</label>
+              <input id="unreleasedPackDesc" class="adminInput" placeholder="Pack Lore" value="Experimental booster pack with classified unreleased prototypes.">
             </div>
           </div>
 
-          <input id="unreleasedPackDesc" class="adminInput" placeholder="Pack Description" value="Experimental booster pack with classified unreleased prototypes.">
+          <button id="createUnreleasedPackBtn" style="background:linear-gradient(135deg,#e11d48,#9f1239);font-weight:700;margin-top:10px">📦 Create Booster Pack</button>
 
-          <button id="createUnreleasedPackBtn" style="background:linear-gradient(135deg,#e11d48,#9f1239);font-weight:700">📦 Create Unreleased Pack</button>
-
-          <h5 style="margin:10px 0 4px;color:#cbd5e1;font-size:13px">Active Unreleased Packs</h5>
-          <div id="unreleasedPacksList" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto"></div>
+          <h5 style="margin:16px 0 6px;color:#cbd5e1;font-size:13px">Active Private Booster Packs (Click ✨ Open to Test)</h5>
+          <div id="unreleasedPacksList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
         </div>
       </div>
     </div>
@@ -510,21 +558,6 @@
     <h2>Collect Legendary Artifacts & Duel AI</h2>
     <p>Summon heroes, mythical beasts, cosmic deities, and all-powerful Divine entities. Every card possesses multiple unique battle attacks with different damage yields to command in the Arena!</p>
     
-    <!-- Cam's Private Unreleased Packs Shelf (Creator Only) -->
-    <div id="unreleasedPacksShelf" style="display:none;margin-bottom:32px;padding:20px;border-radius:22px;background:rgba(225,29,72,0.06);border:1px dashed rgba(244,63,94,0.4)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:24px">🔒</span>
-          <div>
-            <h3 style="margin:0;font-size:18px;color:#fb7185;font-weight:800">Cam's Private Unreleased Packs</h3>
-            <small style="color:#94a3b8">Classified developer prototypes. Invisible to normal players and public decks.</small>
-          </div>
-        </div>
-        <span style="background:rgba(244,63,94,0.18);border:1px solid rgba(244,63,94,0.4);color:#fb7185;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800">CREATOR ONLY</span>
-      </div>
-      <div class="pack-grid" id="unreleasedPackGrid"></div>
-    </div>
-
     <div class="pack-grid">
       <div class="pack-card pack-common">
         <div>

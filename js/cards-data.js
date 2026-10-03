@@ -130,6 +130,76 @@ function getActualPackCost(baseCost){
   return Math.max(1, Math.floor(baseCost * (1 - eventPackDiscount / 100)));
 }
 
+// Custom Designed Rarities (Master Cam Exclusive)
+let customRarities = {};
+try {
+  const savedRarities = JSON.parse(localStorage.getItem("cardCollectorCustomRarities"));
+  if (savedRarities && typeof savedRarities === "object" && Object.keys(savedRarities).length > 0) {
+    customRarities = savedRarities;
+  } else {
+    customRarities = {
+      transcendent: {
+        id: "transcendent",
+        name: "Transcendent",
+        color: "#c084fc",
+        border: "#c084fc",
+        bg: "radial-gradient(ellipse at 50% 15%, #4c1d95 0%, #09090b 100%)",
+        glow: "rgba(192, 132, 252, 0.75)",
+        rank: 7
+      },
+      void: {
+        id: "void",
+        name: "Void",
+        color: "#fb7185",
+        border: "#f43f5e",
+        bg: "radial-gradient(ellipse at 50% 15%, #18181b 0%, #000000 100%)",
+        glow: "rgba(244, 63, 94, 0.75)",
+        rank: 8
+      }
+    };
+    localStorage.setItem("cardCollectorCustomRarities", JSON.stringify(customRarities));
+  }
+} catch(e) {}
+
+function applyCustomRarities(){
+  Object.keys(customRarities).forEach(k => {
+    const r = customRarities[k];
+    rarityRank[r.id] = r.rank || 7;
+  });
+
+  if (typeof document !== "undefined") {
+    let styleEl = document.getElementById("customRarityStyles");
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = "customRarityStyles";
+      if (document.head) document.head.appendChild(styleEl);
+    }
+
+    let cssStr = "";
+    Object.keys(customRarities).forEach(k => {
+      const r = customRarities[k];
+      cssStr += `
+        .face.${r.id} {
+          background: ${r.bg} !important;
+          border-color: ${r.border} !important;
+          box-shadow: 0 0 35px ${r.glow} !important;
+        }
+        .face.${r.id} .rarity {
+          color: ${r.color} !important;
+          border-color: ${r.color}88 !important;
+          background: rgba(0,0,0,0.5) !important;
+        }
+        .reveal-card-item .face.${r.id} {
+          border-color: ${r.border} !important;
+          box-shadow: 0 0 40px ${r.glow} !important;
+        }
+      `;
+    });
+    if (styleEl) styleEl.textContent = cssStr;
+  }
+}
+applyCustomRarities();
+
 // Unreleased / Classified Cards & Packs (Master Cam Exclusive)
 let unreleasedCards = [];
 try {
@@ -192,13 +262,11 @@ try {
 // Mark isUnreleased flag on cards
 unreleasedCards.forEach(c => c.isUnreleased = true);
 
-// Integrate unreleased cards into cards array
-unreleasedCards.forEach(c => {
-  if(!cards.some(existing => existing.name === c.name)){
-    cards.push(c);
-  }
-});
+// Helper to check if Cam enabled binder display
+function shouldShowUnreleasedInBinder(){
+  return isMasterAdmin() && (localStorage.getItem("cardCollectorShowUnreleasedInBinder") === "true");
+}
 
-// Integrate unreleased packs into packTiers
+// Keep unreleased packs accessible to pack engine
 Object.assign(packTiers, unreleasedPacks);
 

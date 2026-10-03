@@ -73,7 +73,11 @@ Cardstack/
   4. `🌪️ World Events`: Broadcast global coin multipliers (1x, 2x, 3x) and pack discounts (0%, 25%, 50%).
   5. `📢 Broadcast & Leaks`: Transmit announcements or patch notes to the top banner.
   6. `🛡 Sub-Admin Roles` *(Master Cam only)*: Appoint sub-admins with daily coin gifting caps and skin gifting allowances.
-  7. `🔒 Unreleased Vault` *(Master Cam only)*: Create and manage unreleased prototype cards and packs hidden completely from normal players. Unreleased cards appear only in Cam's collection binder, and unreleased packs are openable directly from Cam's creator shelf.
+  7. `🔒 Creator Vault` *(Master Cam only)*: Private studio located strictly inside the Admin Hub. Allows Cam to:
+     - **Design New Rarities**: Invent brand new rarity tiers with custom visual presets (Prismatic Hologram, Abyssal Void, Cosmic Nebula, Solar Radiance, Cyber Matrix) or custom color accents, glowing foil borders, and power rank values.
+     - **Design New Cards**: Build private unreleased cards with custom HP, dual attacks with DMG values, lore, custom emoji art, and assign them to any standard or newly designed custom rarity.
+     - **Design New Packs**: Build private booster packs with custom coin costs, card counts (1-12), icons, visual foil themes, guaranteed minimum rarities (including custom rarities), and test-open them right inside the Admin Hub with authentic unsealing animations.
+     - **Stealth Protection**: 100% invisible to regular players, guests, and sub-admins. Main page remains untouched; an optional toggle allows Cam to view unreleased cards in their binder if desired.
 
 ---
 
@@ -95,6 +99,8 @@ All application state is persisted client-side in the browser's `localStorage`:
 | `cardCollectorLeak` | `string` | Active broadcast text |
 | `cardCollectorUnreleasedCards` | `Array` | Unreleased prototype cards visible exclusively to Master Admin (`Cam`) |
 | `cardCollectorUnreleasedPacks` | `Object` | Unreleased prototype booster packs openable exclusively by Master Admin (`Cam`) |
+| `cardCollectorCustomRarities` | `Object` | Custom designed rarity tiers with background gradients, border colors, and glow effects |
+| `cardCollectorShowUnreleasedInBinder` | `string` | `"true"` or `"false"` (Cam's optional toggle to view private cards in their main binder) |
 
 ---
 

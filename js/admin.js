@@ -557,35 +557,200 @@ document.getElementById("adminWipeOtherAccountsBtn").onclick = ()=>{
 };
 
 /* Unreleased Content Controls (Master Cam Only) */
+
+function populateRarityDropdowns(){
+  const cardRaritySelect = document.getElementById("unreleasedCardRarity");
+  const packMinRaritySelect = document.getElementById("unreleasedPackMinRarity");
+  if(!cardRaritySelect || !packMinRaritySelect) return;
+
+  const standardRarities = [
+    { id: "common", name: "Common", rank: 1 },
+    { id: "rare", name: "Rare", rank: 2 },
+    { id: "epic", name: "Epic", rank: 3 },
+    { id: "legendary", name: "Legendary", rank: 4 },
+    { id: "mythic", name: "Mythic", rank: 5 },
+    { id: "divine", name: "Divine", rank: 6 }
+  ];
+
+  let customList = [];
+  if(typeof customRarities === "object"){
+    Object.keys(customRarities).forEach(k => {
+      customList.push({ id: k, name: customRarities[k].name + " (Custom)", rank: customRarities[k].rank || 7 });
+    });
+  }
+
+  const allRarities = [...standardRarities, ...customList];
+
+  // Populate Card Rarity select
+  const currentCardVal = cardRaritySelect.value || (customList.length ? customList[0].id : "mythic");
+  cardRaritySelect.innerHTML = "";
+  allRarities.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r.id;
+    opt.textContent = `${r.name} [Rank ${r.rank}]`;
+    cardRaritySelect.appendChild(opt);
+  });
+  if(allRarities.some(r => r.id === currentCardVal)){
+    cardRaritySelect.value = currentCardVal;
+  }
+
+  // Populate Pack Min Rarity select
+  const currentPackVal = packMinRaritySelect.value || "rare";
+  packMinRaritySelect.innerHTML = `<option value="">None (Pure Odds)</option>`;
+  allRarities.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r.id;
+    opt.textContent = `Guaranteed ${r.name}`;
+    packMinRaritySelect.appendChild(opt);
+  });
+  if(allRarities.some(r => r.id === currentPackVal)){
+    packMinRaritySelect.value = currentPackVal;
+  }
+}
+
+function renderCustomRaritiesList(){
+  const listEl = document.getElementById("customRaritiesList");
+  if(!listEl) return;
+  listEl.innerHTML = "";
+
+  const keys = Object.keys(customRarities || {});
+  if(keys.length === 0){
+    listEl.innerHTML = "<div style=\"color:#64748b;font-size:12px;padding:4px\">No custom rarities designed yet.</div>";
+    return;
+  }
+
+  keys.forEach(k => {
+    const r = customRarities[k];
+    const badge = document.createElement("div");
+    badge.style.cssText = `display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid ${r.border};color:${r.color};background:rgba(0,0,0,0.5);box-shadow:0 0 10px ${r.glow}`;
+    badge.innerHTML = `
+      <span>✦ ${r.name} (Rank ${r.rank || 7})</span>
+      <button type="button" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;padding:0 2px" onclick="deleteCustomRarity('${k}')" title="Delete Rarity">✕</button>
+    `;
+    listEl.appendChild(badge);
+  });
+}
+
+window.deleteCustomRarity = function(rarityId){
+  if(!customRarities[rarityId]) return;
+  if(!confirm(`Delete custom rarity "${customRarities[rarityId].name}"?`)) return;
+
+  delete customRarities[rarityId];
+  delete rarityRank[rarityId];
+  localStorage.setItem("cardCollectorCustomRarities", JSON.stringify(customRarities));
+
+  applyCustomRarities();
+  populateRarityDropdowns();
+  renderCustomRaritiesList();
+  render();
+};
+
+const createRarityBtn = document.getElementById("createCustomRarityBtn");
+if(createRarityBtn){
+  createRarityBtn.onclick = ()=>{
+    const name = document.getElementById("customRarityName").value.trim();
+    const preset = document.getElementById("customRarityPreset").value;
+    const accentColor = document.getElementById("customRarityColor").value;
+    const rank = parseInt(document.getElementById("customRarityRank").value, 10) || 7;
+
+    if(!name) return alert("Please specify a rarity name.");
+
+    const rarityId = name.toLowerCase().replace(/[^a-z0-9]/g, "_");
+
+    let color = accentColor;
+    let border = accentColor;
+    let bg = `radial-gradient(ellipse at 50% 15%, ${accentColor}44 0%, #030712 100%)`;
+    let glow = `${accentColor}aa`;
+
+    if(preset === "prismatic"){
+      color = "#38bdf8";
+      border = "#38bdf8";
+      bg = "radial-gradient(ellipse at 50% 15%, #0369a1 0%, #1e1b4b 50%, #020617 100%)";
+      glow = "rgba(56, 189, 248, 0.8)";
+    } else if(preset === "void"){
+      color = "#fb7185";
+      border = "#f43f5e";
+      bg = "radial-gradient(ellipse at 50% 15%, #4c0519 0%, #000000 100%)";
+      glow = "rgba(244, 63, 94, 0.8)";
+    } else if(preset === "nebula"){
+      color = "#f472b6";
+      border = "#c084fc";
+      bg = "radial-gradient(ellipse at 50% 15%, #581c87 0%, #09090b 100%)";
+      glow = "rgba(192, 132, 252, 0.8)";
+    } else if(preset === "solar"){
+      color = "#fef08a";
+      border = "#fbbf24";
+      bg = "radial-gradient(ellipse at 50% 15%, #b45309 0%, #1c1917 100%)";
+      glow = "rgba(251, 191, 36, 0.85)";
+    } else if(preset === "cyber"){
+      color = "#6ee7b7";
+      border = "#10b981";
+      bg = "radial-gradient(ellipse at 50% 15%, #064e3b 0%, #022c22 100%)";
+      glow = "rgba(16, 185, 129, 0.85)";
+    }
+
+    customRarities[rarityId] = {
+      id: rarityId,
+      name,
+      color,
+      border,
+      bg,
+      glow,
+      rank
+    };
+
+    localStorage.setItem("cardCollectorCustomRarities", JSON.stringify(customRarities));
+    applyCustomRarities();
+    populateRarityDropdowns();
+    renderCustomRaritiesList();
+
+    document.getElementById("customRarityName").value = "";
+    alert(`Created custom rarity "${name}" (Rank ${rank})!`);
+  };
+}
+
 function renderUnreleasedAdminUI(){
   const cardListEl = document.getElementById("unreleasedCardsList");
   const packListEl = document.getElementById("unreleasedPacksList");
+  const binderCheck = document.getElementById("toggleShowUnreleasedInBinderCheck");
+
+  if(binderCheck){
+    binderCheck.checked = (localStorage.getItem("cardCollectorShowUnreleasedInBinder") === "true");
+    binderCheck.onchange = ()=>{
+      localStorage.setItem("cardCollectorShowUnreleasedInBinder", binderCheck.checked ? "true" : "false");
+      render();
+    };
+  }
+
+  populateRarityDropdowns();
+  renderCustomRaritiesList();
+
   if(!cardListEl || !packListEl) return;
 
   // 1. Render Unreleased Cards List
   cardListEl.innerHTML = "";
   if(!Array.isArray(unreleasedCards) || unreleasedCards.length === 0){
-    cardListEl.innerHTML = "<div style="color:#64748b;font-size:12px;padding:8px">No unreleased cards created yet.</div>";
+    cardListEl.innerHTML = "<div style=\"color:#64748b;font-size:12px;padding:8px\">No private cards created yet.</div>";
   } else {
     unreleasedCards.forEach((c, idx) => {
-      const cardIdxInMain = cards.findIndex(x => x.name === c.name);
-      const isOwnedByCam = (currentUser && accounts[currentUser] && accounts[currentUser].owned && accounts[currentUser].owned.includes(cardIdxInMain));
+      const cardId = c.id || c.name;
+      const isOwnedByCam = !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
       
       const item = document.createElement("div");
-      item.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px";
+      item.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);padding:10px 12px;border-radius:12px";
       item.innerHTML = `
         <div style="display:flex;align-items:center;gap:10px">
-          <img src="${c.image}" style="width:34px;height:46px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.15)">
+          <img src="${c.image}" style="width:36px;height:48px;border-radius:6px;object-fit:cover;border:1px solid rgba(255,255,255,0.15)">
           <div>
-            <div style="font-size:13px;font-weight:700;color:#f1f5f9">${c.name} <span style="font-size:10px;text-transform:uppercase;color:#f43f5e;font-weight:800">${c.rarity}</span></div>
+            <div style="font-size:13px;font-weight:700;color:#f1f5f9">${c.name} <span style="font-size:10px;text-transform:uppercase;color:#f43f5e;font-weight:800;background:rgba(244,63,94,0.15);padding:1px 5px;border-radius:4px">${c.rarity}</span></div>
             <div style="font-size:11px;color:#94a3b8">${c.hp} HP • ${c.attacks ? c.attacks.map(a => a.name + " (" + a.dmg + ")").join(", ") : ""}</div>
           </div>
         </div>
         <div style="display:flex;gap:6px">
-          <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:${isOwnedByCam ? "rgba(16,185,129,0.2)" : "rgba(56,189,248,0.2)"};border-color:${isOwnedByCam ? "#10b981" : "#38bdf8"};color:${isOwnedByCam ? "#6ee7b7" : "#38bdf8"}" onclick="toggleUnreleasedCardOwnership(${cardIdxInMain})">
-            ${isOwnedByCam ? "✓ In Binder" : "+ Add to Cam"}
+          <button type="button" class="accountBtn" style="padding:5px 9px;font-size:11px;background:${isOwnedByCam ? "rgba(16,185,129,0.2)" : "rgba(56,189,248,0.2)"};border-color:${isOwnedByCam ? "#10b981" : "#38bdf8"};color:${isOwnedByCam ? "#6ee7b7" : "#38bdf8"}" onclick="toggleUnreleasedCardOwnership('${cardId}')">
+            ${isOwnedByCam ? "✓ In Vault" : "+ Add to Vault"}
           </button>
-          <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5" onclick="deleteUnreleasedCard(${idx})">
+          <button type="button" class="accountBtn" style="padding:5px 8px;font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5" onclick="deleteUnreleasedCard(${idx})">
             ✕
           </button>
         </div>
@@ -598,25 +763,28 @@ function renderUnreleasedAdminUI(){
   packListEl.innerHTML = "";
   const packKeys = Object.keys(unreleasedPacks || {});
   if(packKeys.length === 0){
-    packListEl.innerHTML = "<div style="color:#64748b;font-size:12px;padding:8px">No unreleased packs created yet.</div>";
+    packListEl.innerHTML = "<div style=\"color:#64748b;font-size:12px;padding:8px;grid-column:1/-1\">No private packs created yet.</div>";
   } else {
     packKeys.forEach(k => {
       const p = unreleasedPacks[k];
+      const actualCost = getActualPackCost(p.baseCost);
       const item = document.createElement("div");
-      item.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px";
+      item.style.cssText = `background:rgba(0,0,0,0.4);border:1.5px solid ${p.border || "#f43f5e"};padding:12px 14px;border-radius:14px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,0.4)`;
       item.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-size:24px">${p.icon || "🔒"}</div>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:#fb7185">${p.name}</div>
-            <div style="font-size:11px;color:#94a3b8">${p.baseCost} 🪙 • ${p.count} Cards • ${p.dropMode || "unreleased"}</div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:22px">${p.icon || "🔒"}</span>
+            <span style="font-size:11px;font-weight:800;color:#fda4af;background:rgba(244,63,94,0.2);padding:2px 8px;border-radius:12px">${p.count} Cards</span>
           </div>
+          <div style="font-size:14px;font-weight:800;color:#fb7185;margin-top:6px">${p.name}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px">${p.desc || ""}</div>
+          <div style="font-size:11px;color:#cbd5e1;margin-top:6px"><b>Drop Mode:</b> ${p.dropMode || "unreleased"}</div>
         </div>
-        <div style="display:flex;gap:6px">
-          <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:rgba(244,63,94,0.2);border-color:#f43f5e;color:#fda4af" onclick="document.getElementById('adminModal').classList.remove('show'); startPackOpening('${k}');">
-            ✨ Test Open
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <button type="button" class="accountBtn" style="flex:1;padding:7px;font-size:12px;background:linear-gradient(135deg,#f43f5e,#be123c);border:none;color:#fff;font-weight:800" onclick="document.getElementById('adminModal').classList.remove('show'); startPackOpening('${k}');">
+            ✨ Open • ${actualCost} 🪙
           </button>
-          <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5" onclick="deleteUnreleasedPack('${k}')">
+          <button type="button" class="accountBtn" style="padding:7px 10px;font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5" onclick="deleteUnreleasedPack('${k}')">
             ✕
           </button>
         </div>
@@ -626,19 +794,15 @@ function renderUnreleasedAdminUI(){
   }
 }
 
-window.toggleUnreleasedCardOwnership = function(cardIdx){
-  if(cardIdx < 0 || cardIdx >= cards.length) return;
+window.toggleUnreleasedCardOwnership = function(cardId){
   if(!currentUser || !accounts[currentUser]) return;
-
-  if(!accounts[currentUser].owned) accounts[currentUser].owned = [];
-  const cardOwned = accounts[currentUser].owned;
-  const existingPos = cardOwned.indexOf(cardIdx);
-  if(existingPos > -1){
-    cardOwned.splice(existingPos, 1);
-    if(currentUser === "Cam") owned = cardOwned;
+  if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
+  const ownedList = accounts[currentUser].unreleasedOwned;
+  const pos = ownedList.indexOf(cardId);
+  if(pos > -1){
+    ownedList.splice(pos, 1);
   } else {
-    cardOwned.push(cardIdx);
-    if(currentUser === "Cam") owned = cardOwned;
+    ownedList.push(cardId);
   }
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   render();
@@ -648,25 +812,19 @@ window.toggleUnreleasedCardOwnership = function(cardIdx){
 window.deleteUnreleasedCard = function(idx){
   if(idx < 0 || idx >= unreleasedCards.length) return;
   const cardToDelete = unreleasedCards[idx];
-  if(!confirm(`Delete unreleased card "${cardToDelete.name}"?`)) return;
+  if(!confirm(`Delete private card "${cardToDelete.name}"?`)) return;
 
-  const mainIdx = cards.findIndex(c => c.name === cardToDelete.name && c.isUnreleased);
-  if(mainIdx > -1){
-    cards.splice(mainIdx, 1);
-  }
+  const cardId = cardToDelete.id || cardToDelete.name;
   unreleasedCards.splice(idx, 1);
   localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards));
 
-  // Re-index accounts owned arrays
   Object.keys(accounts).forEach(u => {
-    if(accounts[u] && accounts[u].owned){
-      accounts[u].owned = accounts[u].owned.filter(o => o !== mainIdx).map(o => o > mainIdx ? o - 1 : o);
+    if(accounts[u] && accounts[u].unreleasedOwned){
+      accounts[u].unreleasedOwned = accounts[u].unreleasedOwned.filter(id => id !== cardId);
     }
   });
-  if(currentUser && accounts[currentUser]) owned = accounts[currentUser].owned;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
 
-  initCardSelect();
   render();
   renderUnreleasedAdminUI();
 };
@@ -679,7 +837,6 @@ window.deleteUnreleasedPack = function(packKey){
   delete packTiers[packKey];
   localStorage.setItem("cardCollectorUnreleasedPacks", JSON.stringify(unreleasedPacks));
 
-  if(typeof renderUnreleasedPacksShelf === "function") renderUnreleasedPacksShelf();
   renderUnreleasedAdminUI();
 };
 
@@ -722,16 +879,14 @@ if(createCardBtn){
     };
 
     unreleasedCards.push(newCard);
-    cards.push(newCard);
     localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards));
 
-    initCardSelect();
     render();
     renderUnreleasedAdminUI();
 
     document.getElementById("unreleasedCardName").value = "";
     document.getElementById("unreleasedCardDesc").value = "";
-    alert(`Created unreleased card "${name}"!`);
+    alert(`Created unreleased card "${name}" with rarity "${rarity}"!`);
   };
 }
 
@@ -743,6 +898,7 @@ if(createPackBtn){
     const count = parseInt(document.getElementById("unreleasedPackCardCount").value, 10) || 5;
     const icon = document.getElementById("unreleasedPackIcon").value.trim() || "🔒";
     const visual = document.getElementById("unreleasedPackVisual").value;
+    const minRarity = document.getElementById("unreleasedPackMinRarity").value || null;
     const dropMode = document.getElementById("unreleasedPackDropMode").value;
     const desc = document.getElementById("unreleasedPackDesc").value.trim() || "Experimental booster pack.";
 
@@ -753,6 +909,7 @@ if(createPackBtn){
     if(visual === "violet"){ bg = "radial-gradient(circle, #581c87, #0f172a)"; border = "#a855f7"; }
     else if(visual === "gold"){ bg = "radial-gradient(circle, #78350f, #1c0901)"; border = "#f59e0b"; }
     else if(visual === "cyber"){ bg = "radial-gradient(circle, #065f46, #022c22)"; border = "#10b981"; }
+    else if(visual === "prismatic"){ bg = "radial-gradient(circle, #0284c7, #1e1b4b)"; border = "#38bdf8"; }
 
     const packId = "unreleased_pack_" + Date.now();
     const newPack = {
@@ -764,7 +921,7 @@ if(createPackBtn){
       bg,
       border,
       weights: { common: 0, rare: 10, epic: 25, legendary: 35, mythic: 20, divine: 10 },
-      minRarity: "rare",
+      minRarity,
       dropMode,
       isUnreleased: true,
       desc
@@ -774,11 +931,9 @@ if(createPackBtn){
     packTiers[packId] = newPack;
     localStorage.setItem("cardCollectorUnreleasedPacks", JSON.stringify(unreleasedPacks));
 
-    if(typeof renderUnreleasedPacksShelf === "function") renderUnreleasedPacksShelf();
     renderUnreleasedAdminUI();
 
     document.getElementById("unreleasedPackName").value = "";
-    alert(`Created unreleased pack "${name}"!`);
+    alert(`Created booster pack "${name}"!`);
   };
 }
-
