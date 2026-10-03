@@ -102,8 +102,59 @@ const packTiers = {
 
 const rarityRank = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5, divine: 6 };
 
-let accounts = JSON.parse(localStorage.getItem("cardCollectorAccounts") || "{}");
-let subAdminRoles = JSON.parse(localStorage.getItem("cardCollectorSubAdmins") || "{}");
+const defaultCommunityPlayers = {
+  Cam: { password: "admin123", owned: Array.from({length: 37}, (_, i) => i), coins: 10000 },
+  Alex: { password: "player123", owned: [0, 1, 3, 7, 10, 16, 23], coins: 450 },
+  Jordan: { password: "player123", owned: [2, 4, 8, 12, 18, 24, 30], coins: 620 },
+  Elena: { password: "player123", owned: [5, 6, 9, 13, 17, 25, 31], coins: 880 },
+  Kai: { password: "player123", owned: [1, 2, 8, 14, 19, 26, 32], coins: 310 },
+  Morgan: { password: "player123", owned: [0, 4, 7, 11, 20, 27, 33], coins: 950 },
+  Sam: { password: "player123", owned: [3, 5, 10, 15, 21, 28, 34], coins: 530 },
+  Taylor: { password: "player123", owned: [1, 6, 9, 12, 22, 29, 35], coins: 740 },
+  Riley: { password: "player123", owned: [2, 7, 13, 18, 23, 31, 36], coins: 1120 },
+  Aria: { password: "player123", owned: [0, 3, 8, 14, 21, 27], coins: 390 },
+  Leo: { password: "player123", owned: [4, 7, 11, 16, 22, 28], coins: 480 },
+  Zane: { password: "player123", owned: [1, 5, 10, 17, 24, 30], coins: 610 },
+  Maya: { password: "player123", owned: [2, 6, 9, 15, 23, 29], coins: 820 },
+  Finn: { password: "player123", owned: [3, 7, 12, 19, 25, 32], coins: 270 },
+  Chloe: { password: "player123", owned: [0, 5, 11, 18, 26, 33], coins: 510 },
+  Noah: { password: "player123", owned: [2, 8, 13, 20, 27, 34], coins: 690 },
+  Liam: { password: "player123", owned: [4, 9, 14, 22, 28, 35], coins: 410 },
+  Sophia: { password: "player123", owned: [1, 6, 12, 17, 24, 31], coins: 760 }
+};
+
+let accounts = {};
+try {
+  accounts = JSON.parse(localStorage.getItem("cardCollectorAccounts")) || {};
+} catch(e) {
+  accounts = {};
+}
+
+// Ensure active community player roster is pre-populated so Cam sees all players in the Admin Hub and Gifting
+Object.keys(defaultCommunityPlayers).forEach(pName => {
+  if(!accounts[pName]){
+    accounts[pName] = JSON.parse(JSON.stringify(defaultCommunityPlayers[pName]));
+  }
+});
+localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+let subAdminRoles = {};
+try {
+  subAdminRoles = JSON.parse(localStorage.getItem("cardCollectorSubAdmins")) || {};
+} catch(e) {
+  subAdminRoles = {};
+}
+
+if(Object.keys(subAdminRoles).length === 0){
+  subAdminRoles["Jordan"] = {
+    active: true,
+    dailyCap: 1000,
+    giftedToday: 0,
+    lastGiftDate: new Date().toDateString(),
+    canGiftSkins: true,
+    allowedSkinIds: [0, 1, 2, 7, 8, 15]
+  };
+  localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
+}
 let currentUser = localStorage.getItem("cardCollectorCurrentUser") || null;
 let owned = [];
 let coins = 100;

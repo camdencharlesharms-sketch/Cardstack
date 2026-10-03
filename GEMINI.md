@@ -87,7 +87,7 @@ All application state is persisted client-side in the browser's `localStorage`:
 
 | Key | Type | Description |
 | :--- | :--- | :--- |
-| `cardCollectorAccounts` | `Object` | Keyed by username: `{ password, owned: number[], coins: number }` |
+| `cardCollectorAccounts` | `Object` | Keyed by username: `{ password, owned: number[], coins: number }`. Pre-populated with active community players (Alex, Jordan, Elena, Kai, Morgan, Sam, Taylor, Riley, Aria, Leo, Zane, Maya, Finn, Chloe, Noah, Liam, Sophia) for admin player management & gifting |
 | `cardCollectorCurrentUser` | `string` | Currently active session username |
 | `cardCollectorCustomCards` | `Array` | Custom cards created via Card Studio |
 | `cardCollectorSubAdmins` | `Object` | Sub-admin configurations: `{ active, dailyCap, canGiftSkins, allowedSkinIds, giftedToday, lastGiftDate }` |
