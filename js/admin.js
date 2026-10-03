@@ -201,6 +201,31 @@ function refreshAdminPlayerData(){
     tableBody.appendChild(tr);
   });
 
+  const availListEl = document.getElementById("subAdminAvailablePlayersList");
+  if(availListEl){
+    availListEl.innerHTML = "";
+    const candidatePlayers = Object.keys(accounts).filter(n => n.toLowerCase() !== ADMIN_USERNAME.toLowerCase());
+    if(candidatePlayers.length === 0){
+      availListEl.innerHTML = '<span style="color:#64748b;font-size:12px;padding:4px">No other player accounts recorded yet. Type any player username above to grant them sub-admin privileges directly.</span>';
+    } else {
+      candidatePlayers.forEach(name => {
+        const isOnline = isAccountOnline(name);
+        const isAlreadySub = subAdminRoles[name] && subAdminRoles[name].active;
+        const div = document.createElement("div");
+        div.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);padding:6px 10px;border-radius:6px;font-size:12px";
+        div.innerHTML = `
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:700;color:#f8fafc">${name}</span>
+            <span style="font-size:10px;color:${isOnline ? "#4ade80" : "#64748b"}">${isOnline ? "🟢 Online" : "⚪ Offline"}</span>
+            ${isAlreadySub ? '<span style="font-size:10px;color:#38bdf8;background:rgba(56,189,248,0.15);padding:1px 6px;border-radius:4px;font-weight:700">Sub-Admin</span>' : ""}
+          </div>
+          <button type="button" class="accountBtn" style="padding:3px 10px;font-size:11px;background:#0284c7;color:#fff" onclick="selectSubAdminCandidate('${name}')">Select</button>
+        `;
+        availListEl.appendChild(div);
+      });
+    }
+  }
+
   renderSubAdminRolesList();
 }
 
@@ -362,11 +387,24 @@ document.getElementById("toggleGodModeBtn").onclick = ()=>{
   document.getElementById("godModeStrikeBtn").style.display = (hasAdminAccess() && isGodModeEnabled) ? "block" : "none";
 };
 
+window.selectSubAdminCandidate = function(name){
+  const sel = document.getElementById("subAdminTargetSelect");
+  const input = document.getElementById("subAdminCustomPlayerInput");
+  if(sel) sel.value = name;
+  if(input) input.value = name;
+};
+
 document.getElementById("saveSubAdminRoleBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only Cam can configure admin privileges.");
 
-  const target = document.getElementById("subAdminTargetSelect").value;
-  if(!target) return alert("Select a player to assign privileges to.");
+  const customTarget = (document.getElementById("subAdminCustomPlayerInput") ? document.getElementById("subAdminCustomPlayerInput").value.trim() : "");
+  const target = customTarget || document.getElementById("subAdminTargetSelect").value;
+  if(!target) return alert("Select or type a player name to assign privileges to.");
+
+  if(!accounts[target]){
+    accounts[target] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  }
 
   const dailyCap = parseInt(document.getElementById("subAdminDailyCapInput").value, 10) || 0;
   const canGiftSkins = document.getElementById("subAdminAllowSkinsCheck").checked;

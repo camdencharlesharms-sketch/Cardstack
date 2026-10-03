@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <!-- Free WebRTC P2P library to connect two devices via room codes -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<link rel="stylesheet" href="css/styles.css?v=2.2">
+<link rel="stylesheet" href="css/styles.css?v=2.3">
 </head>
 <body>
 
@@ -364,7 +364,13 @@
         <div class="adminCard">
           <h4>🛡️ Appoint Sub-Admin & Configure Privileges</h4>
           <label style="font-size:12px;color:#94a3b8">Target Player:</label>
-          <select id="subAdminTargetSelect" class="adminSelect"></select>
+          <div style="display:flex;gap:8px">
+            <select id="subAdminTargetSelect" class="adminSelect" style="flex:1"></select>
+            <input id="subAdminCustomPlayerInput" class="adminInput" placeholder="Or type player username..." style="flex:1;margin:0">
+          </div>
+
+          <label style="font-size:11px;color:#94a3b8;margin-top:6px;display:block">Eligible Players in Game (Click to Select):</label>
+          <div id="subAdminAvailablePlayersList" style="display:flex;flex-direction:column;gap:6px;max-height:130px;overflow-y:auto;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px;margin-bottom:8px"></div>
 
           <label style="font-size:12px;color:#94a3b8">Daily Gift Coin Cap (0 = cannot gift coins):</label>
           <input type="number" id="subAdminDailyCapInput" class="adminInput" value="500" min="0">
@@ -649,9 +655,9 @@
 </main>
 
 
-<script src="js/cards-data.js?v=2.2"></script>
-<script src="js/admin.js?v=2.2"></script>
-<script src="js/arena.js?v=2.2"></script>
-<script src="js/app.js?v=2.2"></script>
+<script src="js/cards-data.js?v=2.3"></script>
+<script src="js/admin.js?v=2.3"></script>
+<script src="js/arena.js?v=2.3"></script>
+<script src="js/app.js?v=2.3"></script>
 </body>
 </html>
