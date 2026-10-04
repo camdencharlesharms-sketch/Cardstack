@@ -1610,7 +1610,9 @@ populateRarityDropdowns();
 
 window.quickGiftVaultCard = function(cardId){
   if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift unreleased vault cards.");
-  const vCard = unreleasedCards.find(c => (c.id || c.name) === cardId);
+  const vCard = (typeof findVaultCardByIdOrName === "function")
+    ? findVaultCardByIdOrName(cardId)
+    : unreleasedCards.find(c => (c.id || c.name) === cardId);
   if(!vCard) return alert("Vault card not found.");
 
   // Always reload accounts to have latest players
@@ -1633,16 +1635,22 @@ window.quickGiftVaultCard = function(cardId){
   const rawTarget = recipient.trim();
   if(!rawTarget) return;
 
-  // Case-insensitive matching
-  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === rawTarget.toLowerCase());
-  const target = matchKey || rawTarget;
+  const targetAcc = (typeof getUserAccount === "function") ? getUserAccount(rawTarget) : accounts[rawTarget];
+  const target = targetAcc ? (Object.keys(accounts).find(k => accounts[k] === targetAcc) || rawTarget) : rawTarget;
 
   if(!accounts[target]){
-    accounts[target] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+    accounts[target] = { password: "", owned: [], coins: 100, unreleasedOwned: [], hasPlayed: true, lastActive: Date.now() };
   }
-  if(!accounts[target].unreleasedOwned) accounts[target].unreleasedOwned = [];
-  if(!accounts[target].unreleasedOwned.includes(cardId)){
-    accounts[target].unreleasedOwned.push(cardId);
+  const acc = accounts[target];
+  if(!acc.unreleasedOwned) acc.unreleasedOwned = [];
+
+  const isAlreadyOwned = (typeof isVaultCardOwnedByUser === "function")
+    ? isVaultCardOwnedByUser(vCard, acc.unreleasedOwned)
+    : acc.unreleasedOwned.includes(cardId);
+
+  if(!isAlreadyOwned){
+    if(vCard.id && !acc.unreleasedOwned.includes(vCard.id)) acc.unreleasedOwned.push(vCard.id);
+    if(vCard.name && !acc.unreleasedOwned.includes(vCard.name)) acc.unreleasedOwned.push(vCard.name);
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
 
     if(typeof broadcastAdminActionToTarget === "function"){

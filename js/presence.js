@@ -257,12 +257,18 @@ window.addEventListener("storage", (e)=>{
   if(e.key === "cardCollectorAccounts" && e.newValue){
     try {
       accounts = JSON.parse(e.newValue) || {};
-      if(currentUser && accounts[currentUser]){
-        if(Array.isArray(accounts[currentUser].owned)){
-          owned = accounts[currentUser].owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+      try {
+        const freshUnrel = JSON.parse(localStorage.getItem("cardCollectorUnreleasedCards"));
+        if(Array.isArray(freshUnrel)) unreleasedCards = freshUnrel;
+      } catch(err){}
+      
+      const userAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (currentUser ? accounts[currentUser] : null);
+      if(userAcc){
+        if(Array.isArray(userAcc.owned)){
+          owned = userAcc.owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
         }
-        if(Number.isFinite(accounts[currentUser].coins)){
-          coins = accounts[currentUser].coins;
+        if(Number.isFinite(userAcc.coins)){
+          coins = userAcc.coins;
         }
         if(typeof render === "function") render();
       }
@@ -422,10 +428,11 @@ function handleIncomingAdminDispatch(actionData){
       if(!owned.some(x => parseInt(x, 10) === resolvedIndex)){
         owned.push(resolvedIndex);
       }
-      if(currentUser && accounts[currentUser]){
-        if(!accounts[currentUser].owned) accounts[currentUser].owned = [];
-        if(!accounts[currentUser].owned.some(x => parseInt(x, 10) === resolvedIndex)){
-          accounts[currentUser].owned.push(resolvedIndex);
+      const userAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (currentUser ? accounts[currentUser] : null);
+      if(userAcc){
+        if(!userAcc.owned) userAcc.owned = [];
+        if(!userAcc.owned.some(x => parseInt(x, 10) === resolvedIndex)){
+          userAcc.owned.push(resolvedIndex);
         }
       }
       save();
@@ -436,38 +443,46 @@ function handleIncomingAdminDispatch(actionData){
   } else if(actionData.type === "revoke_card"){
     const cIdx = actionData.cardIndex;
     owned = owned.filter(x => parseInt(x, 10) !== cIdx);
-    if(accounts[currentUser]) accounts[currentUser].owned = owned;
+    const userAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (currentUser ? accounts[currentUser] : null);
+    if(userAcc) userAcc.owned = owned;
     save();
     render();
     showLiveToast(`Card recalled by Master Admin.`, false);
   } else if(actionData.type === "unlock_all"){
     owned = cards.map((_, i) => i);
-    if(accounts[currentUser]) accounts[currentUser].owned = owned;
+    const userAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (currentUser ? accounts[currentUser] : null);
+    if(userAcc) userAcc.owned = owned;
     save();
     render();
     showLiveToast(`🎉 Master Admin Cam unlocked all cards in the game for you!`, true);
   } else if(actionData.type === "wipe_cards"){
     owned = [];
-    if(accounts[currentUser]) accounts[currentUser].owned = [];
+    const userAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (currentUser ? accounts[currentUser] : null);
+    if(userAcc) userAcc.owned = [];
     save();
     render();
     showLiveToast(`Card collection cleared by Master Admin.`, false);
   } else if(actionData.type === "gift_vault_card"){
     const vCard = actionData.card;
     if(vCard){
-      const cardId = vCard.id || vCard.name;
       if(typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
-        if(!unreleasedCards.some(c => (c.id || c.name) === cardId)){
+        const existingIdx = unreleasedCards.findIndex(c => {
+          if(!c) return false;
+          return (vCard.id && c.id && c.id === vCard.id) ||
+                 (vCard.name && c.name && c.name.toLowerCase() === vCard.name.toLowerCase());
+        });
+        if(existingIdx === -1){
           unreleasedCards.push(vCard);
-          try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+        } else {
+          unreleasedCards[existingIdx] = vCard;
         }
+        try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
       }
-      if(currentUser){
-        if(!accounts[currentUser]) accounts[currentUser] = { owned: [], coins: 100, unreleasedOwned: [] };
-        if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
-        if(!accounts[currentUser].unreleasedOwned.includes(cardId)){
-          accounts[currentUser].unreleasedOwned.push(cardId);
-        }
+      const userAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (currentUser ? accounts[currentUser] : null);
+      if(userAcc){
+        if(!userAcc.unreleasedOwned) userAcc.unreleasedOwned = [];
+        if(vCard.id && !userAcc.unreleasedOwned.includes(vCard.id)) userAcc.unreleasedOwned.push(vCard.id);
+        if(vCard.name && !userAcc.unreleasedOwned.includes(vCard.name)) userAcc.unreleasedOwned.push(vCard.name);
       }
       save();
       render();
@@ -571,3 +586,41 @@ function broadcastStudioCardCreated(card){
     });
   }
 }
+
+
+// Hook called whenever account logs in or switches
+window.onUserAccountSwitched = function(username){
+  if(!username) return;
+  const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
+
+  if(isCam){
+    if(!presencePeer || presencePeer.destroyed || presencePeer.id !== CAM_PRESENCE_PEER_ID){
+      if(presencePeer && !presencePeer.destroyed){
+        try { presencePeer.destroy(); } catch(e){}
+        presencePeer = null;
+      }
+      setupCamHostPresence();
+    }
+  } else {
+    if(presencePeer && presencePeer.id === CAM_PRESENCE_PEER_ID){
+      try { presencePeer.destroy(); } catch(e){}
+      presencePeer = null;
+    }
+    setupClientPresence();
+    setTimeout(() => {
+      announcePresenceToCam(false);
+    }, 400);
+  }
+
+  // Also broadcast on BroadcastChannel
+  if(presenceBroadcast && username.toLowerCase() !== ADMIN_USERNAME.toLowerCase()){
+    try {
+      presenceBroadcast.postMessage({
+        type: "presence_heartbeat",
+        user: username,
+        owned: owned,
+        coins: coins
+      });
+    } catch(e){}
+  }
+};

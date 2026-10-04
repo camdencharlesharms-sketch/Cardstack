@@ -1,7 +1,55 @@
+// Helper: case-insensitive account lookup
+window.getUserAccount = function(username){
+  if(!username || typeof accounts !== "object" || !accounts) return null;
+  if(accounts[username]) return accounts[username];
+  const lower = username.toLowerCase();
+  const matchK = Object.keys(accounts).find(k => k.toLowerCase() === lower);
+  return matchK ? accounts[matchK] : null;
+};
+
+// Helper: match unreleased vault card by ID or Name
+window.findVaultCardByIdOrName = function(id){
+  if(!id || typeof unreleasedCards === "undefined" || !Array.isArray(unreleasedCards)) return null;
+  const idStr = String(id).toLowerCase().trim();
+  return unreleasedCards.find(c => {
+    if(!c) return false;
+    const cId = c.id ? String(c.id).toLowerCase().trim() : "";
+    const cName = c.name ? String(c.name).toLowerCase().trim() : "";
+    return cId === idStr || cName === idStr;
+  }) || null;
+};
+
+// Helper: check if a vault card is owned by user
+window.isVaultCardOwnedByUser = function(vCard, unreleasedOwnedList){
+  if(!vCard || !Array.isArray(unreleasedOwnedList)) return false;
+  const vId = vCard.id ? String(vCard.id).toLowerCase().trim() : "";
+  const vName = vCard.name ? String(vCard.name).toLowerCase().trim() : "";
+  return unreleasedOwnedList.some(item => {
+    if(!item) return false;
+    const itemStr = String(item).toLowerCase().trim();
+    return (vId && itemStr === vId) || (vName && itemStr === vName);
+  });
+};
+
 function save(){
-  if(currentUser && accounts[currentUser]){
-    accounts[currentUser].owned = owned;
-    accounts[currentUser].coins = coins;
+  let targetAcc = getUserAccount(currentUser);
+  if(targetAcc){
+    targetAcc.owned = owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+    targetAcc.coins = coins;
+    if(Array.isArray(targetAcc.unreleasedOwned)){
+      targetAcc.unreleasedOwned = Array.from(new Set(targetAcc.unreleasedOwned));
+    }
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    localStorage.setItem("cardCollectorCurrentUser", currentUser);
+  } else if(currentUser && accounts) {
+    accounts[currentUser] = {
+      password: "",
+      owned: owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n)),
+      coins: coins,
+      unreleasedOwned: [],
+      hasPlayed: true,
+      lastActive: Date.now()
+    };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     localStorage.setItem("cardCollectorCurrentUser", currentUser);
   } else {
@@ -14,11 +62,40 @@ function save(){
 
 function loadAccount(username){
   currentUser = username;
-  owned = (Array.isArray(accounts[username].owned) ? accounts[username].owned : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
-  coins = Number.isFinite(accounts[username].coins) ? accounts[username].coins : 100;
+
+  // Always re-read newest accounts, unreleased cards & studio cards from storage
+  try {
+    const stored = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
+    if(stored && typeof stored === "object") accounts = stored;
+  } catch(e){}
+  try {
+    const storedUnreleased = JSON.parse(localStorage.getItem("cardCollectorUnreleasedCards"));
+    if(Array.isArray(storedUnreleased)) unreleasedCards = storedUnreleased;
+  } catch(e){}
+  try {
+    const storedCustoms = JSON.parse(localStorage.getItem("cardCollectorCustomCards"));
+    if(Array.isArray(storedCustoms) && typeof defaultCards !== "undefined"){
+      cards = [...defaultCards, ...storedCustoms].filter(c => !c.isUnreleased);
+    }
+  } catch(e){}
+
+  const userAcc = getUserAccount(username) || accounts[username];
+  if(userAcc){
+    owned = (Array.isArray(userAcc.owned) ? userAcc.owned : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+    coins = Number.isFinite(userAcc.coins) ? userAcc.coins : 100;
+  } else {
+    owned = [];
+    coins = 100;
+  }
+
   save();
   updateAccountUI();
   render();
+
+  // Re-announce presence and synchronize P2P role
+  if(typeof window.onUserAccountSwitched === "function"){
+    window.onUserAccountSwitched(username);
+  }
 }
 
 function updateAccountUI(){
@@ -239,14 +316,25 @@ function render(){
   const showUnreleasedInBinder = isCam && ((typeof shouldShowUnreleasedInBinder === "function") && shouldShowUnreleasedInBinder());
 
   // Collect gifted vault cards for the current user
-  const curUserVaultOwned = (currentUser && accounts[currentUser] && Array.isArray(accounts[currentUser].unreleasedOwned))
-    ? accounts[currentUser].unreleasedOwned
+  const userAcc = getUserAccount(currentUser);
+  const curUserVaultOwned = (userAcc && Array.isArray(userAcc.unreleasedOwned))
+    ? userAcc.unreleasedOwned
     : (isCam && accounts["Cam"] && Array.isArray(accounts["Cam"].unreleasedOwned) ? accounts["Cam"].unreleasedOwned : []);
+
+  // Ensure owned standard cards match user account
+  if(userAcc && Array.isArray(userAcc.owned)){
+    userAcc.owned.forEach(idx => {
+      const num = parseInt(idx, 10);
+      if(!isNaN(num) && !owned.some(x => parseInt(x, 10) === num)){
+        owned.push(num);
+      }
+    });
+  }
 
   const userGiftedVaultCards = [];
   if(Array.isArray(unreleasedCards)){
     curUserVaultOwned.forEach(id => {
-      const vCard = unreleasedCards.find(c => (c.id || c.name) === id);
+      const vCard = findVaultCardByIdOrName(id);
       if(vCard && !userGiftedVaultCards.includes(vCard)){
         userGiftedVaultCards.push(vCard);
       }
@@ -264,15 +352,14 @@ function render(){
     const isUnrel = !!c.isUnreleased;
     let has = false;
     if(isUnrel){
-      const cardId = c.id || c.name;
-      has = curUserVaultOwned.includes(cardId);
+      has = isVaultCardOwnedByUser(c, curUserVaultOwned);
       // Strictly isolate unreleased vault cards: only Cam or players gifted this card can ever see it
       if(!has && !isCam){
         return false;
       }
     } else {
       const cardIdx = cards.indexOf(c);
-      has = owned.includes(cardIdx);
+      has = owned.some(x => parseInt(x, 10) === cardIdx);
     }
     return filter === "all" || (filter === "collected" && has) || (filter === "missing" && !has);
   });
@@ -299,12 +386,11 @@ function render(){
     const isUnrel = !!c.isUnreleased;
     let has = false;
     if(isUnrel){
-      const cardId = c.id || c.name;
-      has = curUserVaultOwned.includes(cardId);
+      has = isVaultCardOwnedByUser(c, curUserVaultOwned);
       if(!has && !isCam) return;
     } else {
       const i = cards.indexOf(c);
-      has = owned.includes(i);
+      has = owned.some(x => parseInt(x, 10) === i);
     }
     const el = document.createElement("div");
     el.className = "card" + (has ? "" : " locked");

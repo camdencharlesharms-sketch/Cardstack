@@ -24,13 +24,16 @@ function renderArenaCardPicker(){
   });
 
   // Allow Master Cam and players who were gifted exclusive vault cards to wield them in battle
-  const curUserVaultOwned = (currentUser && accounts[currentUser] && Array.isArray(accounts[currentUser].unreleasedOwned))
-    ? accounts[currentUser].unreleasedOwned
+  const userAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (currentUser ? accounts[currentUser] : null);
+  const curUserVaultOwned = (userAcc && Array.isArray(userAcc.unreleasedOwned))
+    ? userAcc.unreleasedOwned
     : (isCam && accounts["Cam"] && Array.isArray(accounts["Cam"].unreleasedOwned) ? accounts["Cam"].unreleasedOwned : []);
 
   if(Array.isArray(curUserVaultOwned) && Array.isArray(unreleasedCards)){
     curUserVaultOwned.forEach(id => {
-      const vCard = unreleasedCards.find(uc => (uc.id || uc.name) === id);
+      const vCard = (typeof findVaultCardByIdOrName === "function")
+        ? findVaultCardByIdOrName(id)
+        : unreleasedCards.find(uc => (uc.id && uc.id === id) || (uc.name && uc.name === id) || (uc.id || uc.name) === id);
       if(vCard && !availableCards.some(ac => ac.card === vCard)){
         availableCards.push({ card: vCard, index: "vault_" + (vCard.id || vCard.name), isVault: true });
       }
