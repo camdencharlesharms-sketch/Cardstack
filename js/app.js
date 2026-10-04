@@ -4,6 +4,11 @@ function save(){
     accounts[currentUser].coins = coins;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     localStorage.setItem("cardCollectorCurrentUser", currentUser);
+  } else {
+    try {
+      localStorage.setItem("cardCollectorGuestOwned", JSON.stringify(owned));
+      localStorage.setItem("cardCollectorGuestCoins", coins.toString());
+    } catch(e){}
   }
 }
 
@@ -65,9 +70,11 @@ function updateAccountUI(){
 }
 
 function chooseCardFromWeights(weightMap, minRarityFilter = null, allowUnreleased = false){
+  const minRank = minRarityFilter ? (typeof getRarityRank === "function" ? getRarityRank(minRarityFilter) : (rarityRank[minRarityFilter] || 1)) : 1;
   let pool = cards.filter(c => {
     if(!allowUnreleased && c.isUnreleased) return false;
-    return !minRarityFilter || rarityRank[c.rarity] >= rarityRank[minRarityFilter];
+    const cRank = typeof getRarityRank === "function" ? getRarityRank(c.rarity) : (rarityRank[c.rarity] || 1);
+    return cRank >= minRank;
   });
   if(!pool.length) pool = cards.filter(c => (!allowUnreleased ? !c.isUnreleased : true));
   if(!pool.length) pool = cards;
@@ -252,14 +259,15 @@ function render(){
     binderPool = [...cards, ...unreleasedCards];
   }
 
-  const visible = binderPool.filter((c, i)=>{
+  const visible = binderPool.filter((c)=>{
     const isUnrel = !!c.isUnreleased;
     let has = false;
     if(isUnrel){
       const cardId = c.id || c.name;
       has = isMasterAdmin() || !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
     } else {
-      has = owned.includes(i);
+      const cardIdx = cards.indexOf(c);
+      has = owned.includes(cardIdx);
     }
     return filter === "all" || (filter === "collected" && has) || (filter === "missing" && !has);
   });
@@ -404,6 +412,12 @@ window.addEventListener("keydown", touchUserActive);
 if(currentUser && accounts[currentUser]){
   loadAccount(currentUser);
 } else {
+  try {
+    const savedGuestOwned = JSON.parse(localStorage.getItem("cardCollectorGuestOwned"));
+    if(Array.isArray(savedGuestOwned)) owned = savedGuestOwned;
+    const savedGuestCoins = parseInt(localStorage.getItem("cardCollectorGuestCoins"), 10);
+    if(!isNaN(savedGuestCoins)) coins = savedGuestCoins;
+  } catch(e){}
   updateAccountUI();
   render();
 }

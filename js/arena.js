@@ -72,7 +72,7 @@ function resetArenaViews(){
   document.getElementById("arenaHostWaitArea").style.display = "none";
   document.getElementById("arenaJoinArea").style.display = "none";
   document.getElementById("battleFieldArea").style.display = "none";
-  document.getElementById("victoryBanner").classList.remove("show");
+  document.getElementById("victoryBanner").classList.remove("show", "outcome-win", "outcome-lose");
 }
 
 document.getElementById("closeBattleBtn").onclick = ()=>{
@@ -172,7 +172,8 @@ document.getElementById("confirmJoinCodeBtn").onclick = ()=>{
       p2pConnection.send({
         type: "init",
         card: battlePlayerCard,
-        user: currentUser || "Challenger"
+        user: currentUser || "Challenger",
+        customCards: (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : []
       });
     });
   });
@@ -196,17 +197,24 @@ function setupP2PListeners(isHost){
         }
         localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
       }
+      if(Array.isArray(data.customCards) && data.customCards.length > 0){
+        syncIncomingCustomCards(data.customCards);
+      }
       if(isHost){
         p2pConnection.send({
           type: "init_reply",
           card: battlePlayerCard,
-          user: currentUser || "Host"
+          user: currentUser || "Host",
+          customCards: (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : []
         });
         setupCombatInterface("YOU (HOST)", `${data.user.toUpperCase()}`, true);
         appendBattleLog(`<div style="color:#4ade80">Connected! Fighting rival player: <b>${data.user}</b>.</div>`);
       }
     } else if(data.type === "init_reply"){
       battleOppCard = data.card;
+      if(Array.isArray(data.customCards) && data.customCards.length > 0){
+        syncIncomingCustomCards(data.customCards);
+      }
       if(data.user && data.user !== "Challenger" && data.user !== "Host"){
         if(!accounts[data.user]){
           accounts[data.user] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
@@ -230,7 +238,7 @@ function setupP2PListeners(isHost){
 
       if(battlePlayerHp <= 0){
         appendBattleLog(`💀 <b style="color:#ef4444">DEFEAT!</b> Your champion was knocked out!`);
-        setAttacksDisabled(true);
+        triggerDefeat();
       } else {
         isPlayerTurn = true;
         setAttacksDisabled(false);
@@ -340,8 +348,29 @@ function triggerVictory(){
   save();
   render();
 
-  document.getElementById("victoryCoinsLabel").textContent = `+${reward} Coins Added to Your Account! 🪙 ${eventCoinMultiplier > 1 ? `(${eventCoinMultiplier}x Event Bonus!)` : ''}`;
-  document.getElementById("victoryBanner").classList.add("show");
+  const victoryBanner = document.getElementById("victoryBanner");
+  victoryBanner.classList.remove("outcome-lose");
+  victoryBanner.classList.add("show", "outcome-win");
+
+  const titleEl = document.getElementById("battleOutcomeTitle");
+  if(titleEl) titleEl.textContent = "🏆 You Win!";
+
+  document.getElementById("victoryCoinsLabel").textContent = `+${reward} Coins Added to Your Account! 🪙 ${eventCoinMultiplier > 1 ? `(${eventCoinMultiplier}x Event Bonus!)` : ""}`;
+  setAttacksDisabled(true);
+  document.getElementById("turnInstructionText").textContent = "Match Finished!";
+}
+
+function triggerDefeat(){
+  const victoryBanner = document.getElementById("victoryBanner");
+  victoryBanner.classList.remove("outcome-win");
+  victoryBanner.classList.add("show", "outcome-lose");
+
+  const titleEl = document.getElementById("battleOutcomeTitle");
+  if(titleEl) titleEl.textContent = "💀 Defeated!";
+
+  const labelEl = document.getElementById("victoryCoinsLabel");
+  if(labelEl) labelEl.textContent = "Your champion was knocked out. Better luck next time!";
+
   setAttacksDisabled(true);
   document.getElementById("turnInstructionText").textContent = "Match Finished!";
 }
@@ -385,8 +414,7 @@ function performPlayerAttack(attackObj){
 
       if(battlePlayerHp <= 0){
         appendBattleLog(`💀 <b style="color:#ef4444">DEFEAT!</b> Your champion was knocked out!`);
-        setAttacksDisabled(true);
-        document.getElementById("turnInstructionText").textContent = "Match Finished!";
+        triggerDefeat();
         return;
       }
 
@@ -403,3 +431,57 @@ document.getElementById("godModeStrikeBtn").onclick = ()=>{
   performPlayerAttack({ name: "⚡ OMNIPOTENT GOD STRIKE", dmg: 9999 });
 };
 
+
+
+function syncIncomingCustomCards(incomingCards){
+  if(!Array.isArray(incomingCards) || incomingCards.length === 0) return;
+  let addedAny = false;
+  incomingCards.forEach(inc => {
+    if(!inc || !inc.name) return;
+    if(!cards.some(c => c.name.toLowerCase() === inc.name.toLowerCase())){
+      const cleanCard = {
+        name: inc.name,
+        image: inc.image,
+        rarity: inc.rarity,
+        desc: inc.desc,
+        hp: inc.hp || 100,
+        attacks: Array.isArray(inc.attacks) ? inc.attacks : [
+          { name: "Strike", dmg: 20 },
+          { name: "Burst", dmg: 35 }
+        ],
+        isUnreleased: false,
+        isCustom: true
+      };
+      cards.push(cleanCard);
+      addedAny = true;
+    }
+  });
+  if(addedAny){
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+    if(typeof render === "function") render();
+    if(typeof initCardSelect === "function") initCardSelect();
+  }
+}
+
+const playAgainBtn = document.getElementById("battlePlayAgainBtn");
+if(playAgainBtn){
+  playAgainBtn.onclick = ()=>{
+    document.getElementById("victoryBanner").classList.remove("show", "outcome-win", "outcome-lose");
+    if(!isMultiplayerMode){
+      startSoloBattle();
+    } else {
+      resetArenaViews();
+    }
+  };
+}
+
+const backToCardsBtn = document.getElementById("battleBackToCardsBtn");
+if(backToCardsBtn){
+  backToCardsBtn.onclick = ()=>{
+    document.getElementById("victoryBanner").classList.remove("show", "outcome-win", "outcome-lose");
+    document.getElementById("arenaModal").classList.remove("show");
+    resetArenaViews();
+    if(typeof render === "function") render();
+    window.scrollTo({ top: document.querySelector(".binder")?.offsetTop || 0, behavior: "smooth" });
+  };
+}

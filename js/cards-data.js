@@ -82,13 +82,25 @@ function normalizeCards(cardList){
   });
 }
 
-let cards = normalizeCards(defaultCards);
-try {
-  const saved = JSON.parse(localStorage.getItem("cardCollectorCustomCards"));
-  if (Array.isArray(saved) && saved.length > 0) {
-    cards = normalizeCards(saved);
-  }
-} catch (e) {}
+function getCustomCardsFromStorage(){
+  try {
+    const saved = JSON.parse(localStorage.getItem("cardCollectorCustomCards"));
+    if (Array.isArray(saved) && saved.length > 0) {
+      return saved.filter(sc => sc && sc.name && !defaultCards.some(dc => dc.name.toLowerCase() === sc.name.toLowerCase()));
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveCustomCardsToStorage(){
+  try {
+    const customs = cards.filter(c => !defaultCards.some(dc => dc.name.toLowerCase() === c.name.toLowerCase()));
+    localStorage.setItem("cardCollectorCustomCards", JSON.stringify(customs));
+  } catch(e){}
+}
+
+let customCards = getCustomCardsFromStorage();
+let cards = [...normalizeCards(defaultCards), ...normalizeCards(customCards)];
 
 // PACK TIERS: Both Cosmic Archive (Mythic) & Celestial Reliquary (Divine) are active!
 const packTiers = {
@@ -101,6 +113,14 @@ const packTiers = {
 };
 
 const rarityRank = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5, divine: 6 };
+
+function getRarityRank(r){
+  if(rarityRank && rarityRank[r]) return rarityRank[r];
+  if(typeof customRarities === "object" && customRarities[r] && customRarities[r].rank){
+    return customRarities[r].rank;
+  }
+  return 4;
+}
 
 let accounts = {};
 try {

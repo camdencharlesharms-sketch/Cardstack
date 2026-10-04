@@ -334,11 +334,23 @@ if(studioUrlInput){
   });
 }
 
+function isCanvasBlank(cnv){
+  if(!cnv) return true;
+  const ctx = cnv.getContext("2d");
+  const pixelBuffer = new Uint32Array(
+    ctx.getImageData(0, 0, cnv.width, cnv.height).data.buffer
+  );
+  return !pixelBuffer.some(color => color !== 0);
+}
+
 function getFinalArtworkSrc(){
   const urlVal = document.getElementById("newCardImageUrl").value.trim();
   if(urlVal) return urlVal;
   if(uploadedImageData) return uploadedImageData;
-  return canvas.toDataURL("image/png");
+  if(canvas && !isCanvasBlank(canvas)){
+    return canvas.toDataURL("image/png");
+  }
+  return null;
 }
 
 
@@ -346,6 +358,8 @@ function getFinalArtworkSrc(){
 document.getElementById("adminOpenBtn").onclick = ()=>{
   refreshAdminPlayerData();
   renderUnreleasedAdminUI();
+  renderStudioCustomCards();
+  populateRarityDropdowns();
   document.getElementById("adminLeakInput").value = localStorage.getItem("cardCollectorLeak") || "";
   document.getElementById("adminLuckSelect").value = adminLuckMultiplier.toString();
   document.getElementById("eventCoinMultiplierSelect").value = eventCoinMultiplier.toString();
@@ -470,12 +484,27 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
   const atk2Name = document.getElementById("newCardAttack2Name").value.trim() || "Heavy Strike";
   const atk2Dmg = parseInt(document.getElementById("newCardAttack2Dmg").value, 10) || 32;
 
-  const image = getFinalArtworkSrc();
+  let image = getFinalArtworkSrc();
 
   if(!name || !desc) return alert("Please specify card name and description.");
 
+  // If no image or blank canvas, generate procedural SVG matching rarity
+  if(!image){
+    const rarityColors = {
+      common: ["#16a34a", "#052e16", "⚔️", "#bbf7d0"],
+      rare: ["#0284c7", "#082f49", "⚡", "#7dd3fc"],
+      epic: ["#9333ea", "#3b0764", "🔮", "#f0abfc"],
+      legendary: ["#f59e0b", "#78350f", "👑", "#fde68a"],
+      mythic: ["#ec4899", "#831843", "🌌", "#fbcfe8"],
+      divine: ["#06b6d4", "#1e1b4b", "✨", "#cffafe"]
+    };
+    const cPreset = rarityColors[rarity] || ["#6366f1", "#1e1b4b", "✨", "#c7d2fe"];
+    image = makeSvgArt(cPreset[0], cPreset[1], cPreset[2], cPreset[3]);
+  }
+
   const hpByRarity = { common: 75, rare: 90, epic: 115, legendary: 150, mythic: 180, divine: 210 };
   const newCard = { 
+    id: "card_custom_" + Date.now(),
     name, 
     image, 
     rarity, 
@@ -484,20 +513,24 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
     attacks: [
       { name: atk1Name, dmg: atk1Dmg },
       { name: atk2Name, dmg: atk2Dmg }
-    ]
+    ],
+    isUnreleased: false,
+    isCustom: true
   };
   cards.push(newCard);
-  localStorage.setItem("cardCollectorCustomCards", JSON.stringify(cards));
+  if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
 
   initCardSelect();
   render();
+  renderStudioCustomCards();
+
   document.getElementById("newCardName").value = "";
   document.getElementById("newCardDesc").value = "";
   document.getElementById("newCardAttack1Name").value = "";
   document.getElementById("newCardAttack2Name").value = "";
   document.getElementById("newCardImageUrl").value = "";
   clearCanvas();
-  alert(`Created combat card "${name}" with multiple attacks!`);
+  alert(`✨ Created "${name}"!\n\nThis card is now live on the Home Page binder and ready to be unlocked in Booster Packs for everyone!`);
 };
 
 document.getElementById("adminUpdateCardArtBtn").onclick = ()=>{
@@ -727,6 +760,22 @@ function populateRarityDropdowns(){
 
   const allRarities = [...standardRarities, ...customList];
 
+  // Populate Card Studio Rarity select
+  const studioRaritySelect = document.getElementById("newCardRarity");
+  if(studioRaritySelect){
+    const currentStudioVal = studioRaritySelect.value || "common";
+    studioRaritySelect.innerHTML = "";
+    allRarities.forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = r.name;
+      studioRaritySelect.appendChild(opt);
+    });
+    if(allRarities.some(r => r.id === currentStudioVal)){
+      studioRaritySelect.value = currentStudioVal;
+    }
+  }
+
   // Populate Card Rarity select
   const currentCardVal = cardRaritySelect.value || (customList.length ? customList[0].id : "mythic");
   cardRaritySelect.innerHTML = "";
@@ -943,6 +992,9 @@ function renderUnreleasedAdminUI(){
         <div style="display:flex;gap:6px">
           <button type="button" class="accountBtn" style="padding:5px 9px;font-size:11px;background:${isOwnedByCam ? "rgba(16,185,129,0.2)" : "rgba(56,189,248,0.2)"};border-color:${isOwnedByCam ? "#10b981" : "#38bdf8"};color:${isOwnedByCam ? "#6ee7b7" : "#38bdf8"}" onclick="toggleUnreleasedCardOwnership('${cardId}')">
             ${isOwnedByCam ? "✓ In Vault" : "+ Add to Vault"}
+          </button>
+          <button type="button" class="accountBtn" style="padding:5px 9px;font-size:11px;background:rgba(234,179,8,0.2);border-color:#eab308;color:#fde047" onclick="releaseVaultCardToStudio('${cardId}')" title="Release to Home Page and Booster Packs for everyone">
+            🚀 Release Public
           </button>
           <button type="button" class="accountBtn" style="padding:5px 8px;font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5" onclick="deleteUnreleasedCard(${idx})">
             ✕
@@ -1201,3 +1253,135 @@ if(createPackBtn){
     alert(`Created booster pack "${name}"!`);
   };
 }
+
+
+/* Studio Custom Cards Manager (Live on Home Page & Packs) */
+function renderStudioCustomCards(){
+  const listEl = document.getElementById("studioCustomCardsList");
+  const countEl = document.getElementById("studioCustomCardsCount");
+  if(!listEl) return;
+
+  const customOnly = cards.filter(c => !defaultCards.some(dc => dc.name.toLowerCase() === c.name.toLowerCase()));
+  if(countEl) countEl.textContent = customOnly.length;
+
+  listEl.innerHTML = "";
+  if(customOnly.length === 0){
+    listEl.innerHTML = "<div style=\"color:#64748b;font-size:12px;padding:8px\">No studio cards created yet. Create one above to publish to the Home Page and Booster Packs!</div>";
+    return;
+  }
+
+  customOnly.forEach((c) => {
+    const item = document.createElement("div");
+    item.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);padding:10px 12px;border-radius:12px;gap:10px";
+    
+    const atkText = (c.attacks || []).map(a => `${a.name} (${a.dmg})`).join(", ");
+    item.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <img src="${c.image}" style="width:36px;height:48px;border-radius:6px;object-fit:cover;border:1px solid rgba(255,255,255,0.15);flex-shrink:0">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#f1f5f9;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span>${c.name}</span>
+            <span style="font-size:10px;text-transform:uppercase;color:#38bdf8;font-weight:800;background:rgba(56,189,248,0.15);padding:1px 5px;border-radius:4px">${c.rarity}</span>
+            <span style="font-size:10px;color:#4ade80;font-weight:800;background:rgba(74,222,128,0.15);padding:1px 5px;border-radius:4px">● Live in Packs</span>
+          </div>
+          <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.hp || 100} HP • ${atkText}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button type="button" class="accountBtn" style="padding:5px 8px;font-size:11px;background:rgba(56,189,248,0.15);border-color:#38bdf8;color:#38bdf8" title="View in Home Page Binder" onclick="viewStudioCardInBinder('${c.name.replace(/'/g, "\\x27")}')">
+          👁️ Binder
+        </button>
+        <button type="button" class="accountBtn" style="padding:5px 8px;font-size:11px;background:rgba(168,85,247,0.15);border-color:#a855f7;color:#c084fc" title="Copy Card Code" onclick="copyStudioCardCode('${c.name.replace(/'/g, "\\x27")}')">
+          📋 Code
+        </button>
+        <button type="button" class="accountBtn" style="padding:5px 8px;font-size:11px;background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5" title="Remove Card" onclick="deleteStudioCard('${c.name.replace(/'/g, "\\x27")}')">
+          ✕
+        </button>
+      </div>
+    `;
+    listEl.appendChild(item);
+  });
+}
+
+window.viewStudioCardInBinder = function(cardName){
+  document.getElementById("adminModal").classList.remove("show");
+  filter = "all";
+  document.querySelectorAll(".binder-tab").forEach(t => t.classList.toggle("active", t.dataset.filter === "all"));
+  render();
+  setTimeout(()=>{
+    const cardsEl = Array.from(document.querySelectorAll("#grid .card"));
+    const found = cardsEl.find(el => el.textContent.includes(cardName) || el.innerHTML.includes(cardName));
+    if(found){
+      found.scrollIntoView({ behavior: "smooth", block: "center" });
+      found.style.boxShadow = "0 0 25px #38bdf8";
+      setTimeout(()=>{ found.style.boxShadow = ""; }, 2500);
+    } else {
+      const idx = cards.findIndex(c => c.name === cardName);
+      if(idx !== -1 && cardsEl[idx]){
+        cardsEl[idx].scrollIntoView({ behavior: "smooth", block: "center" });
+        cardsEl[idx].style.boxShadow = "0 0 25px #38bdf8";
+        setTimeout(()=>{ cardsEl[idx].style.boxShadow = ""; }, 2500);
+      }
+    }
+  }, 200);
+};
+
+window.copyStudioCardCode = function(cardName){
+  const found = cards.find(c => c.name === cardName);
+  if(!found) return;
+  const json = JSON.stringify(found, null, 2);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(json).then(()=>{
+      alert(`Card JSON copied to clipboard!\nYou can paste this into defaultCards in js/cards-data.js to make it permanently built-in.`);
+    }).catch(()=>{
+      prompt("Copy card JSON:", json);
+    });
+  } else {
+    prompt("Copy card JSON:", json);
+  }
+};
+
+window.deleteStudioCard = function(cardName){
+  if(!confirm(`Remove card "${cardName}" from the Home Page binder and Booster Pack drop pool?`)) return;
+  const idx = cards.findIndex(c => c.name === cardName);
+  if(idx !== -1){
+    cards.splice(idx, 1);
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+    initCardSelect();
+    render();
+    renderStudioCustomCards();
+    alert(`Card "${cardName}" removed from Home Page and packs.`);
+  }
+};
+
+window.releaseVaultCardToStudio = function(cardId){
+  const idx = unreleasedCards.findIndex(c => (c.id || c.name) === cardId);
+  if(idx === -1) return;
+  const vCard = unreleasedCards[idx];
+  if(!confirm(`Release "${vCard.name}" to the Home Page and Booster Packs for everyone?`)) return;
+
+  const publicCard = {
+    ...vCard,
+    isUnreleased: false,
+    isCustom: true
+  };
+  delete publicCard.isUnreleased;
+
+  if(!cards.some(c => c.name.toLowerCase() === publicCard.name.toLowerCase())){
+    cards.push(publicCard);
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+  }
+
+  unreleasedCards.splice(idx, 1);
+  localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards));
+
+  initCardSelect();
+  render();
+  renderUnreleasedAdminUI();
+  renderStudioCustomCards();
+  alert(`🚀 "${publicCard.name}" is now live on the Home Page and available in Booster Packs for everyone!`);
+};
+
+// Initial render of studio cards
+renderStudioCustomCards();
+populateRarityDropdowns();

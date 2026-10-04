@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <!-- Free WebRTC P2P library to connect two devices via room codes -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<link rel="stylesheet" href="css/styles.css?v=2.5">
+<link rel="stylesheet" href="css/styles.css?v=2.7">
 </head>
 <body>
 
@@ -120,9 +120,13 @@
     </div>
 
     <div id="battleFieldArea" style="display:none;flex-direction:column;gap:18px">
-      <div id="victoryBanner">
-        <h2 style="margin:0;color:#86efac;font-size:28px">🏆 YOU WON!</h2>
-        <span style="font-size:16px;font-weight:800;color:#fde047" id="victoryCoinsLabel">+25 Coins Added to Your Account! 🪙</span>
+      <div id="victoryBanner" class="outcome-banner">
+        <h2 style="margin:0;font-size:28px" id="battleOutcomeTitle">🏆 You Win!</h2>
+        <span style="font-size:15px;font-weight:700;color:#fde047" id="victoryCoinsLabel">+25 Coins Added to Your Account! 🪙</span>
+        <div style="display:flex;gap:12px;margin-top:12px;justify-content:center">
+          <button id="battlePlayAgainBtn" class="accountBtn" style="background:#22c55e;color:#052e16;font-weight:800;padding:10px 22px;font-size:14px;border:none;border-radius:10px;cursor:pointer">Play Again</button>
+          <button id="battleBackToCardsBtn" class="accountBtn" style="background:#3b82f6;color:#eff6ff;font-weight:800;padding:10px 22px;font-size:14px;border:none;border-radius:10px;cursor:pointer">Back to Cards</button>
+        </div>
       </div>
 
       <div class="battle-arena">
@@ -312,6 +316,14 @@
         <div class="adminBtnGroup" style="margin-top:6px">
           <button id="adminCreateCardBtn" style="background:#9333ea">Spawn Brand New Card with Art</button>
           <button id="adminUpdateCardArtBtn" style="background:#0284c7">Update Selected Existing Card's Art</button>
+        </div>
+
+        <div id="studioCustomCardsContainer" style="margin-top:16px;border-top:1px solid rgba(255,255,255,0.1);padding-top:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:800;color:#cbd5e1">🌐 Live Studio Cards on Home Page & Packs (<span id="studioCustomCardsCount">0</span>)</span>
+            <span style="font-size:11px;color:#94a3b8">Active in Home Binder & drops from packs for everyone</span>
+          </div>
+          <div id="studioCustomCardsList" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto"></div>
         </div>
       </div>
     </div>
@@ -663,9 +675,9 @@
 </main>
 
 
-<script src="js/cards-data.js?v=2.5"></script>
-<script src="js/admin.js?v=2.5"></script>
-<script src="js/arena.js?v=2.5"></script>
-<script src="js/app.js?v=2.5"></script>
+<script src="js/cards-data.js?v=2.7"></script>
+<script src="js/admin.js?v=2.7"></script>
+<script src="js/arena.js?v=2.7"></script>
+<script src="js/app.js?v=2.7"></script>
 </body>
 </html>

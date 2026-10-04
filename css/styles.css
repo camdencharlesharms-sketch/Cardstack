@@ -740,14 +740,34 @@ button:active{transform:translateY(0)}
 
 #victoryBanner{
   display:none;
-  background:linear-gradient(135deg, rgba(22, 101, 52, 0.9), rgba(6, 78, 59, 0.95));
-  border:2px solid #4ade80;
   border-radius:16px;
-  padding:18px 24px;
+  padding:20px 28px;
   text-align:center;
   animation:cardPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 10;
 }
-#victoryBanner.show{display:flex;flex-direction:column;align-items:center;gap:6px}
+#victoryBanner.show{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+}
+#victoryBanner.outcome-win{
+  background:linear-gradient(135deg, rgba(22, 101, 52, 0.95), rgba(6, 78, 59, 0.98));
+  border:2px solid #4ade80;
+  box-shadow: 0 0 35px rgba(74, 222, 128, 0.35);
+}
+#victoryBanner.outcome-win #battleOutcomeTitle{
+  color: #86efac;
+}
+#victoryBanner.outcome-lose{
+  background:linear-gradient(135deg, rgba(127, 29, 29, 0.95), rgba(69, 10, 10, 0.98));
+  border:2px solid #ef4444;
+  box-shadow: 0 0 35px rgba(239, 68, 68, 0.35);
+}
+#victoryBanner.outcome-lose #battleOutcomeTitle{
+  color: #fca5a5;
+}
 
 #maintenanceBanner{
   display:none;

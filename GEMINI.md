@@ -69,7 +69,13 @@ Cardstack/
 - **Admin Hub Tabs**:
   1. `👥 Player Manager`: Grant/revoke card skins, unlock all cards, wipe player cards, and manage registered accounts via dropdown or typed username.
   2. `🪙 Economy & RNG`: Gift coins, set exact coin balances, drain accounts, deposit master coins, and adjust pack luck RNG multipliers (1x–10x) via dropdown or typed username.
-  3. `🎨 Card Studio`: Interactive canvas drawing tool, image upload, stats & multi-attack builder for custom cards.
+  3. `🎨 Card Studio`: In-browser card designer and publisher:
+     - **Canvas & Art Tools**: Draw custom art on canvas, upload local image file, or provide an image URL. If no art is provided, a procedural SVG is automatically generated matching the chosen rarity theme.
+     - **Multi-Attack & Stats Builder**: Configure custom HP and 2 unique attacks with customizable DMG yields.
+     - **Home Page & Pack Availability**: Cards created in Card Studio are instantly pushed to the public game deck (`cards`). They appear immediately in the home page binder for all players (in locked mystery frame if not yet owned, increasing the total set count) and enter the booster pack drop tables matching their rarity weight.
+     - **Pack Unlocking & Arena Playability**: Pulling the card from any booster pack unlocks it in the binder with full art, HP, and attacks, and makes it immediately available in the Battle Arena champion picker.
+     - **Live Custom Cards Manager**: Displays all live studio cards with 1-click "👁️ Binder" navigation, "📋 Code" export (for pasting directly into `defaultCards`), and "✕" deletion.
+     - **P2P Decentralized Sync**: When players battle via WebRTC P2P codes, custom cards are exchanged during handshake so opponents automatically receive and integrate them into their local binders and booster pack drop tables.
   4. `🌪️ World Events`: Broadcast global coin multipliers (1x, 2x, 3x) and pack discounts (0%, 25%, 50%).
   5. `📢 Broadcast & Leaks`: Transmit announcements or patch notes to the top banner.
   6. `🛡 Sub-Admin Roles` *(Master Cam only)*: Appoint sub-admins with daily coin gifting caps and skin gifting allowances. Includes an active player roster and direct username selector.
@@ -78,6 +84,7 @@ Cardstack/
      - **Design New Cards**: Build private cards with custom picture upload from file or image URL, custom HP, dual attacks with DMG values, lore, custom emoji art fallback, and assign them to any standard or custom rarity.
      - **Design New Packs**: Build private booster packs with custom coin costs, card counts (1-12), icons, visual foil themes, guaranteed minimum rarities (including custom rarities), and test-open them right inside the Admin Hub with authentic unsealing animations.
      - **Stealth Protection & Home Page Display**: When Cam adds an unreleased card to the vault, it automatically appears on Cam's home page collection as an unlocked, playable card with full stats, custom rarity foil, and attacks. 100% invisible to regular players, guests, and sub-admins (they only ever see standard released cards).
+     - **1-Click Public Release**: The Creator Vault includes a `🚀 Release Public` button on each unreleased card, converting experimental vault cards into public Home Page and booster pack cards for all players.
 
 ---
 
