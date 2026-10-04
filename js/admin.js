@@ -33,18 +33,37 @@ function initCardSelect(){
   const prevVal = select.value;
   select.innerHTML = '<option value="">Select Card to Grant / Edit...</option>';
 
+  const isSub = (typeof isSubAdmin === "function" && isSubAdmin()) && !(typeof isMasterAdmin === "function" && isMasterAdmin());
+  const subRole = isSub ? ((typeof getSubAdminRole === "function") ? getSubAdminRole(currentUser) : subAdminRoles[currentUser]) : null;
+
   const publicGroup = document.createElement("optgroup");
   publicGroup.label = "✨ Public & Studio Cards (Drop in Packs)";
+  let allowedCount = 0;
   cards.forEach((c, idx) => {
+    if(isSub){
+      if(!subRole || !subRole.canGiftSkins) return;
+      if(subRole.allowedSkinIds && subRole.allowedSkinIds.length > 0 && !subRole.allowedSkinIds.some(id => parseInt(id, 10) === idx)){
+        return;
+      }
+    }
+    allowedCount++;
     const opt = document.createElement("option");
     opt.value = idx.toString();
     const atkNames = (c.attacks || []).map(a => `${a.name} (${a.dmg})`).join(" / ");
     opt.textContent = `${c.name} (${c.rarity}) - ATK: ${atkNames}`;
     publicGroup.appendChild(opt);
   });
+
+  if(isSub && allowedCount === 0){
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.disabled = true;
+    opt.textContent = (subRole && !subRole.canGiftSkins) ? "(Skin gifting disabled for your role)" : "(No skins currently assigned to your role)";
+    publicGroup.appendChild(opt);
+  }
   select.appendChild(publicGroup);
 
-  if(Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
+  if((typeof isMasterAdmin === "function" && isMasterAdmin()) && Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
     const vaultGroup = document.createElement("optgroup");
     vaultGroup.label = "🔒 Unreleased Vault Cards (Gift Only - Never In Packs)";
     unreleasedCards.forEach((c) => {
@@ -63,7 +82,9 @@ function initCardSelect(){
   if(prevVal && Array.from(select.options).some(o => o.value === prevVal)){
     select.value = prevVal;
   }
-  renderSubAdminSkinChecklist();
+  if(typeof isMasterAdmin === "function" && isMasterAdmin()){
+    renderSubAdminSkinChecklist();
+  }
 }
 
 function renderSubAdminSkinChecklist(){
@@ -224,7 +245,8 @@ function refreshAdminPlayerData(){
     const data = accounts[name] || {};
     const isCurrent = currentUser && currentUser.toLowerCase() === name.toLowerCase();
     const isMaster = name.toLowerCase() === ADMIN_USERNAME.toLowerCase();
-    const isSub = subAdminRoles[name] && subAdminRoles[name].active;
+    const subRole = (typeof getSubAdminRole === "function") ? getSubAdminRole(name) : (subAdminRoles[name] || null);
+    const isSub = !!(subRole && subRole.active);
     const isOnline = isAccountOnline(name);
 
     let roleText = "Player";
@@ -271,7 +293,7 @@ function refreshAdminPlayerData(){
       <td>${(data.owned || []).length} / ${cards.length}</td>
       <td>
         <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#059669;color:#fff;margin-right:4px" onclick="quickGiftPlayerCardPrompt('${name}')">🎁 Gift</button>
-        ${!isMaster ? `<button class="accountBtn" style="padding:4px 8px;font-size:11px;color:#f87171" onclick="adminDeleteSingleAccount('${name}')">Delete</button>` : '<span style="color:#94a3b8;font-size:11px">Owner</span>'}
+        ${!isMaster ? ((typeof isMasterAdmin === "function" && isMasterAdmin()) ? `<button class="accountBtn" style="padding:4px 8px;font-size:11px;color:#f87171" onclick="adminDeleteSingleAccount('${name}')">Delete</button>` : '') : '<span style="color:#94a3b8;font-size:11px">Owner</span>'}
       </td>
     `;
     tableBody.appendChild(tr);
@@ -329,7 +351,7 @@ function renderSubAdminRolesList(){
 
   subAdminKeys.forEach(user => {
     const role = subAdminRoles[user];
-    if(!role.active) return;
+    if(!role || !role.active) return;
 
     const div = document.createElement("div");
     div.style = "background:rgba(0,0,0,0.35);padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center";
@@ -446,9 +468,12 @@ function getFinalArtworkSrc(){
 document.getElementById("adminOpenBtn").onclick = ()=>{
   initCardSelect();
   refreshAdminPlayerData();
-  renderUnreleasedAdminUI();
+  if(typeof isMasterAdmin === "function" && isMasterAdmin()){
+    renderUnreleasedAdminUI();
+  }
   renderStudioCustomCards();
   populateRarityDropdowns();
+  if(typeof updateAccountUI === "function") updateAccountUI();
   if(typeof updateLivePresenceDisplay === "function") updateLivePresenceDisplay();
   document.getElementById("adminLeakInput").value = localStorage.getItem("cardCollectorLeak") || "";
   document.getElementById("adminLuckSelect").value = adminLuckMultiplier.toString();
@@ -575,12 +600,24 @@ document.getElementById("saveSubAdminRoleBtn").onclick = ()=>{
   const target = getTargetPlayer("subAdminCustomPlayerInput", "subAdminTargetSelect");
   if(!target) return alert("Type or select a player username to assign privileges to.");
 
+  if(target.toLowerCase() === ADMIN_USERNAME.toLowerCase()){
+    return alert("Cam is already Supreme Master Admin.");
+  }
+
   const dailyCap = parseInt(document.getElementById("subAdminDailyCapInput").value, 10) || 0;
   const canGiftSkins = document.getElementById("subAdminAllowSkinsCheck").checked;
 
   const allowedSkinIds = [];
   document.querySelectorAll(".subadmin-skin-check:checked").forEach(cb => {
     allowedSkinIds.push(parseInt(cb.value, 10));
+  });
+
+  // Remove any conflicting case variations from subAdminRoles
+  const targetLower = target.toLowerCase().trim();
+  Object.keys(subAdminRoles).forEach(k => {
+    if(k.toLowerCase().trim() === targetLower && k !== target){
+      delete subAdminRoles[k];
+    }
   });
 
   subAdminRoles[target] = {
@@ -594,15 +631,65 @@ document.getElementById("saveSubAdminRoleBtn").onclick = ()=>{
 
   localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
   refreshAdminPlayerData();
+
+  // Real-time synchronization
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(target, {
+      type: "update_subadmin_role",
+      target: target,
+      role: subAdminRoles[target],
+      allRoles: subAdminRoles
+    });
+  }
+  if(typeof broadcastToAllPresencePeers === "function"){
+    broadcastToAllPresencePeers({
+      type: "sync_sub_admins",
+      subAdminRoles: subAdminRoles
+    });
+  }
+  if(typeof presenceBroadcast !== "undefined" && presenceBroadcast){
+    try {
+      presenceBroadcast.postMessage({
+        type: "sync_sub_admins",
+        subAdminRoles: subAdminRoles
+      });
+    } catch(e){}
+  }
+
   alert(`Granted Sub-Admin privileges to ${target}!`);
 };
 
 window.revokeSubAdminRole = function(user){
   if(!isMasterAdmin()) return alert("Only Cam can revoke sub-admin roles.");
   if(confirm(`Revoke admin privileges from ${user}?`)){
-    delete subAdminRoles[user];
+    const userLower = user.toLowerCase().trim();
+    Object.keys(subAdminRoles).forEach(k => {
+      if(k.toLowerCase().trim() === userLower) delete subAdminRoles[k];
+    });
     localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
     refreshAdminPlayerData();
+
+    if(typeof broadcastAdminActionToTarget === "function"){
+      broadcastAdminActionToTarget(user, {
+        type: "revoke_subadmin_role",
+        target: user,
+        allRoles: subAdminRoles
+      });
+    }
+    if(typeof broadcastToAllPresencePeers === "function"){
+      broadcastToAllPresencePeers({
+        type: "sync_sub_admins",
+        subAdminRoles: subAdminRoles
+      });
+    }
+    if(typeof presenceBroadcast !== "undefined" && presenceBroadcast){
+      try {
+        presenceBroadcast.postMessage({
+          type: "sync_sub_admins",
+          subAdminRoles: subAdminRoles
+        });
+      } catch(e){}
+    }
     alert(`Revoked admin role from ${user}.`);
   }
 };
@@ -716,11 +803,12 @@ document.getElementById("adminGiveSkinBtn").onclick = ()=>{
   if(isNaN(idx)) return alert("Select a valid card to grant.");
 
   if(isSubAdmin() && !isMasterAdmin()){
-    const role = subAdminRoles[currentUser];
-    if(!role.canGiftSkins){
+    const role = (typeof getSubAdminRole === "function") ? getSubAdminRole(currentUser) : subAdminRoles[currentUser];
+    if(!role || !role.active || !role.canGiftSkins){
       return alert("Permission Denied: Your sub-admin role is not authorized to gift skins.");
     }
-    if(!role.allowedSkinIds || !role.allowedSkinIds.includes(idx)){
+    const isAllowed = !role.allowedSkinIds || role.allowedSkinIds.length === 0 || role.allowedSkinIds.some(id => parseInt(id, 10) === idx);
+    if(!isAllowed){
       return alert(`Permission Denied: You are not authorized to gift the skin "${cards[idx].name}".`);
     }
   }
@@ -828,7 +916,10 @@ document.getElementById("adminAddPlayerCoinsBtn").onclick = ()=>{
   if(isNaN(amt) || amt <= 0) return alert("Enter a valid positive number.");
 
   if(isSubAdmin() && !isMasterAdmin()){
-    const role = subAdminRoles[currentUser];
+    const role = (typeof getSubAdminRole === "function") ? getSubAdminRole(currentUser) : subAdminRoles[currentUser];
+    if(!role || !role.active){
+      return alert("Permission Denied: Your sub-admin role is inactive.");
+    }
     const today = new Date().toDateString();
     if(role.lastGiftDate !== today){
       role.lastGiftDate = today;
@@ -841,7 +932,9 @@ document.getElementById("adminAddPlayerCoinsBtn").onclick = ()=>{
     }
 
     role.giftedToday += amt;
+    subAdminRoles[currentUser] = role;
     localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
+    if(typeof updateAccountUI === "function") updateAccountUI();
   }
 
   accounts[target].coins = (accounts[target].coins || 0) + amt;

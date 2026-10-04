@@ -9,6 +9,24 @@ const presenceBroadcast = (typeof BroadcastChannel !== "undefined") ? new Broadc
 // Pool of active PeerJS connections (for Cam to send real-time gifts to online players)
 window.activePresencePeers = window.activePresencePeers || {};
 
+function broadcastToAllPresencePeers(payload){
+  if(!payload) return;
+  if(presenceBroadcast){
+    try { presenceBroadcast.postMessage(payload); } catch(e){}
+  }
+  if(window.activePresencePeers && typeof window.activePresencePeers === "object"){
+    Object.keys(window.activePresencePeers).forEach(peerUser => {
+      try {
+        const peerConn = window.activePresencePeers[peerUser];
+        if(peerConn && peerConn.open){
+          peerConn.send(payload);
+        }
+      } catch(e){}
+    });
+  }
+}
+if(typeof window !== "undefined") window.broadcastToAllPresencePeers = broadcastToAllPresencePeers;
+
 let presencePeer = null;
 let presenceConnToCam = null;
 let presenceHeartbeatTimer = null;
@@ -102,6 +120,13 @@ function connectToCamBeacon(){
       if(!data) return;
       if(data.type === "admin_dispatch"){
         handleIncomingAdminDispatch(data.action);
+      } else if(data.type === "sync_sub_admins"){
+        if(data.subAdminRoles && typeof data.subAdminRoles === "object"){
+          subAdminRoles = data.subAdminRoles;
+          localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
+          if(typeof updateAccountUI === "function") updateAccountUI();
+          if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+        }
       } else if(data.type === "studio_card_created"){
         handleIncomingStudioCardCreated(data.card);
       } else if(data.type === "sync_studio_cards" && Array.isArray(data.cards)){
@@ -146,7 +171,12 @@ function announcePresenceToCam(isNew = false){
 
 // Master Cam processes incoming network message
 function handleCamReceivedPresenceData(conn, data){
-  if(!data || !data.user) return;
+  if(!data) return;
+  if(data.type === "subadmin_action_relay"){
+    handleSubAdminActionRelay(conn, data);
+    return;
+  }
+  if(!data.user) return;
   const username = data.user.trim();
   if(!username || username.toLowerCase() === ADMIN_USERNAME.toLowerCase()) return;
 
@@ -194,7 +224,8 @@ function handleCamReceivedPresenceData(conn, data){
           coins: userAcc.coins,
           unreleasedOwned: userAcc.unreleasedOwned || [],
           unreleasedCards: (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards : [],
-          customCards: customs
+          customCards: customs,
+          subAdminRoles: (typeof subAdminRoles !== "undefined" && typeof subAdminRoles === "object") ? subAdminRoles : {}
         }
       });
     }
@@ -242,6 +273,17 @@ if(presenceBroadcast){
 
       updateLivePresenceDisplay();
       if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+    } else if(data.type === "sync_sub_admins"){
+      if(data.subAdminRoles && typeof data.subAdminRoles === "object"){
+        subAdminRoles = data.subAdminRoles;
+        localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
+        if(typeof updateAccountUI === "function") updateAccountUI();
+        if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+      }
+    } else if(data.type === "subadmin_action_relay"){
+      if(typeof isMasterAdmin === "function" && isMasterAdmin()){
+        handleSubAdminActionRelay(null, data);
+      }
     } else if(data.type === "admin_dispatch"){
       if(currentUser && data.target && data.target.toLowerCase() === currentUser.toLowerCase()){
         handleIncomingAdminDispatch(data.action);
@@ -299,6 +341,79 @@ function showLiveToast(msg, isSuccess = true){
   }, 4500);
 }
 
+// Sub-Admin action relay handler executed on Master Cam
+function handleSubAdminActionRelay(conn, data){
+  if(!data || !data.from || !data.target || !data.action) return;
+  const fromUser = data.from.trim();
+  const targetUser = data.target.trim();
+  const action = data.action;
+
+  // Verify sender has active subadmin permissions
+  const role = (typeof getSubAdminRole === "function") ? getSubAdminRole(fromUser) : (subAdminRoles ? subAdminRoles[fromUser] : null);
+  if(!role || !role.active){
+    console.warn("[Presence] Unauthorized subadmin action from:", fromUser);
+    return;
+  }
+
+  try {
+    const fresh = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
+    if(fresh && typeof fresh === "object") accounts = fresh;
+  } catch(e){}
+
+  if(!accounts[targetUser]){
+    accounts[targetUser] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+  }
+
+  if(action.type === "gift_coins"){
+    const amt = parseInt(action.amount, 10);
+    if(isNaN(amt) || amt <= 0) return;
+
+    const today = new Date().toDateString();
+    if(role.lastGiftDate !== today){
+      role.lastGiftDate = today;
+      role.giftedToday = 0;
+    }
+    if((role.giftedToday + amt) > role.dailyCap){
+      return;
+    }
+
+    role.giftedToday += amt;
+    localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
+
+    accounts[targetUser].coins = (accounts[targetUser].coins || 0) + amt;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+
+    broadcastAdminActionToTarget(targetUser, action);
+
+    if(typeof broadcastToAllPresencePeers === "function"){
+      broadcastToAllPresencePeers({
+        type: "sync_sub_admins",
+        subAdminRoles: subAdminRoles
+      });
+    }
+
+    showLiveToast(`🛡️ Sub-Admin <b>${fromUser}</b> gifted <b>+${amt.toLocaleString()} Coins</b> to <b>${targetUser}</b>!`, true);
+    if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+  } else if(action.type === "gift_card"){
+    const cIdx = parseInt(action.cardIndex, 10);
+    if(isNaN(cIdx) || !role.canGiftSkins) return;
+
+    const isAllowed = !role.allowedSkinIds || role.allowedSkinIds.length === 0 || role.allowedSkinIds.some(id => parseInt(id, 10) === cIdx);
+    if(!isAllowed) return;
+
+    if(!Array.isArray(accounts[targetUser].owned)) accounts[targetUser].owned = [];
+    if(!accounts[targetUser].owned.includes(cIdx)){
+      accounts[targetUser].owned.push(cIdx);
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    }
+
+    broadcastAdminActionToTarget(targetUser, action);
+    const cardName = action.card ? action.card.name : (cards[cIdx] ? cards[cIdx].name : `Card #${cIdx}`);
+    showLiveToast(`🛡️ Sub-Admin <b>${fromUser}</b> gifted skin <b>${cardName}</b> to <b>${targetUser}</b>!`, true);
+    if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+  }
+}
+
 // Gifting dispatch: sends real-time updates to target player
 function broadcastAdminActionToTarget(targetUser, actionData){
   if(!targetUser) return;
@@ -314,7 +429,32 @@ function broadcastAdminActionToTarget(targetUser, actionData){
     } catch(e){}
   }
 
-  // 2. PeerJS remote connection (case-insensitive)
+  // 2. If sender is Sub-Admin and not Master, forward relay to Master Cam
+  if((typeof isSubAdmin === "function" && isSubAdmin()) && !(typeof isMasterAdmin === "function" && isMasterAdmin())){
+    const activeCamConn = (presenceConnToCam && presenceConnToCam.open) ? presenceConnToCam : (typeof window !== "undefined" && window.presenceConnToCam && window.presenceConnToCam.open ? window.presenceConnToCam : null);
+    if(activeCamConn){
+      try {
+        activeCamConn.send({
+          type: "subadmin_action_relay",
+          from: currentUser,
+          target: targetUser,
+          action: actionData
+        });
+      } catch(e){}
+    }
+    if(presenceBroadcast){
+      try {
+        presenceBroadcast.postMessage({
+          type: "subadmin_action_relay",
+          from: currentUser,
+          target: targetUser,
+          action: actionData
+        });
+      } catch(e){}
+    }
+  }
+
+  // 3. PeerJS remote connection (used by Master Cam to dispatch to active connections)
   if(window.activePresencePeers){
     let peerConn = window.activePresencePeers[targetUser];
     if(!peerConn){
@@ -389,10 +529,40 @@ function handleIncomingAdminDispatch(actionData){
       }
       accounts[currentUser].owned = owned;
     }
+    if(actionData.subAdminRoles && typeof actionData.subAdminRoles === "object"){
+      subAdminRoles = actionData.subAdminRoles;
+      try { localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles)); } catch(e){}
+      if(typeof updateAccountUI === "function") updateAccountUI();
+      if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+    }
     if(changed){
       save();
       render();
     }
+    return;
+  }
+  if(actionData.type === "update_subadmin_role"){
+    if(actionData.allRoles && typeof actionData.allRoles === "object"){
+      subAdminRoles = actionData.allRoles;
+    }
+    if(currentUser && actionData.role){
+      subAdminRoles[currentUser] = actionData.role;
+    }
+    try { localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles)); } catch(e){}
+    if(typeof updateAccountUI === "function") updateAccountUI();
+    if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+    showLiveToast(`🛡️ You have been appointed as a <b>Sub-Admin</b> by Master Cam!`, true);
+    return;
+  } else if(actionData.type === "revoke_subadmin_role"){
+    if(actionData.allRoles && typeof actionData.allRoles === "object"){
+      subAdminRoles = actionData.allRoles;
+    } else if(currentUser){
+      delete subAdminRoles[currentUser];
+    }
+    try { localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles)); } catch(e){}
+    if(typeof updateAccountUI === "function") updateAccountUI();
+    if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+    showLiveToast(`Admin privileges revoked by Master Cam.`, false);
     return;
   }
   if(actionData.type === "gift_coins"){

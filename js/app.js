@@ -72,6 +72,10 @@ function loadAccount(username){
     if(stored && typeof stored === "object") accounts = stored;
   } catch(e){}
   try {
+    const storedRoles = JSON.parse(localStorage.getItem("cardCollectorSubAdmins"));
+    if(storedRoles && typeof storedRoles === "object") subAdminRoles = storedRoles;
+  } catch(e){}
+  try {
     const storedUnreleased = JSON.parse(localStorage.getItem("cardCollectorUnreleasedCards"));
     if(Array.isArray(storedUnreleased)) unreleasedCards = storedUnreleased;
   } catch(e){}
@@ -108,7 +112,7 @@ function updateAccountUI(){
 
   let roleLabel = "";
   if(isMaster) roleLabel = " (Master Admin)";
-  else if(isSub) roleLabel = " (Admin)";
+  else if(isSub) roleLabel = " (Sub-Admin)";
 
   document.getElementById("accountLabel").textContent = currentUser ? currentUser + roleLabel : "Guest";
   document.getElementById("accountBtn").textContent = currentUser ? "Switch Account" : "Sign In";
@@ -116,7 +120,9 @@ function updateAccountUI(){
   const adminOpenBtn = document.getElementById("adminOpenBtn");
   if(hasAdminAccess()){
     adminOpenBtn.style.display = "inline-block";
-    adminOpenBtn.textContent = isMaster ? "⚡ Admin Hub" : "🛡️ Sub-Admin Hub";
+    const homeBadge = document.getElementById("homeOnlineBadge");
+    const badgeHtml = (homeBadge && homeBadge.outerHTML) ? homeBadge.outerHTML : "<span id=\"homeOnlineBadge\" style=\"background:#10b981;color:#052e16;font-size:10px;font-weight:900;padding:1px 6px;border-radius:10px;margin-left:4px\">🟢 1</span>";
+    adminOpenBtn.innerHTML = (isMaster ? "⚡ Admin Hub " : "🛡️ Sub-Admin Hub ") + badgeHtml;
   } else {
     adminOpenBtn.style.display = "none";
     document.getElementById("adminModal").classList.remove("show");
@@ -125,26 +131,66 @@ function updateAccountUI(){
   const permTabBtn = document.getElementById("permissionsTabBtn");
   const masterDepositSec = document.getElementById("masterDepositSection");
   const adminWipeSec = document.getElementById("adminWipeSection");
+  const unreleasedTabBtn = document.getElementById("unreleasedTabBtn");
+
+  let statusBanner = document.getElementById("subAdminStatusBanner");
 
   if(isMaster){
-    permTabBtn.style.display = "block";
-    masterDepositSec.style.display = "block";
-    adminWipeSec.style.display = "flex";
-    document.getElementById("adminHubHeader").textContent = "⚡ Supreme Admin Suite (Cam)";
-  } else {
-    permTabBtn.style.display = "none";
-    masterDepositSec.style.display = "none";
-    adminWipeSec.style.display = "none";
-    document.getElementById("adminHubHeader").textContent = `🛡️ Sub-Admin Console (${currentUser})`;
-  }
+    if(permTabBtn) permTabBtn.style.display = "block";
+    if(unreleasedTabBtn) unreleasedTabBtn.style.display = "block";
+    if(masterDepositSec) masterDepositSec.style.display = "block";
+    if(adminWipeSec) adminWipeSec.style.display = "flex";
+    const headerEl = document.getElementById("adminHubHeader");
+    if(headerEl) headerEl.textContent = "⚡ Supreme Admin Suite (Cam)";
+    if(statusBanner) statusBanner.style.display = "none";
+  } else if(isSub){
+    if(permTabBtn) permTabBtn.style.display = "none";
+    if(unreleasedTabBtn) unreleasedTabBtn.style.display = "none";
+    if(masterDepositSec) masterDepositSec.style.display = "none";
+    if(adminWipeSec) adminWipeSec.style.display = "none";
+    const headerEl = document.getElementById("adminHubHeader");
+    if(headerEl) headerEl.textContent = `🛡️ Sub-Admin Console (${currentUser})`;
 
-  const unreleasedTabBtn = document.getElementById("unreleasedTabBtn");
-  if(unreleasedTabBtn){
-    unreleasedTabBtn.style.display = isMaster ? "block" : "none";
+    // Reset tab to tabPlayer if currently on Cam-only tabs
+    const activeTab = document.querySelector(".admin-tab-content.active");
+    if(activeTab && (activeTab.id === "tabPermissions" || activeTab.id === "tabUnreleased")){
+      document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".admin-tab-content").forEach(c => c.classList.remove("active"));
+      const firstTabBtn = document.querySelector('.admin-tab-btn[data-tab="tabPlayer"]');
+      const firstTabContent = document.getElementById("tabPlayer");
+      if(firstTabBtn) firstTabBtn.classList.add("active");
+      if(firstTabContent) firstTabContent.classList.add("active");
+    }
+
+    if(!statusBanner){
+      statusBanner = document.createElement("div");
+      statusBanner.id = "subAdminStatusBanner";
+      const headerArea = headerEl ? headerEl.parentNode : null;
+      if(headerArea && headerArea.parentNode){
+        headerArea.parentNode.insertBefore(statusBanner, headerArea.nextSibling);
+      }
+    }
+    const role = (typeof getSubAdminRole === "function") ? getSubAdminRole(currentUser) : subAdminRoles[currentUser];
+    if(statusBanner && role){
+      const today = new Date().toDateString();
+      const gifted = (role.lastGiftDate === today) ? (role.giftedToday || 0) : 0;
+      const remCoins = Math.max(0, (role.dailyCap || 0) - gifted);
+      statusBanner.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.3);padding:8px 14px;border-radius:10px;margin-bottom:12px;font-size:12px;color:#bae6fd";
+      statusBanner.innerHTML = `
+        <div>🪙 Daily Coins: <b>${remCoins.toLocaleString()} / ${(role.dailyCap || 0).toLocaleString()}</b> remaining today</div>
+        <div>🎨 Skin Gifting: <b style="color:${role.canGiftSkins ? "#4ade80" : "#f87171"}">${role.canGiftSkins ? "Enabled" : "Disabled"}</b></div>
+      `;
+    }
+  } else {
+    if(permTabBtn) permTabBtn.style.display = "none";
+    if(unreleasedTabBtn) unreleasedTabBtn.style.display = "none";
+    if(masterDepositSec) masterDepositSec.style.display = "none";
+    if(adminWipeSec) adminWipeSec.style.display = "none";
+    if(statusBanner) statusBanner.style.display = "none";
   }
 
   const godBtn = document.getElementById("godModeStrikeBtn");
-  godBtn.style.display = (hasAdminAccess() && isGodModeEnabled) ? "block" : "none";
+  if(godBtn) godBtn.style.display = (hasAdminAccess() && isGodModeEnabled) ? "block" : "none";
 
   checkLeaksDisplay();
   updatePackPriceLabels();

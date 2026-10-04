@@ -182,15 +182,37 @@ let eventPackDiscount = parseInt(localStorage.getItem("cardCollectorEventDiscoun
 let isMaintenanceMode = localStorage.getItem("cardCollectorMaintenance") === "true";
 let isGodModeEnabled = localStorage.getItem("cardCollectorGodMode") !== "false";
 
+function getSubAdminRole(username){
+  if(!username) return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem("cardCollectorSubAdmins"));
+    if(saved && typeof saved === "object") subAdminRoles = saved;
+  } catch(e){}
+  if(!subAdminRoles || typeof subAdminRoles !== "object") return null;
+  if(subAdminRoles[username]) return subAdminRoles[username];
+  const lower = username.toLowerCase().trim();
+  const matchKey = Object.keys(subAdminRoles).find(k => k.toLowerCase().trim() === lower);
+  return matchKey ? subAdminRoles[matchKey] : null;
+}
+if(typeof window !== "undefined") window.getSubAdminRole = getSubAdminRole;
+
 function isMasterAdmin(){
-  return currentUser && currentUser.toLowerCase() === ADMIN_USERNAME.toLowerCase();
+  return currentUser && currentUser.toLowerCase().trim() === ADMIN_USERNAME.toLowerCase().trim();
 }
+if(typeof window !== "undefined") window.isMasterAdmin = isMasterAdmin;
+
 function isSubAdmin(){
-  return currentUser && subAdminRoles[currentUser] && subAdminRoles[currentUser].active;
+  if(!currentUser) return false;
+  if(isMasterAdmin()) return false;
+  const role = getSubAdminRole(currentUser);
+  return !!(role && role.active);
 }
+if(typeof window !== "undefined") window.isSubAdmin = isSubAdmin;
+
 function hasAdminAccess(){
   return isMasterAdmin() || isSubAdmin();
 }
+if(typeof window !== "undefined") window.hasAdminAccess = hasAdminAccess;
 
 function getActualPackCost(baseCost){
   if(eventPackDiscount <= 0) return baseCost;
