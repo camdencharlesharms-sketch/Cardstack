@@ -1,105 +1,72 @@
-# Card Stack (Cardstack) – Project Guide & Architecture
-
-Welcome to **Cardstack** (branded as **Card Stack**). This document serves as the persistent system overview, architectural guide, and operational runbook for future development sessions.
-
----
+# GEMINI.md - Card Stack Project Documentation & Architecture
 
 ## 1. Project Overview
 
-Cardstack is a zero-build, client-side web collectible card game (CCG) and tactical battle arena featuring:
-- **Collectible Card Binder**: 37 default collectible cards spanning 6 rarity tiers with procedural SVG artwork, individual health pools, and distinct battle attack sets.
-- **Booster Pack Opening Engine**: 6 booster pack tiers (Standard, Arcane, Aether, Gilded Vault, Cosmic Archive, and Celestial Divine Reliquary) featuring physics-inspired 3D pack opening animations and duplicate-to-coin conversion.
-- **Battle Arena**: Turn-based combat engine supporting both local solo AI duels and serverless peer-to-peer (P2P) multiplayer matches powered by PeerJS WebRTC.
-- **Card Studio**: In-browser card creator with an interactive canvas drawing tool, local image file upload, and custom attack/stat configuration.
-- **Supreme Admin Suite & Hub**: Master Admin controls (`Cam`), World Event broadcasting (coin multipliers & pack sales), God Mode Arena Strike, maintenance lock, player inventory manager, and appointed Sub-Admin roles.
+**Card Stack (Card Collector Pro & Arena)** is a modern, responsive web application for collecting trading cards, opening booster packs, designing custom cards and rarity tiers, managing an in-depth administration hub, and dueling in combat arenas against AI or other players via real-time WebRTC peer-to-peer networking.
+
+- **Technology Stack**: Pure client-side vanilla JavaScript (ES6+), HTML5, CSS3.
+- **External Libraries**: `canvas-confetti` (for celebratory pack unsealing), `peerjs` (for decentralized P2P multiplayer arena and presence mesh).
+- **Hosting & Deployment**: Static hosting on Vercel with continuous deployment via `git push origin main`. Zero build tools, bundlers, or server-side dependencies.
 
 ---
 
-## 2. Directory Structure & File Map
+## 2. File Structure
 
 ```
 Cardstack/
-├── index.html                  # Primary HTML5 application entry point
-├── cardstack.html              # Fallback redirect to index.html (backward compatibility)
-├── vercel.json                 # Vercel static routing configuration
-├── GEMINI.md                   # This project guide and architectural manual
-├── .agents/skills/cardstack-workflow/
-│   └── SKILL.md                # Git workflow, Vercel CI/CD and deployment rules
-├── .gemini/skills/cardstack-workflow/
-│   └── SKILL.md                # Mirrored workflow skill
+├── index.html            # Main markup for header, binder grid, pack opener, admin hub, and combat arena
 ├── css/
-│   └── styles.css              # Centralized stylesheet (exact original theme, layouts, animations)
-└── js/
-    ├── cards-data.js           # Card database, SVG art generator, pack odds & global state
-    ├── admin.js                # Admin Suite tabs, Card Studio canvas, and Sub-Admin controls
-    ├── arena.js                # AI & P2P Multiplayer combat engine (PeerJS WebRTC)
-    └── app.js                  # Main app loop, booster opening, accounts & initialization
+│   └── styles.css        # Visual styles, rarity glow animations, 3D card tilts, modal layouts, and battle animations
+├── js/
+│   ├── cards-data.js     # Default card sets, rarity configurations, drop tables, account initialization, and shared helpers
+│   ├── admin.js          # Admin suite: player management, economy, card studio, creator vault, events, and sub-admins
+│   ├── arena.js          # Combat arena: champion selector, AI matches, P2P multiplayer dueling, and combat animations
+│   ├── presence.js       # Real-time player presence tracking, heartbeat mesh, and remote session synchronization
+│   └── app.js            # Main application controller: collection rendering, pack mechanics, audio, and auth persistence
+└── GEMINI.md             # Architecture, design rules, localStorage schema, and workflow guidelines
 ```
-
-### Script Execution Order in `index.html`
-1. `https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js` (External WebRTC library for P2P Arena)
-2. `js/cards-data.js` (Declares default cards, pack definitions, and global game state variables)
-3. `js/admin.js` (Defines Admin functions, Canvas studio, and sub-admin management)
-4. `js/arena.js` (Initializes battle arena, turn logic, and P2P connection handlers)
-5. `js/app.js` (Core game loop, booster opening, account auth, and bootstrap initialization)
 
 ---
 
-## 3. Core Systems & Architecture
+## 3. Core Subsystems
 
-### A. Card & Pack Mechanics (`js/cards-data.js`)
-- **Rarity Hierarchy**: `common` (1) < `rare` (2) < `epic` (3) < `legendary` (4) < `mythic` (5) < `divine` (6).
-- **Procedural SVG Generator (`makeSvgArt`)**: Dynamically renders high-resolution card artwork via SVG data URIs, minimizing external asset dependencies.
-- **Pack Tiers (`packTiers`)**:
-  - `common` (Standard Booster, 25 🪙, 3 cards)
-  - `rare` (Arcane Booster, 60 🪙, 4 cards)
-  - `epic` (Aether Booster, 120 🪙, 5 cards)
-  - `legendary` (Gilded Vault, 220 🪙, 6 cards)
-  - `mythic` (Cosmic Archive, 400 🪙, 7 cards, 1 guaranteed Mythic)
-  - `divine` (Celestial Reliquary, 600 🪙, 8 cards, 1 guaranteed Divine)
-- **Pack Cost Calculation**: Dynamic discount via `getActualPackCost(baseCost)` supporting server-wide sales (25% or 50% off).
+### A. Card Collection & Booster Packs
+- **Card Tiers & Rarities**: Common, Uncommon, Rare, Epic, Legendary, Mythic, Divine, Transcendent, Void, plus any user-created custom rarities.
+- **Booster Pack Tiers**: Common, Rare, Legendary, God, Custom, and private Creator Vault Packs.
+- **Opening Animation**: Authentic 3D card tear/foil unsealing effects with particle confetti for high-rarity pulls.
+- **Duplicate Protection**: Pulling duplicate cards awards coin compensation based on rarity.
 
-### B. Battle Arena & Combat Engine (`js/arena.js`)
-- **Solo AI Mode**: Simulates opponent attacks with randomized timing and damage variance.
-- **Multiplayer P2P Mode**: Uses PeerJS for zero-server room matchmaking. Hosts generate a 6-digit code; guests join with the code. State is synchronized over WebRTC data channels (`init`, `init_reply`, `attack`, `forfeit`).
-- **God Strike**: Admin-only test cheat button (`godModeStrikeBtn`) dealing 9,999 instant damage.
-- **Match Conclusion & Rematch Controls**: Upon match victory (`triggerVictory`) or defeat (`triggerDefeat`), the outcome banner displays interactive controls:
-  - **Play Again** (`#battlePlayAgainBtn`): Seamlessly launches a new battle against a guaranteed fresh opponent (different from the opponent just fought), resets player/opponent health bars, populates and enables attack moves, and clears the combat log.
-  - **Back to Cards** (`#battleBackToCardsBtn`): Cleans up peer connections, closes the battle modal (`#battleModal`), resets arena views, updates collection renders, and scrolls smoothly back to the player's cards grid.
+### B. Battle Arena & Combat Engine
+- **Champion Selection**: Players select any unlocked card from their collection or gifted vault skins to champion them into battle.
+- **Starter Champion Fallback**: If a player or guest owns 0 cards, Card 0 ("Blaze") is provided as a free Starter Champion so anyone can enter and battle immediately.
+- **Dual Combat Modes**:
+  1. **Battle AI Champion**: Fight offline against automated AI cards equipped with unique attacks. Rewards coins upon victory. Includes "Play Again" with guaranteed new opponent rotation and "Back to Cards" smooth navigation.
+  2. **Custom Match (PVP)**: Decentralized 1v1 multiplayer using a 6-digit room code over WebRTC via PeerJS, supported by Google STUN servers (`stun:stun.l.google.com:19302`) and a local `BroadcastChannel` bridge for same-machine/multi-tab instantaneous dueling. Supports attack sync, live HP updates, animations, forfeit detection, disconnect handling, and rematch negotiation.
 
-### C. Live Player Presence & Real-Time Synchronization (`js/presence.js`)
-- **Live Online Presence Bar**: Displayed prominently at the top of the Admin Hub and in the header button (`⚡ Admin Hub 🟢 X`). Features pulsating indicators and interactive player chips showing active users, roles, and treasury balances.
-- **Instant Account Discovery**: When any player registers or signs in on any device or tab, their identity is announced instantly over `BroadcastChannel` (same-device multi-tab) and PeerJS WebRTC beacon (`cardstack_hub_presence_cam_v1`). Cam's Admin Hub immediately registers them into `accounts`, populates them into `#skinPlayerSelect`, `#economyPlayerSelect`, and `#subAdminTargetSelect`, updates the active player table, and displays a celebratory toast: `🎉 New Player Registered: [Username]`.
-- **1-Click Autofill Gifting**: Clicking any online player chip or table row autofills that player's username into all admin gifting fields with glowing visual confirmation.
-- **Real-Time Remote Gifting**: When Cam grants coins, skins, or unlocks in the Admin Hub, actions are dispatched over the live data channel directly to the recipient's device. The recipient's balance and collection update dynamically on screen with an animated celebratory banner without needing a page refresh.
-- **Active Refresh Daemon**: While the Admin Hub is open, a 2.5s daemon keeps online status labels (🟢 Online Now, 🟡 Away, ⚪ Offline) and treasury counts synchronized in real time.
-
-### D. Admin Hub & Permissions (`js/admin.js`)
-- **Authentication**: Master Admin is defined by `ADMIN_USERNAME = "Cam"`.
-- **Admin Hub Tabs**:
-  1. `👥 Player Manager`: Grant/revoke card skins, unlock all cards, wipe player cards, and manage registered accounts via dropdown or typed username.
-  2. `🪙 Economy & RNG`: Gift coins, set exact coin balances, drain accounts, deposit master coins, and adjust pack luck RNG multipliers (1x–10x) via dropdown or typed username.
-  3. `🎨 Card Studio`: In-browser card designer and publisher:
-     - **Canvas & Art Tools**: Draw custom art on canvas, upload local image file, or provide an image URL. If no art is provided, a procedural SVG is automatically generated matching the chosen rarity theme.
-     - **Multi-Attack & Stats Builder**: Configure custom HP and 2 unique attacks with customizable DMG yields.
-     - **Home Page & Pack Availability**: Cards created in Card Studio are instantly pushed to the public game deck (`cards`). They appear immediately in the home page binder for all players (in locked mystery frame if not yet owned, increasing the total set count) and enter the booster pack drop tables matching their rarity weight.
-     - **Pack Unlocking & Arena Playability**: Pulling the card from any booster pack unlocks it in the binder with full art, HP, and attacks, and makes it immediately available in the Battle Arena champion picker.
-     - **Live Custom Cards Manager**: Displays all live studio cards with 1-click "👁️ Binder" navigation, "📋 Code" export (for pasting directly into `defaultCards`), and "✕" deletion.
-     - **P2P Decentralized Sync**: When players battle via WebRTC P2P codes, custom cards are exchanged during handshake so opponents automatically receive and integrate them into their local binders and booster pack drop tables.
-  4. `🌪️ World Events`: Broadcast global coin multipliers (1x, 2x, 3x) and pack discounts (0%, 25%, 50%).
-  5. `📢 Broadcast & Leaks`: Transmit announcements or patch notes to the top banner.
-  6. `🛡 Sub-Admin Roles` *(Master Cam only)*: Appoint sub-admins with daily coin gifting caps and skin gifting allowances. Includes an active player roster and direct username selector.
-  7. `🔒 Creator Vault` *(Master Cam only)*: Private studio located strictly inside the Admin Hub. Allows Cam to:
-     - **Design New Rarities**: Invent brand new rarity tiers with custom visual presets (Prismatic Hologram, Abyssal Void, Cosmic Nebula, Solar Radiance, Cyber Matrix) or custom color accents, glowing foil borders, and power rank values.
-     - **Design New Cards**: Build private cards with custom picture upload from file or image URL, custom HP, dual attacks with DMG values, lore, custom emoji art fallback, and assign them to any standard or custom rarity.
-     - **Design New Packs**: Build private booster packs with custom coin costs, card counts (1-12), icons, visual foil themes, guaranteed minimum rarities (including custom rarities), and test-open them right inside the Admin Hub with authentic unsealing animations.
-     - **Strict Vault Isolation & Exclusive Gift-Only Rules**: When Cam creates an unreleased card in the Creator Vault:
-       - **Zero Pack Drops**: Unreleased vault cards NEVER drop in any booster packs for anyone. They can strictly and exclusively be obtained through Master Cam gifting.
-       - **Card Page Visibility**: Unreleased vault cards are 100% invisible to regular players (no locked placeholder, no counter increase) unless Cam specifically gifts the card to that player.
-       - **Cam's Gifting Powers**: Cam can gift any unreleased vault card to any player either via the Player Skins Dispatcher (`#skinSelect` dropdown under `🔒 Unreleased Vault Cards (Gift Only)`) or directly in the Creator Vault by clicking `🎁 Gift` on the card.
-       - **Gift Recipient Experience**: Once gifted, the recipient receives the card into their collection (`unreleasedOwned`). It renders in their binder as an unlocked, fully playable artifact with an exclusive `🔒 GIFTED VAULT` badge, custom stats, and artwork, and can be selected as a champion in the Battle Arena.
-       - **Revocation**: Cam can revoke gifted vault cards at any time via the Player Skins Dispatcher.
-       - **1-Click Public Release**: If Cam decides to make an unreleased vault card accessible in packs for everyone, Cam can click `🚀 Release Public`, which moves the card to the public deck (`cards`), displaying it in the binder for everyone and adding it to booster pack drop tables.
+### C. Admin Hub Suite & Creator Studio
+1. `👥 Player Manager`: Grant/revoke card skins, unlock all cards, wipe player cards, and manage registered accounts via dropdown or typed username.
+2. `🪙 Economy & RNG`: Gift coins, set exact coin balances, drain accounts, deposit master coins, and adjust pack luck RNG multipliers (1x–10x) via dropdown or typed username.
+3. `🎨 Card Studio`: In-browser card designer and publisher:
+   - **Canvas & Art Tools**: Draw custom art on canvas, upload local image file, or provide an image URL. If no art is provided, a procedural SVG is automatically generated matching the chosen rarity theme.
+   - **Multi-Attack & Stats Builder**: Configure custom HP and 2 unique attacks with customizable DMG yields.
+   - **Home Page & Pack Availability**: Cards created in Card Studio are instantly pushed to the public game deck (`cards`). They appear immediately in the home page binder for all players (in locked mystery frame if not yet owned, increasing the total set count) and enter the booster pack drop tables matching their rarity weight.
+   - **Pack Unlocking & Arena Playability**: Pulling the card from any booster pack unlocks it in the binder with full art, HP, and attacks, and makes it immediately available in the Battle Arena champion picker.
+   - **Live Custom Cards Manager**: Displays all live studio cards with 1-click "👁️ Binder" navigation, "📋 Code" export (for pasting directly into `defaultCards`), and "✕" deletion.
+   - **P2P Decentralized Sync**: When players battle via WebRTC P2P codes, custom cards are exchanged during handshake so opponents automatically receive and integrate them into their local binders and booster pack drop tables.
+4. `🌪️ World Events`: Broadcast global coin multipliers (1x, 2x, 3x) and pack discounts (0%, 25%, 50%).
+5. `📢 Broadcast & Leaks`: Transmit announcements or patch notes to the top banner.
+6. `🛡 Sub-Admin Roles` *(Master Cam only)*: Appoint sub-admins with daily coin gifting caps and skin gifting allowances. Includes an active player roster and direct username selector.
+7. `🔒 Creator Vault` *(Master Cam only)*: Private studio located strictly inside the Admin Hub. Allows Cam to:
+   - **Design New Rarities**: Invent brand new rarity tiers with custom visual presets (Prismatic Hologram, Abyssal Void, Cosmic Nebula, Solar Radiance, Cyber Matrix) or custom color accents, glowing foil borders, and power rank values.
+   - **Design New Cards**: Build private cards with custom picture upload from file or image URL, custom HP, dual attacks with DMG values, lore, custom emoji art fallback, and assign them to any standard or custom rarity.
+   - **Design New Packs**: Build private booster packs with custom coin costs, card counts (1-12), icons, visual foil themes, guaranteed minimum rarities (including custom rarities), and test-open them right inside the Admin Hub with authentic unsealing animations.
+   - **Strict Vault Isolation & Exclusive Gift-Only Rules**: When Cam creates an unreleased card in the Creator Vault:
+     - **Zero Pack Drops**: Unreleased vault cards NEVER drop in any booster packs for anyone. They can strictly and exclusively be obtained through Master Cam gifting.
+     - **Card Page Visibility**: Unreleased vault cards are 100% invisible to regular players (no locked placeholder, no counter increase) unless Cam specifically gifts the card to that player.
+     - **Cam's Gifting Powers**: Cam can gift any unreleased vault card to any player either via the Player Skins Dispatcher (`#skinSelect` dropdown under `🔒 Unreleased Vault Cards (Gift Only)`) or directly in the Creator Vault by clicking `🎁 Gift` on the card.
+     - **Gift Recipient Experience**: Once gifted, the recipient receives the card into their collection (`unreleasedOwned`). It renders in their binder as an unlocked, fully playable artifact with an exclusive `🔒 GIFTED VAULT` badge, custom stats, and artwork, and can be selected as a champion in the Battle Arena.
+     - **Revocation**: Cam can revoke gifted vault cards at any time via the Player Skins Dispatcher.
+     - **1-Click Public Release**: If Cam decides to make an unreleased vault card accessible in packs for everyone, Cam can click `🚀 Release Public`, which moves the card to the public deck (`cards`), displaying it in the binder for everyone and adding it to booster pack drop tables.
 
 ---
 
@@ -148,6 +115,10 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 - **Full Player State Sync on Connect**: Connected players automatically receive their latest account status, gifted cards, unreleased vault unlocks, coin balances, and studio cards upon handshake or reconnection.
 - **Vault Card Arena Readiness**: Gifted exclusive vault cards are recognized as owned battle-eligible cards, permitting arena entry even before standard packs are opened.
 - **Resilient Vault & Skin Identifier Matching**: Unreleased vault cards are matched across both card `id` and `name` (case-insensitive) using `findVaultCardByIdOrName` and `isVaultCardOwnedByUser`. This guarantees gifted vault cards and custom skins always show as unlocked in the recipient's binder grid and combat arena, irrespective of whether the identifier was saved by ID or by card name.
-- **Account State Freshness on Sign-in**: `loadAccount` re-reads fresh `accounts`, `unreleasedCards`, and `customCards` directly from `localStorage` upon login, ensuring any cards or coins granted to the player while logged out or in another tab are instantly loaded and never overwritten by stale memory.
-- **Case-Insensitive Account Lookup**: `getUserAccount` safely resolves player records regardless of case mismatches (e.g., `playertwo` vs `PlayerTwo`), keeping ownership lists, balances, and gift dispatches synchronized.
-- **Instant Account Presence & Beacon Re-alignment**: Switching accounts or signing in triggers `window.onUserAccountSwitched`, transitioning the peer connection to Host (`Cam`) or Client (players) and immediately announcing presence, so gifts dispatch over WebRTC and BroadcastChannel in real time without refresh.
+
+### Combat Arena Accessibility & Network Resilience
+- **Starter Champion Auto-Provisioning**: Every new player, guest, or account starts with Card 0 ("Blaze") in `owned: [0]`, ensuring immediate access to the arena without lockouts.
+- **Universal Arena Availability**: Safe admin checking eliminates runtime `ReferenceError` crashes, allowing guests, newly signed up players, and regular users across all devices to open the arena instantly.
+- **WebRTC STUN NAT Traversal**: Google STUN servers (`stun:stun.l.google.com:19302`) ensure reliable P2P matchmaking across separate Wi-Fi, cellular, and remote networks.
+- **Hybrid Local BroadcastChannel Fallback**: Same-machine or multi-tab multiplayer duels connect instantly with 0 latency over `BroadcastChannel("cardstack_arena_local_bridge")`.
+- **Match Life-Cycle & Error Handling**: Explicit connection timeouts, clear lobby status indicators, graceful disconnect/forfeit banners, and rematch negotiation in multiplayer.

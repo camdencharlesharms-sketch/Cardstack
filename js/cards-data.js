@@ -172,7 +172,7 @@ localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
 localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
 
 let currentUser = localStorage.getItem("cardCollectorCurrentUser") || null;
-let owned = [];
+let owned = [0];
 let coins = 100;
 let filter = "all";
 let adminLuckMultiplier = parseFloat(localStorage.getItem("cardCollectorLuck") || "1");
@@ -346,3 +346,37 @@ function shouldShowUnreleasedInBinder(){
 // Keep unreleased packs accessible to pack engine
 Object.assign(packTiers, unreleasedPacks);
 
+
+// Universal Account & Vault Card Lookup Helpers
+function getUserAccount(username){
+  if(!username || typeof accounts !== "object" || !accounts) return null;
+  if(accounts[username]) return accounts[username];
+  const lower = username.toLowerCase();
+  const matchK = Object.keys(accounts).find(k => k.toLowerCase() === lower);
+  return matchK ? accounts[matchK] : null;
+}
+if(typeof window !== "undefined") window.getUserAccount = getUserAccount;
+
+function findVaultCardByIdOrName(id){
+  if(!id || typeof unreleasedCards === "undefined" || !Array.isArray(unreleasedCards)) return null;
+  const idStr = String(id).toLowerCase().trim();
+  return unreleasedCards.find(c => {
+    if(!c) return false;
+    const cId = c.id ? String(c.id).toLowerCase().trim() : "";
+    const cName = c.name ? String(c.name).toLowerCase().trim() : "";
+    return cId === idStr || cName === idStr;
+  }) || null;
+}
+if(typeof window !== "undefined") window.findVaultCardByIdOrName = findVaultCardByIdOrName;
+
+function isVaultCardOwnedByUser(vCard, unreleasedOwnedList){
+  if(!vCard || !Array.isArray(unreleasedOwnedList)) return false;
+  const vId = vCard.id ? String(vCard.id).toLowerCase().trim() : "";
+  const vName = vCard.name ? String(vCard.name).toLowerCase().trim() : "";
+  return unreleasedOwnedList.some(item => {
+    if(!item) return false;
+    const itemStr = String(item).toLowerCase().trim();
+    return (vId && itemStr === vId) || (vName && itemStr === vName);
+  });
+}
+if(typeof window !== "undefined") window.isVaultCardOwnedByUser = isVaultCardOwnedByUser;

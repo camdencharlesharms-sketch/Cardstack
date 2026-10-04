@@ -1,14 +1,15 @@
 // Helper: case-insensitive account lookup
-window.getUserAccount = function(username){
+function getUserAccount(username){
   if(!username || typeof accounts !== "object" || !accounts) return null;
   if(accounts[username]) return accounts[username];
   const lower = username.toLowerCase();
   const matchK = Object.keys(accounts).find(k => k.toLowerCase() === lower);
   return matchK ? accounts[matchK] : null;
-};
+}
+if(typeof window !== "undefined") window.getUserAccount = getUserAccount;
 
 // Helper: match unreleased vault card by ID or Name
-window.findVaultCardByIdOrName = function(id){
+function findVaultCardByIdOrName(id){
   if(!id || typeof unreleasedCards === "undefined" || !Array.isArray(unreleasedCards)) return null;
   const idStr = String(id).toLowerCase().trim();
   return unreleasedCards.find(c => {
@@ -17,10 +18,11 @@ window.findVaultCardByIdOrName = function(id){
     const cName = c.name ? String(c.name).toLowerCase().trim() : "";
     return cId === idStr || cName === idStr;
   }) || null;
-};
+}
+if(typeof window !== "undefined") window.findVaultCardByIdOrName = findVaultCardByIdOrName;
 
 // Helper: check if a vault card is owned by user
-window.isVaultCardOwnedByUser = function(vCard, unreleasedOwnedList){
+function isVaultCardOwnedByUser(vCard, unreleasedOwnedList){
   if(!vCard || !Array.isArray(unreleasedOwnedList)) return false;
   const vId = vCard.id ? String(vCard.id).toLowerCase().trim() : "";
   const vName = vCard.name ? String(vCard.name).toLowerCase().trim() : "";
@@ -29,7 +31,8 @@ window.isVaultCardOwnedByUser = function(vCard, unreleasedOwnedList){
     const itemStr = String(item).toLowerCase().trim();
     return (vId && itemStr === vId) || (vName && itemStr === vName);
   });
-};
+}
+if(typeof window !== "undefined") window.isVaultCardOwnedByUser = isVaultCardOwnedByUser;
 
 function save(){
   let targetAcc = getUserAccount(currentUser);
@@ -82,9 +85,10 @@ function loadAccount(username){
   const userAcc = getUserAccount(username) || accounts[username];
   if(userAcc){
     owned = (Array.isArray(userAcc.owned) ? userAcc.owned : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+    if(owned.length === 0) owned = [0];
     coins = Number.isFinite(userAcc.coins) ? userAcc.coins : 100;
   } else {
-    owned = [];
+    owned = [0];
     coins = 100;
   }
 
@@ -488,7 +492,7 @@ document.getElementById("accountSubmit").onclick = ()=>{
 
   if(!accounts[actualUser]){
     isNewAccount = true;
-    accounts[actualUser] = { password: pass, owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+    accounts[actualUser] = { password: pass, owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   } else if(!accounts[actualUser].password){
     // Claiming account created via Admin Hub gifting
@@ -543,10 +547,13 @@ if(currentUser && accounts[currentUser]){
 } else {
   try {
     const savedGuestOwned = JSON.parse(localStorage.getItem("cardCollectorGuestOwned"));
-    if(Array.isArray(savedGuestOwned)) owned = savedGuestOwned;
+    if(Array.isArray(savedGuestOwned) && savedGuestOwned.length > 0) owned = savedGuestOwned;
+    else owned = [0];
     const savedGuestCoins = parseInt(localStorage.getItem("cardCollectorGuestCoins"), 10);
     if(!isNaN(savedGuestCoins)) coins = savedGuestCoins;
-  } catch(e){}
+  } catch(e){
+    owned = [0];
+  }
   updateAccountUI();
   render();
 }

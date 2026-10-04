@@ -9,19 +9,69 @@ let isMultiplayerMode = false;
 let peer = null;
 let p2pConnection = null;
 let myRoomCode = "";
+let localArenaChannel = null;
+let isLocalChannelMode = false;
+
+// STUN configuration for reliable cross-network WebRTC traversal
+const PEER_CONFIG = {
+  debug: 1,
+  config: {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun3.l.google.com:19302" },
+      { urls: "stun:stun4.l.google.com:19302" }
+    ]
+  }
+};
+
+try {
+  if(typeof BroadcastChannel !== "undefined"){
+    localArenaChannel = new BroadcastChannel("cardstack_arena_local_bridge");
+  }
+} catch(e){}
+
+function checkIsMasterAdmin(){
+  return (typeof isMasterAdmin === "function") && isMasterAdmin();
+}
+
+function getSelectedChampionCard(){
+  if(typeof selectedChampionIndex === "string" && selectedChampionIndex.startsWith("vault_")){
+    const vId = selectedChampionIndex.replace("vault_", "");
+    const found = (typeof findVaultCardByIdOrName === "function")
+      ? findVaultCardByIdOrName(vId)
+      : (Array.isArray(unreleasedCards) ? unreleasedCards.find(uc => (uc.id || uc.name) === vId) : null);
+    if(found) return found;
+  }
+  if(selectedChampionIndex !== null && cards[selectedChampionIndex]){
+    return cards[selectedChampionIndex];
+  }
+  if(Array.isArray(owned) && owned.length > 0 && cards[owned[0]]){
+    return cards[owned[0]];
+  }
+  return cards[0];
+}
+window.getSelectedChampionCard = getSelectedChampionCard;
 
 function renderArenaCardPicker(){
   const carousel = document.getElementById("arenaCardDeckCarousel");
+  if(!carousel) return;
   carousel.innerHTML = "";
 
-  const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
+  const isCam = checkIsMasterAdmin();
   let availableCards = [];
 
-  owned.forEach(idx => {
-    if(cards[idx]){
-      availableCards.push({ card: cards[idx], index: idx, isVault: false });
-    }
-  });
+  if(Array.isArray(owned)){
+    owned.forEach(idx => {
+      const numIdx = parseInt(idx, 10);
+      if(!isNaN(numIdx) && cards[numIdx]){
+        if(!availableCards.some(ac => ac.card === cards[numIdx])){
+          availableCards.push({ card: cards[numIdx], index: numIdx, isVault: false });
+        }
+      }
+    });
+  }
 
   // Allow Master Cam and players who were gifted exclusive vault cards to wield them in battle
   const userAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (currentUser ? accounts[currentUser] : null);
@@ -40,6 +90,15 @@ function renderArenaCardPicker(){
     });
   }
 
+  // Starter champion fallback so EVERY new player / guest can battle immediately!
+  if(availableCards.length === 0){
+    const starterCard = cards.find(c => !c.isUnreleased) || cards[0];
+    const starterIdx = (starterCard && cards.indexOf(starterCard) >= 0) ? cards.indexOf(starterCard) : 0;
+    if(starterCard){
+      availableCards.push({ card: starterCard, index: starterIdx, isVault: false, isStarter: true });
+    }
+  }
+
   if(availableCards.length === 0) return;
 
   if(selectedChampionIndex === null || !availableCards.some(ac => ac.index === selectedChampionIndex)){
@@ -52,17 +111,21 @@ function renderArenaCardPicker(){
     const cardItem = document.createElement("div");
     cardItem.className = `arena-pick-item ${isSelected ? 'selected' : ''}`;
     
-    const atkList = (c.attacks || []).map(a => `<div style="display:flex;justify-content:space-between;font-size:9.5px;color:#cbd5e1"><span>⚔️ ${a.name}</span><b style="color:#fbbf24">${a.dmg}</b></div>`).join("");
+    const cardAttacks = (Array.isArray(c.attacks) && c.attacks.length > 0)
+      ? c.attacks
+      : [{ name: "Quick Strike", dmg: 18 }, { name: "Power Burst", dmg: 30 }];
 
-    const vaultBadge = item.isVault ? '<span style="color:#f43f5e;font-size:8px;font-weight:900;background:rgba(244,63,94,0.15);padding:1px 4px;border-radius:3px">VAULT</span>' : '';
+    const atkList = cardAttacks.map(a => `<div style="display:flex;justify-content:space-between;font-size:9.5px;color:#cbd5e1"><span>⚔️ ${a.name}</span><b style="color:#fbbf24">${a.dmg}</b></div>`).join("");
+
+    const vaultBadge = item.isVault ? '<span style="color:#f43f5e;font-size:8px;font-weight:900;background:rgba(244,63,94,0.15);padding:1px 4px;border-radius:3px">VAULT</span>' : (item.isStarter ? '<span style="color:#38bdf8;font-size:8px;font-weight:900;background:rgba(56,189,248,0.15);padding:1px 4px;border-radius:3px">STARTER</span>' : '');
 
     cardItem.innerHTML = `
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;font-weight:900;text-transform:uppercase">
-          <span style="color:#38bdf8">${c.rarity} ${vaultBadge}</span>
+          <span style="color:#38bdf8">${c.rarity || 'Common'} ${vaultBadge}</span>
           <span style="color:#fca5a5">${c.hp || 80} HP</span>
         </div>
-        <img src="${c.image}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin:6px 0;border:1px solid rgba(255,255,255,0.1)">
+        <img src="${c.image || ''}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin:6px 0;border:1px solid rgba(255,255,255,0.1)">
         <b style="font-size:13px;display:block;text-align:center">${c.name}</b>
       </div>
       <div style="background:rgba(0,0,0,0.4);padding:6px;border-radius:6px">
@@ -81,69 +144,75 @@ function renderArenaCardPicker(){
   const selectedItem = availableCards.find(ac => ac.index === selectedChampionIndex) || availableCards[0];
   const activeCard = selectedItem.card;
   battlePlayerCard = activeCard;
-  document.getElementById("selectedChampionBadge").textContent = `Selected: ${activeCard.name} (${activeCard.hp || 80} HP)${selectedItem.isVault ? ' [Vault Card]' : ''}`;
+  const badgeEl = document.getElementById("selectedChampionBadge");
+  if(badgeEl){
+    badgeEl.textContent = `Selected: ${activeCard.name} (${activeCard.hp || 80} HP)${selectedItem.isVault ? ' [Vault Card]' : (selectedItem.isStarter ? ' [Starter]' : '')}`;
+  }
 }
 
 document.getElementById("arenaBtn").onclick = ()=>{
-  if(isMaintenanceMode && !hasAdminAccess()){
+  if(isMaintenanceMode && (typeof hasAdminAccess === "function" && !hasAdminAccess())){
     alert("The battle arena is offline for maintenance.");
-    return;
-  }
-  const curUserVaultOwned = (currentUser && accounts[currentUser] && Array.isArray(accounts[currentUser].unreleasedOwned))
-    ? accounts[currentUser].unreleasedOwned
-    : (isCam && accounts["Cam"] && Array.isArray(accounts["Cam"].unreleasedOwned) ? accounts["Cam"].unreleasedOwned : []);
-
-  if(owned.length === 0 && curUserVaultOwned.length === 0){
-    alert("You need to own at least one card to enter the arena! Open some packs first.");
     return;
   }
   renderArenaCardPicker();
   resetArenaViews();
-  document.getElementById("battleModal").classList.add("show");
+  const battleModal = document.getElementById("battleModal");
+  if(battleModal) battleModal.classList.add("show");
 };
 
 function resetArenaViews(){
-  document.getElementById("arenaHubArea").style.display = "flex";
-  document.getElementById("arenaHostWaitArea").style.display = "none";
-  document.getElementById("arenaJoinArea").style.display = "none";
-  document.getElementById("battleFieldArea").style.display = "none";
-  document.getElementById("victoryBanner").classList.remove("show", "outcome-win", "outcome-lose");
+  const hub = document.getElementById("arenaHubArea");
+  const hostWait = document.getElementById("arenaHostWaitArea");
+  const joinArea = document.getElementById("arenaJoinArea");
+  const battleField = document.getElementById("battleFieldArea");
+  const victoryBanner = document.getElementById("victoryBanner");
+
+  if(hub) hub.style.display = "flex";
+  if(hostWait) hostWait.style.display = "none";
+  if(joinArea) joinArea.style.display = "none";
+  if(battleField) battleField.style.display = "none";
+  if(victoryBanner) victoryBanner.classList.remove("show", "outcome-win", "outcome-lose");
+
+  const joinBtn = document.getElementById("confirmJoinCodeBtn");
+  if(joinBtn){
+    joinBtn.textContent = "Connect & Fight";
+    joinBtn.disabled = false;
+  }
 }
 
 document.getElementById("closeBattleBtn").onclick = ()=>{
   cleanupPeer();
-  document.getElementById("battleModal").classList.remove("show");
+  const battleModal = document.getElementById("battleModal");
+  if(battleModal) battleModal.classList.remove("show");
 };
+
 document.getElementById("forfeitBattleBtn").onclick = ()=>{
-  if(isMultiplayerMode && p2pConnection){
-    p2pConnection.send({ type: "forfeit" });
+  if(isMultiplayerMode){
+    if(p2pConnection && p2pConnection.open){
+      try { p2pConnection.send({ type: "forfeit" }); } catch(e){}
+    } else if(isLocalChannelMode && localArenaChannel){
+      try { localArenaChannel.postMessage({ type: "forfeit", room: myRoomCode }); } catch(e){}
+    }
   }
   cleanupPeer();
-  document.getElementById("battleModal").classList.remove("show");
+  const battleModal = document.getElementById("battleModal");
+  if(battleModal) battleModal.classList.remove("show");
+  resetArenaViews();
 };
 
 function cleanupPeer(){
-  if(p2pConnection) p2pConnection.close();
-  if(peer) peer.destroy();
+  isMultiplayerMode = false;
+  isLocalChannelMode = false;
+  if(p2pConnection){
+    try { p2pConnection.close(); } catch(e){}
+  }
+  if(peer){
+    try { peer.destroy(); } catch(e){}
+  }
   peer = null;
   p2pConnection = null;
 }
-
-function getSelectedChampionCard(){
-  if(typeof selectedChampionIndex === "string" && selectedChampionIndex.startsWith("vault_")){
-    const vId = selectedChampionIndex.replace("vault_", "");
-    const found = (typeof findVaultCardByIdOrName === "function")
-      ? findVaultCardByIdOrName(vId)
-      : (Array.isArray(unreleasedCards) ? unreleasedCards.find(uc => (uc.id || uc.name) === vId) : null);
-    if(found) return found;
-  }
-  if(selectedChampionIndex !== null && cards[selectedChampionIndex]){
-    return cards[selectedChampionIndex];
-  }
-  if(owned.length > 0 && cards[owned[0]]) return cards[owned[0]];
-  return cards[0];
-}
-window.getSelectedChampionCard = getSelectedChampionCard;
 
 function startSoloBattle(){
   cleanupPeer();
@@ -153,7 +222,7 @@ function startSoloBattle(){
   const publicCards = cards.filter(c => !c.isUnreleased);
   const aiPool = publicCards.length > 0 ? publicCards : cards;
 
-  // Ensure we always face a NEW opponent different from the previous opponent
+  // Guarantee facing a NEW, different opponent
   let eligiblePool = aiPool;
   if(battleOppCard && aiPool.length > 1){
     eligiblePool = aiPool.filter(c => {
@@ -180,6 +249,7 @@ document.getElementById("startAiMatchBtn").onclick = startSoloBattle;
 document.getElementById("hostMatchBtn").onclick = ()=>{
   battlePlayerCard = getSelectedChampionCard();
   isMultiplayerMode = true;
+  isLocalChannelMode = false;
 
   myRoomCode = Math.floor(100000 + Math.random() * 900000).toString();
   document.getElementById("roomCodeDisplay").textContent = myRoomCode;
@@ -188,21 +258,58 @@ document.getElementById("hostMatchBtn").onclick = ()=>{
   document.getElementById("arenaHostWaitArea").style.display = "flex";
 
   cleanupPeer();
-  peer = new Peer("aetheria-" + myRoomCode);
+  isMultiplayerMode = true;
 
-  peer.on("open", ()=>{
-    console.log("Host ready on code:", myRoomCode);
-  });
+  // Listen on local BroadcastChannel for instant same-browser multi-tab connection
+  if(localArenaChannel){
+    localArenaChannel.onmessage = (e)=>{
+      const data = e.data;
+      if(!data) return;
+      if(data.type === "local_join" && data.room === myRoomCode && isMultiplayerMode && !p2pConnection){
+        isLocalChannelMode = true;
+        battleOppCard = data.card || cards[0];
+        const challengerName = data.user || "Challenger";
 
-  peer.on("connection", (conn)=>{
-    p2pConnection = conn;
-    setupP2PListeners(true);
-  });
+        localArenaChannel.postMessage({
+          type: "local_init_reply",
+          room: myRoomCode,
+          card: battlePlayerCard,
+          user: currentUser || "Host",
+          customCards: (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : []
+        });
 
-  peer.on("error", (err)=>{
-    alert("Connection error: " + err.type);
-    resetArenaViews();
-  });
+        setupCombatInterface("YOU (HOST)", challengerName.toUpperCase(), true);
+        appendBattleLog(`<div style="color:#4ade80">⚔️ Connected locally to: <b>${challengerName}</b>!</div>`);
+      } else if(isLocalChannelMode && data.room === myRoomCode){
+        handleIncomingBattleData(data, true);
+      }
+    };
+  }
+
+  // Cross-device PeerJS WebRTC
+  if(typeof Peer === "undefined"){
+    console.warn("PeerJS library unavailable, relying on local channel");
+    return;
+  }
+
+  try {
+    peer = new Peer("aetheria-" + myRoomCode, PEER_CONFIG);
+
+    peer.on("open", ()=>{
+      console.log("Host ready on code:", myRoomCode);
+    });
+
+    peer.on("connection", (conn)=>{
+      p2pConnection = conn;
+      setupP2PListeners(true);
+    });
+
+    peer.on("error", (err)=>{
+      console.warn("Host peer notice:", err.type);
+    });
+  } catch(e){
+    console.error("Peer init failed:", e);
+  }
 };
 
 document.getElementById("cancelHostBtn").onclick = ()=>{
@@ -217,111 +324,253 @@ document.getElementById("showJoinMatchBtn").onclick = ()=>{
 
   document.getElementById("arenaHubArea").style.display = "none";
   document.getElementById("arenaJoinArea").style.display = "flex";
-  document.getElementById("joinCodeInput").value = "";
-  document.getElementById("joinCodeInput").focus();
+  const input = document.getElementById("joinCodeInput");
+  if(input){
+    input.value = "";
+    input.focus();
+  }
 };
 
 document.getElementById("cancelJoinBtn").onclick = resetArenaViews;
 
 document.getElementById("confirmJoinCodeBtn").onclick = ()=>{
-  const code = document.getElementById("joinCodeInput").value.trim();
+  const rawCode = document.getElementById("joinCodeInput").value.trim();
+  const code = rawCode.replace(/\s+/g, "");
   if(code.length !== 6 || isNaN(code)){
     alert("Please enter a valid 6-digit battle code.");
     return;
   }
 
-  cleanupPeer();
-  peer = new Peer();
+  battlePlayerCard = getSelectedChampionCard();
+  isMultiplayerMode = true;
+  myRoomCode = code;
 
-  peer.on("open", ()=>{
-    p2pConnection = peer.connect("aetheria-" + code);
-    p2pConnection.on("open", ()=>{
-      setupP2PListeners(false);
-      p2pConnection.send({
-        type: "init",
-        card: battlePlayerCard,
-        user: currentUser || "Challenger",
-        customCards: (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : []
+  const joinBtn = document.getElementById("confirmJoinCodeBtn");
+  joinBtn.textContent = "Connecting...";
+  joinBtn.disabled = true;
+
+  cleanupPeer();
+  isMultiplayerMode = true;
+
+  let hasConnected = false;
+
+  // Try local BroadcastChannel first for instant multi-tab testing
+  if(localArenaChannel){
+    localArenaChannel.onmessage = (e)=>{
+      const data = e.data;
+      if(!data) return;
+      if(data.type === "local_init_reply" && data.room === code && !hasConnected){
+        hasConnected = true;
+        isLocalChannelMode = true;
+        clearTimeout(joinTimeout);
+        joinBtn.textContent = "Connect & Fight";
+        joinBtn.disabled = false;
+
+        battleOppCard = data.card || cards[0];
+        const hostName = data.user || "Host";
+        setupCombatInterface("YOU (CHALLENGER)", hostName.toUpperCase(), false);
+        appendBattleLog(`<div style="color:#4ade80">⚔️ Connected locally to Host: <b>${hostName}</b>! Host attacks first.</div>`);
+      } else if(isLocalChannelMode && data.room === code){
+        handleIncomingBattleData(data, false);
+      }
+    };
+
+    localArenaChannel.postMessage({
+      type: "local_join",
+      room: code,
+      card: battlePlayerCard,
+      user: currentUser || "Challenger",
+      customCards: (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : []
+    });
+  }
+
+  // Cross-device PeerJS WebRTC with timeout
+  const joinTimeout = setTimeout(()=>{
+    if(!hasConnected){
+      joinBtn.textContent = "Connect & Fight";
+      joinBtn.disabled = false;
+      alert(`Could not connect to room ${code}. Make sure the host has opened the lobby with this 6-digit code!`);
+      cleanupPeer();
+      resetArenaViews();
+    }
+  }, 12000);
+
+  if(typeof Peer === "undefined"){
+    return;
+  }
+
+  try {
+    peer = new Peer(PEER_CONFIG);
+
+    peer.on("open", ()=>{
+      p2pConnection = peer.connect("aetheria-" + code, { reliable: true });
+
+      const onConnectReady = ()=>{
+        if(hasConnected) return;
+        hasConnected = true;
+        clearTimeout(joinTimeout);
+        joinBtn.textContent = "Connect & Fight";
+        joinBtn.disabled = false;
+
+        setupP2PListeners(false);
+        p2pConnection.send({
+          type: "init",
+          card: battlePlayerCard,
+          user: currentUser || "Challenger",
+          customCards: (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : []
+        });
+      };
+
+      if(p2pConnection.open){
+        onConnectReady();
+      } else {
+        p2pConnection.on("open", onConnectReady);
+      }
+
+      p2pConnection.on("error", (err)=>{
+        if(!hasConnected){
+          clearTimeout(joinTimeout);
+          joinBtn.textContent = "Connect & Fight";
+          joinBtn.disabled = false;
+          alert("Connection error: " + (err.message || err.type || "Check arena code"));
+          cleanupPeer();
+          resetArenaViews();
+        }
       });
     });
-  });
 
-  peer.on("error", (err)=>{
-    alert("Unable to connect to arena code. Check code and try again.");
-    resetArenaViews();
-  });
+    peer.on("error", (err)=>{
+      if(!hasConnected){
+        clearTimeout(joinTimeout);
+        joinBtn.textContent = "Connect & Fight";
+        joinBtn.disabled = false;
+        alert("Unable to reach room code. Make sure the host is currently in the lobby.");
+        cleanupPeer();
+        resetArenaViews();
+      }
+    });
+  } catch(e){
+    console.error("Peer connect error:", e);
+  }
 };
 
-function setupP2PListeners(isHost){
-  p2pConnection.on("data", (data)=>{
-    if(data.type === "init"){
-      battleOppCard = data.card;
-      if(data.user && data.user !== "Challenger" && data.user !== "Host"){
-        if(!accounts[data.user]){
-          accounts[data.user] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
-        } else {
-          accounts[data.user].hasPlayed = true;
-          accounts[data.user].lastActive = Date.now();
-        }
-        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+function handleIncomingBattleData(data, isHost){
+  if(data.type === "init"){
+    battleOppCard = data.card || cards[0];
+    const challengerName = data.user || "Challenger";
+
+    if(challengerName && challengerName !== "Challenger" && challengerName !== "Host"){
+      const acc = (typeof getUserAccount === "function") ? getUserAccount(challengerName) : accounts[challengerName];
+      if(!acc){
+        accounts[challengerName] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+      } else {
+        acc.hasPlayed = true;
+        acc.lastActive = Date.now();
       }
-      if(Array.isArray(data.customCards) && data.customCards.length > 0){
-        syncIncomingCustomCards(data.customCards);
-      }
-      if(isHost){
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    }
+
+    if(Array.isArray(data.customCards) && data.customCards.length > 0){
+      syncIncomingCustomCards(data.customCards);
+    }
+
+    if(isHost){
+      if(p2pConnection && p2pConnection.open){
         p2pConnection.send({
           type: "init_reply",
           card: battlePlayerCard,
           user: currentUser || "Host",
           customCards: (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : []
         });
-        setupCombatInterface("YOU (HOST)", `${data.user.toUpperCase()}`, true);
-        appendBattleLog(`<div style="color:#4ade80">Connected! Fighting rival player: <b>${data.user}</b>.</div>`);
       }
-    } else if(data.type === "init_reply"){
-      battleOppCard = data.card;
-      if(Array.isArray(data.customCards) && data.customCards.length > 0){
-        syncIncomingCustomCards(data.customCards);
-      }
-      if(data.user && data.user !== "Challenger" && data.user !== "Host"){
-        if(!accounts[data.user]){
-          accounts[data.user] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
-        } else {
-          accounts[data.user].hasPlayed = true;
-          accounts[data.user].lastActive = Date.now();
-        }
-        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-      }
-      setupCombatInterface("YOU (CHALLENGER)", `${data.user.toUpperCase()}`, false);
-      appendBattleLog(`<div style="color:#4ade80">Connected to Host! <b>${data.user}</b> takes first turn.</div>`);
-    } else if(data.type === "attack"){
-      const dmg = data.dmg;
-      const attackName = data.attackName;
-
-      triggerBattleAnimation("ai", "player");
-
-      battlePlayerHp = Math.max(0, battlePlayerHp - dmg);
-      updateBattleHpBars();
-      appendBattleLog(`⚔️ <b>${battleOppCard.name}</b> hit you with <span style="color:#fca5a5">${attackName}</span> for <b>${dmg}</b> damage!`);
-
-      if(battlePlayerHp <= 0){
-        appendBattleLog(`💀 <b style="color:#ef4444">DEFEAT!</b> Your champion was knocked out!`);
-        triggerDefeat();
-      } else {
-        isPlayerTurn = true;
-        setAttacksDisabled(false);
-        document.getElementById("turnInstructionText").textContent = "Your turn! Choose an attack:";
-        appendBattleLog(`<span style="color:#38bdf8">It's your turn to strike!</span>`);
-      }
-    } else if(data.type === "forfeit"){
-      triggerVictory();
-      appendBattleLog(`🏆 <b style="color:#4ade80">OPPONENT SURRENDERED!</b> You won the arena duel!`);
-      setAttacksDisabled(true);
+      setupCombatInterface("YOU (HOST)", challengerName.toUpperCase(), true);
+      appendBattleLog(`<div style="color:#4ade80">⚔️ Connected! Fighting rival player: <b>${challengerName}</b>.</div>`);
     }
+  } else if(data.type === "init_reply"){
+    battleOppCard = data.card || cards[0];
+    const hostName = data.user || "Host";
+
+    if(Array.isArray(data.customCards) && data.customCards.length > 0){
+      syncIncomingCustomCards(data.customCards);
+    }
+
+    if(hostName && hostName !== "Challenger" && hostName !== "Host"){
+      const acc = (typeof getUserAccount === "function") ? getUserAccount(hostName) : accounts[hostName];
+      if(!acc){
+        accounts[hostName] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+      } else {
+        acc.hasPlayed = true;
+        acc.lastActive = Date.now();
+      }
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    }
+
+    setupCombatInterface("YOU (CHALLENGER)", hostName.toUpperCase(), false);
+    appendBattleLog(`<div style="color:#4ade80">⚔️ Connected to Host! <b>${hostName}</b> strikes first.</div>`);
+  } else if(data.type === "attack"){
+    const dmg = Number(data.dmg) || 15;
+    const attackName = data.attackName || "Strike";
+
+    triggerBattleAnimation("ai", "player");
+
+    battlePlayerHp = Math.max(0, battlePlayerHp - dmg);
+    updateBattleHpBars();
+    appendBattleLog(`⚔️ <b>${battleOppCard.name}</b> hit you with <span style="color:#fca5a5">${attackName}</span> for <b>${dmg}</b> damage!`);
+
+    if(battlePlayerHp <= 0){
+      appendBattleLog(`💀 <b style="color:#ef4444">DEFEAT!</b> Your champion was knocked out!`);
+      triggerDefeat();
+    } else {
+      isPlayerTurn = true;
+      setAttacksDisabled(false);
+      document.getElementById("turnInstructionText").textContent = "Your turn! Choose an attack:";
+      appendBattleLog(`<span style="color:#38bdf8">It's your turn to strike!</span>`);
+    }
+  } else if(data.type === "rematch_request"){
+    appendBattleLog(`<div style="color:#fbbf24">🔄 Opponent requested a rematch! Setting up next battle...</div>`);
+    if(isHost){
+      if(p2pConnection && p2pConnection.open){
+        p2pConnection.send({ type: "rematch_start" });
+      } else if(isLocalChannelMode && localArenaChannel){
+        localArenaChannel.postMessage({ type: "rematch_start", room: myRoomCode });
+      }
+      setupCombatInterface("YOU (HOST)", (battleOppCard ? battleOppCard.name.toUpperCase() : "RIVAL"), true);
+    } else {
+      setupCombatInterface("YOU (CHALLENGER)", (battleOppCard ? battleOppCard.name.toUpperCase() : "HOST"), false);
+    }
+  } else if(data.type === "rematch_start"){
+    setupCombatInterface("YOU (CHALLENGER)", (battleOppCard ? battleOppCard.name.toUpperCase() : "HOST"), false);
+    appendBattleLog(`<div style="color:#4ade80">⚔️ Rematch started!</div>`);
+  } else if(data.type === "forfeit"){
+    triggerVictory();
+    appendBattleLog(`🏆 <b style="color:#4ade80">OPPONENT SURRENDERED!</b> You won the arena duel!`);
+    setAttacksDisabled(true);
+  }
+}
+
+function setupP2PListeners(isHost){
+  if(!p2pConnection) return;
+
+  p2pConnection.on("data", (data)=>{
+    if(data) handleIncomingBattleData(data, isHost);
+  });
+
+  p2pConnection.on("close", ()=>{
+    appendBattleLog(`<div style="color:#ef4444">⚠️ Rival player disconnected from the arena.</div>`);
+    if(isMultiplayerMode && battleOppHp > 0 && battlePlayerHp > 0){
+      triggerVictory();
+    }
+  });
+
+  p2pConnection.on("error", (err)=>{
+    console.warn("P2P connection error:", err);
   });
 }
 
 function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
+  if(!battlePlayerCard) battlePlayerCard = cards[0];
+  if(!battleOppCard) battleOppCard = cards[1] || cards[0];
+
   battlePlayerHp = battlePlayerCard.hp || 85;
   battleOppHp = battleOppCard.hp || 85;
   isPlayerTurn = playerStartsFirst;
@@ -337,15 +586,19 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
   document.getElementById("playerLabelTag").textContent = playerTitle;
   document.getElementById("oppLabelTag").textContent = oppTitle;
 
-  document.getElementById("playerBattleImg").src = battlePlayerCard.image;
-  document.getElementById("playerBattleName").textContent = battlePlayerCard.name;
+  document.getElementById("playerBattleImg").src = battlePlayerCard.image || "";
+  document.getElementById("playerBattleName").textContent = battlePlayerCard.name || "Champion";
 
-  document.getElementById("aiBattleImg").src = battleOppCard.image;
-  document.getElementById("aiBattleName").textContent = battleOppCard.name;
+  document.getElementById("aiBattleImg").src = battleOppCard.image || "";
+  document.getElementById("aiBattleName").textContent = battleOppCard.name || "Opponent";
 
   const attacksContainer = document.getElementById("playerAttacksContainer");
   attacksContainer.innerHTML = "";
-  battlePlayerCard.attacks.forEach((atk) => {
+  const playerAttacks = (Array.isArray(battlePlayerCard.attacks) && battlePlayerCard.attacks.length > 0)
+    ? battlePlayerCard.attacks
+    : [{ name: "Quick Strike", dmg: 18 }, { name: "Power Burst", dmg: 32 }];
+
+  playerAttacks.forEach((atk) => {
     const btn = document.createElement("button");
     btn.className = "attack-btn";
     btn.innerHTML = `<span>⚔️ <b>${atk.name}</b></span> <span style="color:#fbbf24">${atk.dmg} DMG</span>`;
@@ -371,8 +624,8 @@ function setAttacksDisabled(disabled){
 }
 
 function updateBattleHpBars(){
-  const maxPlayerHp = battlePlayerCard.hp || 85;
-  const maxOppHp = battleOppCard.hp || 85;
+  const maxPlayerHp = (battlePlayerCard && battlePlayerCard.hp) ? battlePlayerCard.hp : 85;
+  const maxOppHp = (battleOppCard && battleOppCard.hp) ? battleOppCard.hp : 85;
 
   const playerPct = Math.max(0, (battlePlayerHp / maxPlayerHp) * 100);
   const oppPct = Math.max(0, (battleOppHp / maxOppHp) * 100);
@@ -386,6 +639,7 @@ function updateBattleHpBars(){
 
 function appendBattleLog(msg){
   const log = document.getElementById("battleLog");
+  if(!log) return;
   const line = document.createElement("div");
   line.innerHTML = msg;
   log.appendChild(line);
@@ -395,6 +649,8 @@ function appendBattleLog(msg){
 function triggerBattleAnimation(attacker, defender){
   const atkEl = attacker === "player" ? document.getElementById("playerFighterCard") : document.getElementById("aiFighterCard");
   const defEl = defender === "player" ? document.getElementById("playerFighterCard") : document.getElementById("aiFighterCard");
+
+  if(!atkEl || !defEl) return;
 
   const lungeClass = attacker === "player" ? "lunge-right" : "lunge-left";
 
@@ -423,25 +679,32 @@ function triggerVictory(){
   render();
 
   const victoryBanner = document.getElementById("victoryBanner");
-  victoryBanner.classList.remove("outcome-lose");
-  victoryBanner.classList.add("show", "outcome-win");
+  if(victoryBanner){
+    victoryBanner.classList.remove("outcome-lose");
+    victoryBanner.classList.add("show", "outcome-win");
+  }
 
   const titleEl = document.getElementById("battleOutcomeTitle");
   if(titleEl) titleEl.textContent = "🏆 You Win!";
 
-  document.getElementById("victoryCoinsLabel").textContent = `+${reward} Coins Added to Your Account! 🪙 ${eventCoinMultiplier > 1 ? `(${eventCoinMultiplier}x Event Bonus!)` : ""}`;
+  const labelEl = document.getElementById("victoryCoinsLabel");
+  if(labelEl) labelEl.textContent = `+${reward} Coins Added to Your Account! 🪙 ${eventCoinMultiplier > 1 ? `(${eventCoinMultiplier}x Event Bonus!)` : ""}`;
+
   setAttacksDisabled(true);
-  document.getElementById("turnInstructionText").textContent = "Match Finished!";
+  const turnText = document.getElementById("turnInstructionText");
+  if(turnText) turnText.textContent = "Match Finished!";
 
   try {
-    victoryBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if(victoryBanner) victoryBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch(e){}
 }
 
 function triggerDefeat(){
   const victoryBanner = document.getElementById("victoryBanner");
-  victoryBanner.classList.remove("outcome-win");
-  victoryBanner.classList.add("show", "outcome-lose");
+  if(victoryBanner){
+    victoryBanner.classList.remove("outcome-win");
+    victoryBanner.classList.add("show", "outcome-lose");
+  }
 
   const titleEl = document.getElementById("battleOutcomeTitle");
   if(titleEl) titleEl.textContent = "💀 Defeated!";
@@ -450,10 +713,11 @@ function triggerDefeat(){
   if(labelEl) labelEl.textContent = "Your champion was knocked out. Better luck next time!";
 
   setAttacksDisabled(true);
-  document.getElementById("turnInstructionText").textContent = "Match Finished!";
+  const turnText = document.getElementById("turnInstructionText");
+  if(turnText) turnText.textContent = "Match Finished!";
 
   try {
-    victoryBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if(victoryBanner) victoryBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch(e){}
 }
 
@@ -467,8 +731,12 @@ function performPlayerAttack(attackObj){
   appendBattleLog(`💥 <b>${battlePlayerCard.name}</b> executed <span style="color:#fca5a5">${attackObj.name}</span> dealing <b>${playerDmg}</b> damage!`);
   updateBattleHpBars();
 
-  if(isMultiplayerMode && p2pConnection){
-    p2pConnection.send({ type: "attack", attackName: attackObj.name, dmg: playerDmg });
+  if(isMultiplayerMode){
+    if(p2pConnection && p2pConnection.open){
+      p2pConnection.send({ type: "attack", attackName: attackObj.name, dmg: playerDmg });
+    } else if(isLocalChannelMode && localArenaChannel){
+      localArenaChannel.postMessage({ type: "attack", room: myRoomCode, attackName: attackObj.name, dmg: playerDmg });
+    }
   }
 
   if(battleOppHp <= 0){
@@ -485,7 +753,11 @@ function performPlayerAttack(attackObj){
     setTimeout(()=>{
       if(battleOppHp <= 0) return;
 
-      const aiAttack = battleOppCard.attacks[Math.floor(Math.random() * battleOppCard.attacks.length)];
+      const oppAttacks = (Array.isArray(battleOppCard.attacks) && battleOppCard.attacks.length > 0)
+        ? battleOppCard.attacks
+        : [{ name: "Quick Strike", dmg: 18 }, { name: "Power Burst", dmg: 32 }];
+
+      const aiAttack = oppAttacks[Math.floor(Math.random() * oppAttacks.length)];
       const aiDmg = Math.floor(aiAttack.dmg * (0.85 + Math.random() * 0.3));
 
       triggerBattleAnimation("ai", "player");
@@ -512,8 +784,6 @@ document.getElementById("godModeStrikeBtn").onclick = ()=>{
   if(!hasAdminAccess()) return;
   performPlayerAttack({ name: "⚡ OMNIPOTENT GOD STRIKE", dmg: 9999 });
 };
-
-
 
 function syncIncomingCustomCards(incomingCards){
   if(!Array.isArray(incomingCards) || incomingCards.length === 0) return;
@@ -548,10 +818,26 @@ function syncIncomingCustomCards(incomingCards){
 const playAgainBtn = document.getElementById("battlePlayAgainBtn");
 if(playAgainBtn){
   playAgainBtn.onclick = ()=>{
-    cleanupPeer();
     const victoryBanner = document.getElementById("victoryBanner");
     if(victoryBanner) victoryBanner.classList.remove("show", "outcome-win", "outcome-lose");
-    startSoloBattle();
+
+    if(isMultiplayerMode){
+      if(p2pConnection && p2pConnection.open){
+        p2pConnection.send({ type: "rematch_request" });
+        appendBattleLog(`<div style="color:#38bdf8">🔄 Sent rematch request to opponent...</div>`);
+        document.getElementById("turnInstructionText").textContent = "Waiting for rival to accept rematch...";
+      } else if(isLocalChannelMode && localArenaChannel){
+        localArenaChannel.postMessage({ type: "rematch_request", room: myRoomCode });
+        appendBattleLog(`<div style="color:#38bdf8">🔄 Sent rematch request to opponent...</div>`);
+        document.getElementById("turnInstructionText").textContent = "Waiting for rival to accept rematch...";
+      } else {
+        cleanupPeer();
+        startSoloBattle();
+      }
+    } else {
+      cleanupPeer();
+      startSoloBattle();
+    }
   };
 }
 
