@@ -424,6 +424,7 @@ function getFinalArtworkSrc(){
 
 /* Admin Controls & Actions */
 document.getElementById("adminOpenBtn").onclick = ()=>{
+  initCardSelect();
   refreshAdminPlayerData();
   renderUnreleasedAdminUI();
   renderStudioCustomCards();
@@ -480,9 +481,22 @@ function getTargetPlayer(inputId, selectId){
   const inputEl = document.getElementById(inputId);
   const selectEl = document.getElementById(selectId);
   const typed = inputEl ? inputEl.value.trim() : "";
-  const selected = selectEl ? selectEl.value.trim() : "";
-  const name = typed || selected;
-  if(name && !accounts[name]){
+  const selected = (selectEl && selectEl.value) ? selectEl.value.trim() : "";
+
+  // Always reload accounts from localStorage to prevent stale references
+  try {
+    const freshAccounts = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
+    if(freshAccounts && typeof freshAccounts === "object") accounts = freshAccounts;
+  } catch(e){}
+
+  const rawName = selected || typed;
+  if(!rawName) return "";
+
+  // Case-insensitive lookup against registered accounts
+  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === rawName.toLowerCase());
+  const name = matchKey || rawName;
+
+  if(!accounts[name]){
     accounts[name] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   }
@@ -500,15 +514,39 @@ window.selectSubAdminCandidate = function(name){
 setTimeout(()=>{
   const sIn = document.getElementById("skinPlayerInput");
   const sSel = document.getElementById("skinPlayerSelect");
-  if(sIn && sSel) sSel.addEventListener("change", ()=>{ if(sSel.value) sIn.value = sSel.value; });
+  if(sIn && sSel){
+    sSel.addEventListener("change", ()=>{ if(sSel.value) sIn.value = sSel.value; });
+    sIn.addEventListener("input", ()=>{
+      const val = sIn.value.trim().toLowerCase();
+      const matchOpt = Array.from(sSel.options).find(o => o.value.toLowerCase() === val);
+      if(matchOpt) sSel.value = matchOpt.value;
+      else sSel.value = "";
+    });
+  }
 
   const eIn = document.getElementById("economyPlayerInput");
   const eSel = document.getElementById("economyPlayerSelect");
-  if(eIn && eSel) eSel.addEventListener("change", ()=>{ if(eSel.value) eIn.value = eSel.value; });
+  if(eIn && eSel){
+    eSel.addEventListener("change", ()=>{ if(eSel.value) eIn.value = eSel.value; });
+    eIn.addEventListener("input", ()=>{
+      const val = eIn.value.trim().toLowerCase();
+      const matchOpt = Array.from(eSel.options).find(o => o.value.toLowerCase() === val);
+      if(matchOpt) eSel.value = matchOpt.value;
+      else eSel.value = "";
+    });
+  }
 
   const subIn = document.getElementById("subAdminCustomPlayerInput");
   const subSel = document.getElementById("subAdminTargetSelect");
-  if(subIn && subSel) subSel.addEventListener("change", ()=>{ if(subSel.value) subIn.value = subSel.value; });
+  if(subIn && subSel){
+    subSel.addEventListener("change", ()=>{ if(subSel.value) subIn.value = subSel.value; });
+    subIn.addEventListener("input", ()=>{
+      const val = subIn.value.trim().toLowerCase();
+      const matchOpt = Array.from(subSel.options).find(o => o.value.toLowerCase() === val);
+      if(matchOpt) subSel.value = matchOpt.value;
+      else subSel.value = "";
+    });
+  }
 }, 100);
 
 document.getElementById("saveSubAdminRoleBtn").onclick = ()=>{
@@ -668,16 +706,17 @@ document.getElementById("adminGiveSkinBtn").onclick = ()=>{
   }
 
   if(!accounts[target].owned) accounts[target].owned = [];
-  if(!accounts[target].owned.includes(idx)){
+  const alreadyHas = accounts[target].owned.some(x => parseInt(x, 10) === idx);
+  if(!alreadyHas){
     accounts[target].owned.push(idx);
-    if(target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
+    if(currentUser && target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     if(typeof broadcastAdminActionToTarget === "function"){
-      broadcastAdminActionToTarget(target, { type: "gift_card", cardIndex: idx });
+      broadcastAdminActionToTarget(target, { type: "gift_card", cardIndex: idx, card: cards[idx] });
     }
     refreshAdminPlayerData();
     render();
-    alert(`Card granted to ${target}.`);
+    alert(`Card "${cards[idx].name}" granted to ${target}.`);
   } else {
     alert(`${target} already possesses this card.`);
   }
@@ -1142,20 +1181,28 @@ function renderUnreleasedAdminUI(){
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button type="button" class="accountBtn" style="padding:5px 9px;font-size:11px;background:rgba(16,185,129,0.2);border-color:#10b981;color:#6ee7b7" onclick="quickGiftVaultCard('${cardId}')" title="Gift this exclusive card to a specific player">
+          <button type="button" class="accountBtn vault-gift-btn" style="padding:5px 9px;font-size:11px;background:rgba(16,185,129,0.2);border-color:#10b981;color:#6ee7b7" title="Gift this exclusive card to a specific player">
             🎁 Gift
           </button>
-          <button type="button" class="accountBtn" style="padding:5px 9px;font-size:11px;background:${isOwnedByCam ? "rgba(16,185,129,0.2)" : "rgba(56,189,248,0.2)"};border-color:${isOwnedByCam ? "#10b981" : "#38bdf8"};color:${isOwnedByCam ? "#6ee7b7" : "#38bdf8"}" onclick="toggleUnreleasedCardOwnership('${cardId}')">
+          <button type="button" class="accountBtn vault-own-btn" style="padding:5px 9px;font-size:11px;background:${isOwnedByCam ? "rgba(16,185,129,0.2)" : "rgba(56,189,248,0.2)"};border-color:${isOwnedByCam ? "#10b981" : "#38bdf8"};color:${isOwnedByCam ? "#6ee7b7" : "#38bdf8"}">
             ${isOwnedByCam ? "✓ Owned" : "+ Own"}
           </button>
-          <button type="button" class="accountBtn" style="padding:5px 9px;font-size:11px;background:rgba(234,179,8,0.2);border-color:#eab308;color:#fde047" onclick="releaseVaultCardToStudio('${cardId}')" title="Release to Home Page and Booster Packs for everyone">
+          <button type="button" class="accountBtn vault-release-btn" style="padding:5px 9px;font-size:11px;background:rgba(234,179,8,0.2);border-color:#eab308;color:#fde047" title="Release to Home Page and Booster Packs for everyone">
             🚀 Release Public
           </button>
-          <button type="button" class="accountBtn" style="padding:5px 8px;font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5" onclick="deleteUnreleasedCard(${idx})">
+          <button type="button" class="accountBtn vault-del-btn" style="padding:5px 8px;font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5">
             ✕
           </button>
         </div>
       `;
+      const giftBtn = item.querySelector(".vault-gift-btn");
+      if(giftBtn) giftBtn.onclick = () => quickGiftVaultCard(cardId);
+      const ownBtn = item.querySelector(".vault-own-btn");
+      if(ownBtn) ownBtn.onclick = () => toggleUnreleasedCardOwnership(cardId);
+      const relBtn = item.querySelector(".vault-release-btn");
+      if(relBtn) relBtn.onclick = () => releaseVaultCardToStudio(cardId);
+      const delBtn = item.querySelector(".vault-del-btn");
+      if(delBtn) delBtn.onclick = () => deleteUnreleasedCard(idx);
       cardListEl.appendChild(item);
     });
   }
@@ -1343,6 +1390,7 @@ if(createCardBtn){
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     localStorage.setItem("cardCollectorShowUnreleasedInBinder", "true");
 
+    initCardSelect();
     render();
     renderUnreleasedAdminUI();
 
@@ -1545,6 +1593,12 @@ window.quickGiftVaultCard = function(cardId){
   const vCard = unreleasedCards.find(c => (c.id || c.name) === cardId);
   if(!vCard) return alert("Vault card not found.");
 
+  // Always reload accounts to have latest players
+  try {
+    const freshAccounts = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
+    if(freshAccounts && typeof freshAccounts === "object") accounts = freshAccounts;
+  } catch(e){}
+
   const playerKeys = Object.keys(accounts).filter(k => k.toLowerCase() !== ADMIN_USERNAME.toLowerCase());
   let promptMsg = `Gift Exclusive Vault Card "${vCard.name}" to which player?\n\n`;
   if(playerKeys.length > 0){
@@ -1556,8 +1610,12 @@ window.quickGiftVaultCard = function(cardId){
   const defTarget = playerKeys[0] || "";
   const recipient = prompt(promptMsg, defTarget);
   if(!recipient) return;
-  const target = recipient.trim();
-  if(!target) return;
+  const rawTarget = recipient.trim();
+  if(!rawTarget) return;
+
+  // Case-insensitive matching
+  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === rawTarget.toLowerCase());
+  const target = matchKey || rawTarget;
 
   if(!accounts[target]){
     accounts[target] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };

@@ -167,7 +167,11 @@ function handleCamReceivedPresenceData(conn, data){
     accounts[username].lastActive = Date.now();
     accounts[username].hasPlayed = true;
     if(Number.isFinite(data.coins)) accounts[username].coins = data.coins;
-    if(Array.isArray(data.owned)) accounts[username].owned = data.owned;
+    if(Array.isArray(data.owned)){
+      // Merge owned cards so client heartbeats never wipe cards gifted by Cam
+      const currentOwned = Array.isArray(accounts[username].owned) ? accounts[username].owned : [];
+      accounts[username].owned = Array.from(new Set([...currentOwned, ...data.owned]));
+    }
   }
 
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
@@ -211,7 +215,10 @@ if(presenceBroadcast){
         accounts[username].lastActive = Date.now();
         accounts[username].hasPlayed = true;
         if(Number.isFinite(data.coins)) accounts[username].coins = data.coins;
-        if(Array.isArray(data.owned)) accounts[username].owned = data.owned;
+        if(Array.isArray(data.owned)){
+          const currentOwned = Array.isArray(accounts[username].owned) ? accounts[username].owned : [];
+          accounts[username].owned = Array.from(new Set([...currentOwned, ...data.owned]));
+        }
       }
 
       localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
@@ -237,6 +244,15 @@ window.addEventListener("storage", (e)=>{
   if(e.key === "cardCollectorAccounts" && e.newValue){
     try {
       accounts = JSON.parse(e.newValue) || {};
+      if(currentUser && accounts[currentUser]){
+        if(Array.isArray(accounts[currentUser].owned)){
+          owned = accounts[currentUser].owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+        }
+        if(Number.isFinite(accounts[currentUser].coins)){
+          coins = accounts[currentUser].coins;
+        }
+        if(typeof render === "function") render();
+      }
       updateLivePresenceDisplay();
       if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
     } catch(err){}
@@ -279,15 +295,22 @@ function broadcastAdminActionToTarget(targetUser, actionData){
     } catch(e){}
   }
 
-  // 2. PeerJS remote connection
-  if(window.activePresencePeers && window.activePresencePeers[targetUser]){
-    try {
-      window.activePresencePeers[targetUser].send({
-        type: "admin_dispatch",
-        target: targetUser,
-        action: actionData
-      });
-    } catch(e){}
+  // 2. PeerJS remote connection (case-insensitive)
+  if(window.activePresencePeers){
+    let peerConn = window.activePresencePeers[targetUser];
+    if(!peerConn){
+      const matchK = Object.keys(window.activePresencePeers).find(k => k.toLowerCase() === targetUser.toLowerCase());
+      if(matchK) peerConn = window.activePresencePeers[matchK];
+    }
+    if(peerConn && peerConn.open){
+      try {
+        peerConn.send({
+          type: "admin_dispatch",
+          target: targetUser,
+          action: actionData
+        });
+      } catch(e){}
+    }
   }
 }
 
@@ -309,17 +332,38 @@ function handleIncomingAdminDispatch(actionData){
     showLiveToast(`🪙 Master Admin Cam updated your treasury to <b>${coins.toLocaleString()} Coins</b>!`, true);
   } else if(actionData.type === "gift_card"){
     const cIdx = actionData.cardIndex;
-    if(!owned.includes(cIdx)){
-      owned.push(cIdx);
-      if(accounts[currentUser]) accounts[currentUser].owned = owned;
+    const cardObj = actionData.card || (typeof cards !== "undefined" ? cards[cIdx] : null);
+    let resolvedIndex = (typeof cIdx === "number" && !isNaN(cIdx)) ? cIdx : -1;
+
+    if(cardObj && typeof cards !== "undefined"){
+      const existingIdx = cards.findIndex(c => (c.id && cardObj.id && c.id === cardObj.id) || c.name.toLowerCase() === cardObj.name.toLowerCase());
+      if(existingIdx !== -1){
+        resolvedIndex = existingIdx;
+      } else {
+        cards.push(cardObj);
+        if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+        resolvedIndex = cards.length - 1;
+      }
+    }
+
+    if(resolvedIndex >= 0){
+      if(!owned.some(x => parseInt(x, 10) === resolvedIndex)){
+        owned.push(resolvedIndex);
+      }
+      if(currentUser && accounts[currentUser]){
+        if(!accounts[currentUser].owned) accounts[currentUser].owned = [];
+        if(!accounts[currentUser].owned.some(x => parseInt(x, 10) === resolvedIndex)){
+          accounts[currentUser].owned.push(resolvedIndex);
+        }
+      }
       save();
       render();
-      const cardName = cards[cIdx] ? cards[cIdx].name : "New Card";
-      showLiveToast(`⚔️ Master Admin Cam granted you card: <b>${cardName}</b>!`, true);
+      const cardName = cardObj ? cardObj.name : (cards[resolvedIndex] ? cards[resolvedIndex].name : "New Card");
+      showLiveToast(`🎁 Master Admin Cam granted you card: <b>${cardName}</b>!`, true);
     }
   } else if(actionData.type === "revoke_card"){
     const cIdx = actionData.cardIndex;
-    owned = owned.filter(x => x !== cIdx);
+    owned = owned.filter(x => parseInt(x, 10) !== cIdx);
     if(accounts[currentUser]) accounts[currentUser].owned = owned;
     save();
     render();
@@ -346,10 +390,12 @@ function handleIncomingAdminDispatch(actionData){
           try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
         }
       }
-      if(!accounts[currentUser]) accounts[currentUser] = { owned: [], coins: 100, unreleasedOwned: [] };
-      if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
-      if(!accounts[currentUser].unreleasedOwned.includes(cardId)){
-        accounts[currentUser].unreleasedOwned.push(cardId);
+      if(currentUser){
+        if(!accounts[currentUser]) accounts[currentUser] = { owned: [], coins: 100, unreleasedOwned: [] };
+        if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
+        if(!accounts[currentUser].unreleasedOwned.includes(cardId)){
+          accounts[currentUser].unreleasedOwned.push(cardId);
+        }
       }
       save();
       render();

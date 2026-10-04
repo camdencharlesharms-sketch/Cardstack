@@ -14,7 +14,7 @@ function save(){
 
 function loadAccount(username){
   currentUser = username;
-  owned = Array.isArray(accounts[username].owned) ? accounts[username].owned : [];
+  owned = (Array.isArray(accounts[username].owned) ? accounts[username].owned : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
   coins = Number.isFinite(accounts[username].coins) ? accounts[username].coins : 100;
   save();
   updateAccountUI();
@@ -390,22 +390,35 @@ document.getElementById("accountSubmit").onclick = ()=>{
     return;
   }
 
+  // Reload accounts from localStorage to prevent stale data
+  try {
+    const saved = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
+    if(saved && typeof saved === "object") accounts = saved;
+  } catch(e){}
+
   let isNewAccount = false;
-  if(!accounts[user]){
+  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === user.toLowerCase());
+  const actualUser = matchKey || user;
+
+  if(!accounts[actualUser]){
     isNewAccount = true;
-    accounts[user] = { password: pass, owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+    accounts[actualUser] = { password: pass, owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-  } else if(user.toLowerCase() === "cam" && (pass === "admin123" || pass === "password" || pass === "admin")){
-    accounts[user].password = pass;
+  } else if(!accounts[actualUser].password){
+    // Claiming account created via Admin Hub gifting
+    accounts[actualUser].password = pass;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-  } else if(accounts[user].password !== pass){
+  } else if(actualUser.toLowerCase() === "cam" && (pass === "admin123" || pass === "password" || pass === "admin")){
+    accounts[actualUser].password = pass;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  } else if(accounts[actualUser].password !== pass){
     err.textContent = "Invalid passcode supplied.";
     return;
   }
 
-  loadAccount(user);
+  loadAccount(actualUser);
   document.getElementById("accountModal").classList.remove("show");
-  document.getElementById("message").textContent = `Loaded identity profile: ${user}`;
+  document.getElementById("message").textContent = `Loaded identity profile: ${actualUser}`;
 
   // Broadcast presence & new account registration to network and Admin Hub
   if(typeof announcePresenceToCam === "function"){
