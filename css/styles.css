@@ -788,3 +788,13 @@ button:active{transform:translateY(0)}
   font-size:13px;
   letter-spacing:1px;
 }
+
+/* Live Presence Pulse Animation */
+@keyframes pulseLiveDot {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.live-dot {
+  animation: pulseLiveDot 2s infinite ease-in-out;
+}

@@ -73,7 +73,48 @@ function isAccountOnline(name){
   if(name.toLowerCase() === ADMIN_USERNAME.toLowerCase() && isMasterAdmin()) return true;
   const data = accounts[name];
   if(!data) return false;
-  return (Date.now() - (data.lastActive || 0)) < 60000;
+  return (Date.now() - (data.lastActive || 0)) < 75000;
+}
+
+function getAccountOnlineState(name){
+  if(!name) return { status: "offline", label: "Offline", color: "#64748b" };
+  const isCurrent = currentUser && currentUser.toLowerCase() === name.toLowerCase();
+  if(isCurrent) return { status: "online", label: "Online Now", color: "#4ade80" };
+  const data = accounts[name];
+  if(!data || !data.lastActive) return { status: "offline", label: "Offline", color: "#64748b" };
+  const diffSec = Math.floor((Date.now() - data.lastActive) / 1000);
+  if(diffSec < 75) return { status: "online", label: "Online Now", color: "#4ade80" };
+  if(diffSec < 300) return { status: "away", label: `${Math.floor(diffSec/60)}m ago`, color: "#fbbf24" };
+  if(diffSec < 3600) return { status: "offline", label: `${Math.floor(diffSec/60)}m ago`, color: "#94a3b8" };
+  return { status: "offline", label: `${Math.floor(diffSec/3600)}h ago`, color: "#64748b" };
+}
+
+function selectPlayerInAllAdminDropdowns(name){
+  const skinSel = document.getElementById("skinPlayerSelect");
+  const ecoSel = document.getElementById("economyPlayerSelect");
+  const subSel = document.getElementById("subAdminTargetSelect");
+  const skinInput = document.getElementById("skinPlayerInput");
+  const ecoInput = document.getElementById("economyPlayerInput");
+  const subInput = document.getElementById("subAdminCustomPlayerInput");
+
+  if(skinSel) skinSel.value = name;
+  if(ecoSel) ecoSel.value = name;
+  if(subSel) subSel.value = name;
+  if(skinInput) skinInput.value = name;
+  if(ecoInput) ecoInput.value = name;
+  if(subInput) subInput.value = name;
+
+  // Flash highlight target inputs for visual confirmation
+  [skinInput, ecoInput, subInput].forEach(inp => {
+    if(inp){
+      inp.style.borderColor = "#10b981";
+      inp.style.boxShadow = "0 0 10px rgba(16,185,129,0.5)";
+      setTimeout(()=>{
+        inp.style.borderColor = "";
+        inp.style.boxShadow = "";
+      }, 1000);
+    }
+  });
 }
 
 function isValidGameAccount(name, data){
@@ -161,10 +202,9 @@ function refreshAdminPlayerData(){
     if(isMaster) roleText = "Master";
     else if(isSub) roleText = "Sub-Admin";
 
-    const statusBadge = isOnline 
-      ? '<span style="color:#4ade80;font-weight:700">🟢 Online</span>' 
-      : '<span style="color:#64748b">⚪ Offline</span>';
-    const statusText = isOnline ? "🟢 Online" : "Offline";
+    const onlineState = getAccountOnlineState(name);
+    const statusBadge = `<span style="color:${onlineState.color};font-weight:700">● ${onlineState.label}</span>`;
+    const statusText = onlineState.status === "online" ? "🟢 Online" : (onlineState.status === "away" ? "🟡 Away" : "Offline");
 
     // Player Skins selector
     const opt = document.createElement("option");
@@ -188,6 +228,12 @@ function refreshAdminPlayerData(){
 
     const tr = document.createElement("tr");
     tr.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+    tr.style.cursor = "pointer";
+    tr.title = `Click to select ${name} for gifting & treasury`;
+    tr.onclick = (e)=>{
+      if(e.target.tagName.toLowerCase() === "button") return;
+      selectPlayerInAllAdminDropdowns(name);
+    };
     tr.innerHTML = `
       <td style="padding:8px 6px"><b>${name}</b></td>
       <td><span style="color:${isMaster ? '#f43f5e' : (isSub ? '#38bdf8' : '#64748b')}">${roleText}</span></td>
@@ -227,6 +273,7 @@ function refreshAdminPlayerData(){
   }
 
   renderSubAdminRolesList();
+  if(typeof updateLivePresenceDisplay === "function") updateLivePresenceDisplay();
 }
 
 function renderSubAdminRolesList(){
@@ -360,6 +407,7 @@ document.getElementById("adminOpenBtn").onclick = ()=>{
   renderUnreleasedAdminUI();
   renderStudioCustomCards();
   populateRarityDropdowns();
+  if(typeof updateLivePresenceDisplay === "function") updateLivePresenceDisplay();
   document.getElementById("adminLeakInput").value = localStorage.getItem("cardCollectorLeak") || "";
   document.getElementById("adminLuckSelect").value = adminLuckMultiplier.toString();
   document.getElementById("eventCoinMultiplierSelect").value = eventCoinMultiplier.toString();
@@ -367,8 +415,14 @@ document.getElementById("adminOpenBtn").onclick = ()=>{
   document.getElementById("toggleMaintenanceBtn").textContent = isMaintenanceMode ? "ON" : "OFF";
   document.getElementById("toggleGodModeBtn").textContent = isGodModeEnabled ? "ENABLED" : "DISABLED";
   document.getElementById("adminModal").classList.add("show");
+
+  clearInterval(window._adminAutoRefreshTimer);
+  window._adminAutoRefreshTimer = setInterval(()=>{
+    refreshAdminPlayerData();
+  }, 2500);
 };
 document.getElementById("adminCloseBtn").onclick = ()=>{
+  clearInterval(window._adminAutoRefreshTimer);
   document.getElementById("adminModal").classList.remove("show");
 };
 
@@ -565,6 +619,9 @@ document.getElementById("adminGiveSkinBtn").onclick = ()=>{
     accounts[target].owned.push(idx);
     if(target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof broadcastAdminActionToTarget === "function"){
+      broadcastAdminActionToTarget(target, { type: "gift_card", cardIndex: idx });
+    }
     refreshAdminPlayerData();
     render();
     alert(`Card granted to ${target}.`);
@@ -584,6 +641,9 @@ document.getElementById("adminTakeSkinBtn").onclick = ()=>{
     accounts[target].owned = accounts[target].owned.filter(x => x !== idx);
     if(target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof broadcastAdminActionToTarget === "function"){
+      broadcastAdminActionToTarget(target, { type: "revoke_card", cardIndex: idx });
+    }
     refreshAdminPlayerData();
     render();
     alert(`Card revoked from ${target}.`);
@@ -598,6 +658,9 @@ document.getElementById("adminUnlockAllPlayerBtn").onclick = ()=>{
   accounts[target].owned = cards.map((_, i) => i);
   if(target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(target, { type: "unlock_all" });
+  }
   refreshAdminPlayerData();
   render();
   alert(`Unlocked all ${cards.length} cards for ${target}!`);
@@ -612,6 +675,9 @@ document.getElementById("adminWipePlayerBtn").onclick = ()=>{
     accounts[target].owned = [];
     if(target.toLowerCase() === currentUser.toLowerCase()) owned = [];
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof broadcastAdminActionToTarget === "function"){
+      broadcastAdminActionToTarget(target, { type: "wipe_cards" });
+    }
     refreshAdminPlayerData();
     render();
     alert(`Inventory cleared for ${target}.`);
@@ -645,6 +711,9 @@ document.getElementById("adminAddPlayerCoinsBtn").onclick = ()=>{
   accounts[target].coins = (accounts[target].coins || 0) + amt;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = accounts[target].coins;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(target, { type: "gift_coins", amount: amt });
+  }
   refreshAdminPlayerData();
   render();
   alert(`Added ${amt.toLocaleString()} coins to ${target}.`);
@@ -659,6 +728,9 @@ document.getElementById("adminSetPlayerCoinsBtn").onclick = ()=>{
   accounts[target].coins = amt;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = accounts[target].coins;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(target, { type: "set_coins", amount: amt });
+  }
   refreshAdminPlayerData();
   render();
   alert(`Set ${target}'s treasury balance to ${amt.toLocaleString()} coins.`);
@@ -671,6 +743,9 @@ document.getElementById("adminDrainPlayerCoinsBtn").onclick = ()=>{
   accounts[target].coins = 0;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = 0;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(target, { type: "set_coins", amount: 0 });
+  }
   refreshAdminPlayerData();
   render();
   alert(`Emptied treasury balance for ${target}.`);
@@ -1179,15 +1254,11 @@ if(createCardBtn){
     unreleasedCards.push(newCard);
     localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards));
 
-    // Automatically add to Cam's collection so it shows immediately on Cam's home page
+    // Automatically add exclusively to Cam's collection so it shows only on Cam's home page
     const newCardId = newCard.id || newCard.name;
     if(accounts["Cam"]){
       if(!accounts["Cam"].unreleasedOwned) accounts["Cam"].unreleasedOwned = [];
       if(!accounts["Cam"].unreleasedOwned.includes(newCardId)) accounts["Cam"].unreleasedOwned.push(newCardId);
-    }
-    if(currentUser && accounts[currentUser]){
-      if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
-      if(!accounts[currentUser].unreleasedOwned.includes(newCardId)) accounts[currentUser].unreleasedOwned.push(newCardId);
     }
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     localStorage.setItem("cardCollectorShowUnreleasedInBinder", "true");
@@ -1261,7 +1332,7 @@ function renderStudioCustomCards(){
   const countEl = document.getElementById("studioCustomCardsCount");
   if(!listEl) return;
 
-  const customOnly = cards.filter(c => !defaultCards.some(dc => dc.name.toLowerCase() === c.name.toLowerCase()));
+  const customOnly = cards.filter(c => !c.isUnreleased && !defaultCards.some(dc => dc.name.toLowerCase() === c.name.toLowerCase()));
   if(countEl) countEl.textContent = customOnly.length;
 
   listEl.innerHTML = "";

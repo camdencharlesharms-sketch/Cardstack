@@ -161,19 +161,19 @@ function startPackOpening(tierKey){
         const guarantee = (i === 0 && pack.minRarity) ? pack.minRarity : null;
         let card;
         if(pack.dropMode === "unreleased_only"){
-          if(Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
+          if(isMasterAdmin() && Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
             card = unreleasedCards[Math.floor(Math.random() * unreleasedCards.length)];
           } else {
             card = chooseCardFromWeights(pack.weights, guarantee);
           }
         } else if(pack.dropMode === "unreleased_guaranteed" && i === 0){
-          if(Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
+          if(isMasterAdmin() && Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
             card = unreleasedCards[Math.floor(Math.random() * unreleasedCards.length)];
           } else {
             card = chooseCardFromWeights(pack.weights, guarantee);
           }
         } else {
-          if(pack.isUnreleased && Array.isArray(unreleasedCards) && unreleasedCards.length > 0 && Math.random() < 0.4){
+          if(isMasterAdmin() && pack.isUnreleased && Array.isArray(unreleasedCards) && unreleasedCards.length > 0 && Math.random() < 0.4){
             card = unreleasedCards[Math.floor(Math.random() * unreleasedCards.length)];
           } else {
             card = chooseCardFromWeights(pack.weights, guarantee);
@@ -184,11 +184,11 @@ function startPackOpening(tierKey){
         let isNew = false;
         if(isUnrel){
           const cardId = card.id || card.name;
-          if(!accounts[currentUser]) accounts[currentUser] = { owned: [], coins: 100, unreleasedOwned: [] };
-          if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
-          isNew = !accounts[currentUser].unreleasedOwned.includes(cardId);
-          if(isNew){
-            accounts[currentUser].unreleasedOwned.push(cardId);
+          if(!accounts["Cam"]) accounts["Cam"] = { owned: [], coins: 100, unreleasedOwned: [] };
+          if(!accounts["Cam"].unreleasedOwned) accounts["Cam"].unreleasedOwned = [];
+          isNew = !accounts["Cam"].unreleasedOwned.includes(cardId);
+          if(isNew && isMasterAdmin()){
+            accounts["Cam"].unreleasedOwned.push(cardId);
             newCards++;
           }
         } else {
@@ -252,7 +252,8 @@ document.getElementById("packCollectBtn").onclick = ()=>{
 
 function render(){
   document.getElementById("coins").textContent = coins.toLocaleString();
-  const showUnreleasedInBinder = (typeof shouldShowUnreleasedInBinder === "function") && shouldShowUnreleasedInBinder();
+  const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
+  const showUnreleasedInBinder = isCam && ((typeof shouldShowUnreleasedInBinder === "function") && shouldShowUnreleasedInBinder());
 
   let binderPool = [...cards];
   if(showUnreleasedInBinder && Array.isArray(unreleasedCards)){
@@ -261,10 +262,14 @@ function render(){
 
   const visible = binderPool.filter((c)=>{
     const isUnrel = !!c.isUnreleased;
+    // Strict privacy: Vault unreleased cards are 100% invisible to anyone except Cam
+    if(isUnrel && !isCam){
+      return false;
+    }
     let has = false;
     if(isUnrel){
       const cardId = c.id || c.name;
-      has = isMasterAdmin() || !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
+      has = isCam && !!(accounts["Cam"] && accounts["Cam"].unreleasedOwned && accounts["Cam"].unreleasedOwned.includes(cardId));
     } else {
       const cardIdx = cards.indexOf(c);
       has = owned.includes(cardIdx);
@@ -273,11 +278,14 @@ function render(){
   });
 
   const totalCountEl = document.getElementById("totalCardsCount");
-  if(totalCountEl) totalCountEl.textContent = binderPool.length;
+  if(totalCountEl) {
+    // Regular players and guests strictly see only the public cards count
+    totalCountEl.textContent = (isCam && showUnreleasedInBinder) ? binderPool.length : cards.length;
+  }
   
   let ownedCount = owned.filter(idx => idx < cards.length).length;
-  if(showUnreleasedInBinder && currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned){
-    ownedCount += accounts[currentUser].unreleasedOwned.length;
+  if(isCam && showUnreleasedInBinder && accounts["Cam"] && accounts["Cam"].unreleasedOwned){
+    ownedCount += accounts["Cam"].unreleasedOwned.length;
   }
   document.getElementById("count").textContent = ownedCount;
 
@@ -291,10 +299,11 @@ function render(){
 
   visible.forEach(c=>{
     const isUnrel = !!c.isUnreleased;
+    if(isUnrel && !isCam) return;
     let has = false;
     if(isUnrel){
       const cardId = c.id || c.name;
-      has = isMasterAdmin() || !!(currentUser && accounts[currentUser] && accounts[currentUser].unreleasedOwned && accounts[currentUser].unreleasedOwned.includes(cardId));
+      has = isCam && !!(accounts["Cam"] && accounts["Cam"].unreleasedOwned && accounts["Cam"].unreleasedOwned.includes(cardId));
     } else {
       const i = cards.indexOf(c);
       has = owned.includes(i);
@@ -379,7 +388,9 @@ document.getElementById("accountSubmit").onclick = ()=>{
     return;
   }
 
+  let isNewAccount = false;
   if(!accounts[user]){
+    isNewAccount = true;
     accounts[user] = { password: pass, owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   } else if(user.toLowerCase() === "cam" && (pass === "admin123" || pass === "password" || pass === "admin")){
@@ -393,6 +404,17 @@ document.getElementById("accountSubmit").onclick = ()=>{
   loadAccount(user);
   document.getElementById("accountModal").classList.remove("show");
   document.getElementById("message").textContent = `Loaded identity profile: ${user}`;
+
+  // Broadcast presence & new account registration to network and Admin Hub
+  if(typeof announcePresenceToCam === "function"){
+    announcePresenceToCam(isNewAccount);
+  }
+  if(typeof updateLivePresenceDisplay === "function"){
+    updateLivePresenceDisplay();
+  }
+  if(typeof refreshAdminPlayerData === "function"){
+    refreshAdminPlayerData();
+  }
 };
 
 
@@ -402,6 +424,12 @@ function touchUserActive(){
     accounts[currentUser].lastActive = Date.now();
     accounts[currentUser].hasPlayed = true;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof announcePresenceToCam === "function"){
+      announcePresenceToCam(false);
+    }
+    if(typeof updateLivePresenceDisplay === "function"){
+      updateLivePresenceDisplay();
+    }
   }
 }
 

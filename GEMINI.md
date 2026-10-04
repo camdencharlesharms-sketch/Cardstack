@@ -64,7 +64,14 @@ Cardstack/
 - **Multiplayer P2P Mode**: Uses PeerJS for zero-server room matchmaking. Hosts generate a 6-digit code; guests join with the code. State is synchronized over WebRTC data channels (`init`, `init_reply`, `attack`, `forfeit`).
 - **God Strike**: Admin-only test cheat button (`godModeStrikeBtn`) dealing 9,999 instant damage.
 
-### C. Admin Hub & Permissions (`js/admin.js`)
+### C. Live Player Presence & Real-Time Synchronization (`js/presence.js`)
+- **Live Online Presence Bar**: Displayed prominently at the top of the Admin Hub and in the header button (`⚡ Admin Hub 🟢 X`). Features pulsating indicators and interactive player chips showing active users, roles, and treasury balances.
+- **Instant Account Discovery**: When any player registers or signs in on any device or tab, their identity is announced instantly over `BroadcastChannel` (same-device multi-tab) and PeerJS WebRTC beacon (`cardstack_hub_presence_cam_v1`). Cam's Admin Hub immediately registers them into `accounts`, populates them into `#skinPlayerSelect`, `#economyPlayerSelect`, and `#subAdminTargetSelect`, updates the active player table, and displays a celebratory toast: `🎉 New Player Registered: [Username]`.
+- **1-Click Autofill Gifting**: Clicking any online player chip or table row autofills that player's username into all admin gifting fields with glowing visual confirmation.
+- **Real-Time Remote Gifting**: When Cam grants coins, skins, or unlocks in the Admin Hub, actions are dispatched over the live data channel directly to the recipient's device. The recipient's balance and collection update dynamically on screen with an animated celebratory banner without needing a page refresh.
+- **Active Refresh Daemon**: While the Admin Hub is open, a 2.5s daemon keeps online status labels (🟢 Online Now, 🟡 Away, ⚪ Offline) and treasury counts synchronized in real time.
+
+### D. Admin Hub & Permissions (`js/admin.js`)
 - **Authentication**: Master Admin is defined by `ADMIN_USERNAME = "Cam"`.
 - **Admin Hub Tabs**:
   1. `👥 Player Manager`: Grant/revoke card skins, unlock all cards, wipe player cards, and manage registered accounts via dropdown or typed username.
@@ -83,7 +90,12 @@ Cardstack/
      - **Design New Rarities**: Invent brand new rarity tiers with custom visual presets (Prismatic Hologram, Abyssal Void, Cosmic Nebula, Solar Radiance, Cyber Matrix) or custom color accents, glowing foil borders, and power rank values.
      - **Design New Cards**: Build private cards with custom picture upload from file or image URL, custom HP, dual attacks with DMG values, lore, custom emoji art fallback, and assign them to any standard or custom rarity.
      - **Design New Packs**: Build private booster packs with custom coin costs, card counts (1-12), icons, visual foil themes, guaranteed minimum rarities (including custom rarities), and test-open them right inside the Admin Hub with authentic unsealing animations.
-     - **Stealth Protection & Home Page Display**: When Cam adds an unreleased card to the vault, it automatically appears on Cam's home page collection as an unlocked, playable card with full stats, custom rarity foil, and attacks. 100% invisible to regular players, guests, and sub-admins (they only ever see standard released cards).
+     - **Strict Vault Privacy & Isolation**: When Cam creates an unreleased card in the Creator Vault, it is strictly private to Cam:
+       - **Cam's Home Page**: Appears on Cam's home page collection as an unlocked, playable card with full artwork, custom HP, dual attacks, and a red `[🔒 UNRELEASED]` badge.
+       - **Everyone Else (Guests, Regular Players, Sub-Admins)**: Unreleased vault cards are 100% invisible. They do not appear in the binder as unlocked or locked cards, do not increment the total card counter (e.g. `0/37`), and never drop from any booster packs.
+       - **Battle Arena Picker**: Only Cam can select unreleased vault cards as champions in the Battle Arena. Other players cannot see or select them.
+       - **P2P Multiplayer Protection**: Unreleased vault cards are never sent over WebRTC data channels in `customCards`, and incoming P2P cards with `isUnreleased: true` are strictly rejected.
+       - **Deck Separation**: Unreleased cards are kept exclusively in `cardCollectorUnreleasedCards`, completely isolated from `cards` and `cardCollectorCustomCards`, until Cam explicitly clicks `🚀 Release Public`.
      - **1-Click Public Release**: The Creator Vault includes a `🚀 Release Public` button on each unreleased card, converting experimental vault cards into public Home Page and booster pack cards for all players.
 
 ---

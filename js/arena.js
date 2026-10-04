@@ -14,23 +14,45 @@ function renderArenaCardPicker(){
   const carousel = document.getElementById("arenaCardDeckCarousel");
   carousel.innerHTML = "";
 
-  if(owned.length === 0) return;
-  if(selectedChampionIndex === null || !owned.includes(selectedChampionIndex)){
-    selectedChampionIndex = owned[0];
-  }
+  const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
+  let availableCards = [];
 
   owned.forEach(idx => {
-    const c = cards[idx];
-    const isSelected = idx === selectedChampionIndex;
+    if(cards[idx]){
+      availableCards.push({ card: cards[idx], index: idx, isVault: false });
+    }
+  });
+
+  // Only Master Cam can wield unreleased vault cards in the battle arena
+  if(isCam && accounts["Cam"] && Array.isArray(accounts["Cam"].unreleasedOwned) && Array.isArray(unreleasedCards)){
+    accounts["Cam"].unreleasedOwned.forEach(id => {
+      const vCard = unreleasedCards.find(uc => (uc.id || uc.name) === id);
+      if(vCard){
+        availableCards.push({ card: vCard, index: "vault_" + (vCard.id || vCard.name), isVault: true });
+      }
+    });
+  }
+
+  if(availableCards.length === 0) return;
+
+  if(selectedChampionIndex === null || !availableCards.some(ac => ac.index === selectedChampionIndex)){
+    selectedChampionIndex = availableCards[0].index;
+  }
+
+  availableCards.forEach(item => {
+    const c = item.card;
+    const isSelected = item.index === selectedChampionIndex;
     const cardItem = document.createElement("div");
     cardItem.className = `arena-pick-item ${isSelected ? 'selected' : ''}`;
     
-    const atkList = c.attacks.map(a => `<div style="display:flex;justify-content:space-between;font-size:9.5px;color:#cbd5e1"><span>⚔️ ${a.name}</span><b style="color:#fbbf24">${a.dmg}</b></div>`).join("");
+    const atkList = (c.attacks || []).map(a => `<div style="display:flex;justify-content:space-between;font-size:9.5px;color:#cbd5e1"><span>⚔️ ${a.name}</span><b style="color:#fbbf24">${a.dmg}</b></div>`).join("");
+
+    const vaultBadge = item.isVault ? '<span style="color:#f43f5e;font-size:8px;font-weight:900;background:rgba(244,63,94,0.15);padding:1px 4px;border-radius:3px">VAULT</span>' : '';
 
     cardItem.innerHTML = `
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;font-weight:900;text-transform:uppercase">
-          <span style="color:#38bdf8">${c.rarity}</span>
+          <span style="color:#38bdf8">${c.rarity} ${vaultBadge}</span>
           <span style="color:#fca5a5">${c.hp || 80} HP</span>
         </div>
         <img src="${c.image}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin:6px 0;border:1px solid rgba(255,255,255,0.1)">
@@ -42,15 +64,17 @@ function renderArenaCardPicker(){
     `;
 
     cardItem.onclick = ()=>{
-      selectedChampionIndex = idx;
+      selectedChampionIndex = item.index;
       renderArenaCardPicker();
     };
 
     carousel.appendChild(cardItem);
   });
 
-  const activeCard = cards[selectedChampionIndex];
-  document.getElementById("selectedChampionBadge").textContent = `Selected: ${activeCard.name} (${activeCard.hp || 80} HP)`;
+  const selectedItem = availableCards.find(ac => ac.index === selectedChampionIndex) || availableCards[0];
+  const activeCard = selectedItem.card;
+  battlePlayerCard = activeCard;
+  document.getElementById("selectedChampionBadge").textContent = `Selected: ${activeCard.name} (${activeCard.hp || 80} HP)${selectedItem.isVault ? ' [Vault Card]' : ''}`;
 }
 
 document.getElementById("arenaBtn").onclick = ()=>{
@@ -437,7 +461,7 @@ function syncIncomingCustomCards(incomingCards){
   if(!Array.isArray(incomingCards) || incomingCards.length === 0) return;
   let addedAny = false;
   incomingCards.forEach(inc => {
-    if(!inc || !inc.name) return;
+    if(!inc || !inc.name || inc.isUnreleased) return;
     if(!cards.some(c => c.name.toLowerCase() === inc.name.toLowerCase())){
       const cleanCard = {
         name: inc.name,

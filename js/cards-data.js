@@ -86,7 +86,7 @@ function getCustomCardsFromStorage(){
   try {
     const saved = JSON.parse(localStorage.getItem("cardCollectorCustomCards"));
     if (Array.isArray(saved) && saved.length > 0) {
-      return saved.filter(sc => sc && sc.name && !defaultCards.some(dc => dc.name.toLowerCase() === sc.name.toLowerCase()));
+      return saved.filter(sc => sc && sc.name && !sc.isUnreleased && !defaultCards.some(dc => dc.name.toLowerCase() === sc.name.toLowerCase()));
     }
   } catch (e) {}
   return [];
@@ -94,13 +94,13 @@ function getCustomCardsFromStorage(){
 
 function saveCustomCardsToStorage(){
   try {
-    const customs = cards.filter(c => !defaultCards.some(dc => dc.name.toLowerCase() === c.name.toLowerCase()));
+    const customs = cards.filter(c => !c.isUnreleased && !defaultCards.some(dc => dc.name.toLowerCase() === c.name.toLowerCase()));
     localStorage.setItem("cardCollectorCustomCards", JSON.stringify(customs));
   } catch(e){}
 }
 
 let customCards = getCustomCardsFromStorage();
-let cards = [...normalizeCards(defaultCards), ...normalizeCards(customCards)];
+let cards = [...normalizeCards(defaultCards), ...normalizeCards(customCards)].filter(c => !c.isUnreleased);
 
 // PACK TIERS: Both Cosmic Archive (Mythic) & Celestial Reliquary (Divine) are active!
 const packTiers = {
@@ -133,6 +133,13 @@ try {
 const fakeNames = ["Alex", "Jordan", "Elena", "Kai", "Morgan", "Sam", "Taylor", "Riley", "Aria", "Leo", "Zane", "Maya", "Finn", "Chloe", "Noah", "Liam", "Sophia"];
 fakeNames.forEach(fn => {
   delete accounts[fn];
+});
+
+// Purge any unreleasedOwned from any non-Cam accounts so vault cards never leak to other profiles
+Object.keys(accounts).forEach(u => {
+  if(u.toLowerCase() !== ADMIN_USERNAME.toLowerCase() && accounts[u].unreleasedOwned){
+    delete accounts[u].unreleasedOwned;
+  }
 });
 
 let subAdminRoles = {};
