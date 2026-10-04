@@ -63,6 +63,9 @@ Cardstack/
 - **Solo AI Mode**: Simulates opponent attacks with randomized timing and damage variance.
 - **Multiplayer P2P Mode**: Uses PeerJS for zero-server room matchmaking. Hosts generate a 6-digit code; guests join with the code. State is synchronized over WebRTC data channels (`init`, `init_reply`, `attack`, `forfeit`).
 - **God Strike**: Admin-only test cheat button (`godModeStrikeBtn`) dealing 9,999 instant damage.
+- **Match Conclusion & Rematch Controls**: Upon match victory (`triggerVictory`) or defeat (`triggerDefeat`), the outcome banner displays interactive controls:
+  - **Play Again** (`#battlePlayAgainBtn`): Seamlessly launches a new battle against a guaranteed fresh opponent (different from the opponent just fought), resets player/opponent health bars, populates and enables attack moves, and clears the combat log.
+  - **Back to Cards** (`#battleBackToCardsBtn`): Cleans up peer connections, closes the battle modal (`#battleModal`), resets arena views, updates collection renders, and scrolls smoothly back to the player's cards grid.
 
 ### C. Live Player Presence & Real-Time Synchronization (`js/presence.js`)
 - **Live Online Presence Bar**: Displayed prominently at the top of the Admin Hub and in the header button (`⚡ Admin Hub 🟢 X`). Features pulsating indicators and interactive player chips showing active users, roles, and treasury balances.

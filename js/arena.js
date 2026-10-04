@@ -129,23 +129,56 @@ function cleanupPeer(){
   p2pConnection = null;
 }
 
-// 1. Start AI Match
-document.getElementById("startAiMatchBtn").onclick = ()=>{
-  battlePlayerCard = cards[selectedChampionIndex];
+function getSelectedChampionCard(){
+  if(typeof selectedChampionIndex === "string" && selectedChampionIndex.startsWith("vault_")){
+    const vId = selectedChampionIndex.replace("vault_", "");
+    const found = (typeof findVaultCardByIdOrName === "function")
+      ? findVaultCardByIdOrName(vId)
+      : (Array.isArray(unreleasedCards) ? unreleasedCards.find(uc => (uc.id || uc.name) === vId) : null);
+    if(found) return found;
+  }
+  if(selectedChampionIndex !== null && cards[selectedChampionIndex]){
+    return cards[selectedChampionIndex];
+  }
+  if(owned.length > 0 && cards[owned[0]]) return cards[owned[0]];
+  return cards[0];
+}
+window.getSelectedChampionCard = getSelectedChampionCard;
+
+function startSoloBattle(){
+  cleanupPeer();
+  battlePlayerCard = getSelectedChampionCard();
   isMultiplayerMode = false;
 
   const publicCards = cards.filter(c => !c.isUnreleased);
   const aiPool = publicCards.length > 0 ? publicCards : cards;
-  const aiIdx = Math.floor(Math.random() * aiPool.length);
-  battleOppCard = aiPool[aiIdx];
+
+  // Ensure we always face a NEW opponent different from the previous opponent
+  let eligiblePool = aiPool;
+  if(battleOppCard && aiPool.length > 1){
+    eligiblePool = aiPool.filter(c => {
+      const isSameCard = (c === battleOppCard);
+      const isSameName = (c.name && battleOppCard.name && c.name.toLowerCase() === battleOppCard.name.toLowerCase());
+      const isSameId = (c.id && battleOppCard.id && c.id === battleOppCard.id);
+      return !isSameCard && !isSameName && !isSameId;
+    });
+    if(eligiblePool.length === 0) eligiblePool = aiPool;
+  }
+
+  const aiIdx = Math.floor(Math.random() * eligiblePool.length);
+  battleOppCard = eligiblePool[aiIdx];
 
   setupCombatInterface("YOUR CHAMPION", "AI COMBATANT", true);
   appendBattleLog(`<div style="color:#38bdf8">⚔️ Combat started! Your <b>${battlePlayerCard.name}</b> vs AI's <b>${battleOppCard.name}</b>.</div>`);
-};
+}
+window.startSoloBattle = startSoloBattle;
+
+// 1. Start AI Match
+document.getElementById("startAiMatchBtn").onclick = startSoloBattle;
 
 // 2. Host Multiplayer Match (Generates a 6-digit code)
 document.getElementById("hostMatchBtn").onclick = ()=>{
-  battlePlayerCard = cards[selectedChampionIndex];
+  battlePlayerCard = getSelectedChampionCard();
   isMultiplayerMode = true;
 
   myRoomCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -179,7 +212,7 @@ document.getElementById("cancelHostBtn").onclick = ()=>{
 
 // 3. Join Match with Code
 document.getElementById("showJoinMatchBtn").onclick = ()=>{
-  battlePlayerCard = cards[selectedChampionIndex];
+  battlePlayerCard = getSelectedChampionCard();
   isMultiplayerMode = true;
 
   document.getElementById("arenaHubArea").style.display = "none";
@@ -293,7 +326,13 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
   battleOppHp = battleOppCard.hp || 85;
   isPlayerTurn = playerStartsFirst;
 
-  document.getElementById("victoryBanner").classList.remove("show");
+  const victoryBanner = document.getElementById("victoryBanner");
+  if(victoryBanner) victoryBanner.classList.remove("show", "outcome-win", "outcome-lose");
+
+  const pCard = document.getElementById("playerFighterCard");
+  const aCard = document.getElementById("aiFighterCard");
+  if(pCard) pCard.classList.remove("lunge-right", "lunge-left", "hit-shake");
+  if(aCard) aCard.classList.remove("lunge-right", "lunge-left", "hit-shake");
 
   document.getElementById("playerLabelTag").textContent = playerTitle;
   document.getElementById("oppLabelTag").textContent = oppTitle;
@@ -393,6 +432,10 @@ function triggerVictory(){
   document.getElementById("victoryCoinsLabel").textContent = `+${reward} Coins Added to Your Account! 🪙 ${eventCoinMultiplier > 1 ? `(${eventCoinMultiplier}x Event Bonus!)` : ""}`;
   setAttacksDisabled(true);
   document.getElementById("turnInstructionText").textContent = "Match Finished!";
+
+  try {
+    victoryBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch(e){}
 }
 
 function triggerDefeat(){
@@ -408,6 +451,10 @@ function triggerDefeat(){
 
   setAttacksDisabled(true);
   document.getElementById("turnInstructionText").textContent = "Match Finished!";
+
+  try {
+    victoryBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch(e){}
 }
 
 function performPlayerAttack(attackObj){
@@ -501,22 +548,27 @@ function syncIncomingCustomCards(incomingCards){
 const playAgainBtn = document.getElementById("battlePlayAgainBtn");
 if(playAgainBtn){
   playAgainBtn.onclick = ()=>{
-    document.getElementById("victoryBanner").classList.remove("show", "outcome-win", "outcome-lose");
-    if(!isMultiplayerMode){
-      startSoloBattle();
-    } else {
-      resetArenaViews();
-    }
+    cleanupPeer();
+    const victoryBanner = document.getElementById("victoryBanner");
+    if(victoryBanner) victoryBanner.classList.remove("show", "outcome-win", "outcome-lose");
+    startSoloBattle();
   };
 }
 
 const backToCardsBtn = document.getElementById("battleBackToCardsBtn");
 if(backToCardsBtn){
   backToCardsBtn.onclick = ()=>{
-    document.getElementById("victoryBanner").classList.remove("show", "outcome-win", "outcome-lose");
-    document.getElementById("arenaModal").classList.remove("show");
+    cleanupPeer();
+    const victoryBanner = document.getElementById("victoryBanner");
+    if(victoryBanner) victoryBanner.classList.remove("show", "outcome-win", "outcome-lose");
+    const battleModal = document.getElementById("battleModal");
+    if(battleModal) battleModal.classList.remove("show");
     resetArenaViews();
     if(typeof render === "function") render();
-    window.scrollTo({ top: document.querySelector(".binder")?.offsetTop || 0, behavior: "smooth" });
+
+    const targetEl = document.getElementById("grid") || document.querySelector(".controls");
+    if(targetEl){
+      targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 }
