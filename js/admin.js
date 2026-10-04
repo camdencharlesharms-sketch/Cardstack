@@ -30,6 +30,7 @@ function updatePackPriceLabels(){
 function initCardSelect(){
   const select = document.getElementById("skinSelect");
   if(!select) return;
+  const prevVal = select.value;
   select.innerHTML = '<option value="">Select Card to Grant / Edit...</option>';
 
   const publicGroup = document.createElement("optgroup");
@@ -59,6 +60,9 @@ function initCardSelect(){
 
   const totalEl = document.getElementById("totalCardsCount");
   if(totalEl) totalEl.textContent = cards.length;
+  if(prevVal && Array.from(select.options).some(o => o.value === prevVal)){
+    select.value = prevVal;
+  }
   renderSubAdminSkinChecklist();
 }
 
@@ -176,10 +180,14 @@ function refreshAdminPlayerData(){
 
   const isFilterOnline = onlineOnlyFilter ? onlineOnlyFilter.checked : false;
 
-  playerSelect.innerHTML = '<option value="">Select Target Player...</option>';
-  subAdminSelect.innerHTML = '<option value="">Select Player...</option>';
-  ecoPlayerSelect.innerHTML = '<option value="">Select Target Player...</option>';
-  tableBody.innerHTML = "";
+  const prevSkinPlayer = playerSelect ? playerSelect.value : "";
+  const prevEcoPlayer = ecoPlayerSelect ? ecoPlayerSelect.value : "";
+  const prevSubPlayer = subAdminSelect ? subAdminSelect.value : "";
+
+  if(playerSelect) playerSelect.innerHTML = '<option value="">Select Target Player...</option>';
+  if(subAdminSelect) subAdminSelect.innerHTML = '<option value="">Select Player...</option>';
+  if(ecoPlayerSelect) ecoPlayerSelect.innerHTML = '<option value="">Select Target Player...</option>';
+  if(tableBody) tableBody.innerHTML = "";
 
   // Always sanitize against fake / made-up names
   const fakeNames = ["Alex", "Jordan", "Elena", "Kai", "Morgan", "Sam", "Taylor", "Riley", "Aria", "Leo", "Zane", "Maya", "Finn", "Chloe", "Noah", "Liam", "Sophia"];
@@ -262,11 +270,23 @@ function refreshAdminPlayerData(){
       <td>🪙 ${(data.coins || 0).toLocaleString()}</td>
       <td>${(data.owned || []).length} / ${cards.length}</td>
       <td>
+        <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#059669;color:#fff;margin-right:4px" onclick="quickGiftPlayerCardPrompt('${name}')">🎁 Gift</button>
         ${!isMaster ? `<button class="accountBtn" style="padding:4px 8px;font-size:11px;color:#f87171" onclick="adminDeleteSingleAccount('${name}')">Delete</button>` : '<span style="color:#94a3b8;font-size:11px">Owner</span>'}
       </td>
     `;
     tableBody.appendChild(tr);
   });
+
+  // Restore active player dropdown selections if still available
+  if(prevSkinPlayer && playerSelect && Array.from(playerSelect.options).some(o => o.value === prevSkinPlayer)){
+    playerSelect.value = prevSkinPlayer;
+  }
+  if(prevEcoPlayer && ecoPlayerSelect && Array.from(ecoPlayerSelect.options).some(o => o.value === prevEcoPlayer)){
+    ecoPlayerSelect.value = prevEcoPlayer;
+  }
+  if(prevSubPlayer && subAdminSelect && Array.from(subAdminSelect.options).some(o => o.value === prevSubPlayer)){
+    subAdminSelect.value = prevSubPlayer;
+  }
 
   const availListEl = document.getElementById("subAdminAvailablePlayersList");
   if(availListEl){
@@ -1636,5 +1656,20 @@ window.quickGiftVaultCard = function(cardId){
     alert(`🎁 Exclusive Vault Card "${vCard.name}" successfully gifted to ${target}!\n\nThis card is now unlocked in ${target}'s binder and arena, and will NEVER drop in booster packs for anyone.`);
   } else {
     alert(`${target} already owns this exclusive vault card.`);
+  }
+};
+
+
+window.quickGiftPlayerCardPrompt = function(name){
+  selectPlayerInAllAdminDropdowns(name);
+  const cardSel = document.getElementById("skinSelect");
+  if(cardSel){
+    cardSel.focus();
+    cardSel.style.borderColor = "#10b981";
+    cardSel.style.boxShadow = "0 0 10px rgba(16,185,129,0.5)";
+    setTimeout(()=>{
+      cardSel.style.borderColor = "";
+      cardSel.style.boxShadow = "";
+    }, 1500);
   }
 };

@@ -86,7 +86,11 @@ document.getElementById("arenaBtn").onclick = ()=>{
     alert("The battle arena is offline for maintenance.");
     return;
   }
-  if(owned.length === 0){
+  const curUserVaultOwned = (currentUser && accounts[currentUser] && Array.isArray(accounts[currentUser].unreleasedOwned))
+    ? accounts[currentUser].unreleasedOwned
+    : (isCam && accounts["Cam"] && Array.isArray(accounts["Cam"].unreleasedOwned) ? accounts["Cam"].unreleasedOwned : []);
+
+  if(owned.length === 0 && curUserVaultOwned.length === 0){
     alert("You need to own at least one card to enter the arena! Open some packs first.");
     return;
   }

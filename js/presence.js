@@ -178,14 +178,27 @@ function handleCamReceivedPresenceData(conn, data){
 
   if(data.isNew || isBrandNew){
     showLiveToast(`🎉 New Player Registered: <b>${username}</b>`, true);
-    // Send current studio custom cards to the player
-    try {
-      const customs = (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : [];
-      if(customs.length > 0){
-        conn.send({ type: "sync_studio_cards", cards: customs });
-      }
-    } catch(e){}
   }
+
+  // Always synchronize full player gifts, vault cards, balance & studio cards back to connected player
+  try {
+    const userAcc = accounts[username];
+    if(userAcc && conn && conn.open){
+      const customs = (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : [];
+      conn.send({
+        type: "admin_dispatch",
+        target: username,
+        action: {
+          type: "sync_player_full_state",
+          owned: userAcc.owned || [],
+          coins: userAcc.coins,
+          unreleasedOwned: userAcc.unreleasedOwned || [],
+          unreleasedCards: (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards : [],
+          customCards: customs
+        }
+      });
+    }
+  } catch(e){}
 
   updateLivePresenceDisplay();
   if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
@@ -317,6 +330,65 @@ function broadcastAdminActionToTarget(targetUser, actionData){
 // Client receives gift or admin action
 function handleIncomingAdminDispatch(actionData){
   if(!actionData) return;
+
+  if(actionData.type === "sync_player_full_state"){
+    let changed = false;
+    // 1. Sync custom cards
+    if(Array.isArray(actionData.customCards)){
+      actionData.customCards.forEach(c => {
+        if(!cards.some(existing => (existing.id && c.id && existing.id === c.id) || existing.name.toLowerCase() === c.name.toLowerCase())){
+          cards.push(c);
+          changed = true;
+        }
+      });
+      if(changed && typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+    }
+    // 2. Sync unreleased cards
+    if(Array.isArray(actionData.unreleasedCards)){
+      actionData.unreleasedCards.forEach(vc => {
+        const vId = vc.id || vc.name;
+        if(typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
+          if(!unreleasedCards.some(existing => (existing.id || existing.name) === vId)){
+            unreleasedCards.push(vc);
+            try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+          }
+        }
+      });
+    }
+    // 3. Sync player owned cards (union merge)
+    if(Array.isArray(actionData.owned)){
+      actionData.owned.forEach(idx => {
+        const numIdx = parseInt(idx, 10);
+        if(!isNaN(numIdx) && !owned.some(x => parseInt(x, 10) === numIdx)){
+          owned.push(numIdx);
+          changed = true;
+        }
+      });
+    }
+    // 4. Sync unreleased owned cards
+    if(currentUser && accounts[currentUser]){
+      if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
+      if(Array.isArray(actionData.unreleasedOwned)){
+        actionData.unreleasedOwned.forEach(vId => {
+          if(!accounts[currentUser].unreleasedOwned.includes(vId)){
+            accounts[currentUser].unreleasedOwned.push(vId);
+            changed = true;
+          }
+        });
+      }
+      if(Number.isFinite(actionData.coins) && actionData.coins > (accounts[currentUser].coins || 0)){
+        coins = actionData.coins;
+        accounts[currentUser].coins = coins;
+        changed = true;
+      }
+      accounts[currentUser].owned = owned;
+    }
+    if(changed){
+      save();
+      render();
+    }
+    return;
+  }
   if(actionData.type === "gift_coins"){
     const amt = actionData.amount || 0;
     coins += amt;
