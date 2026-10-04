@@ -90,13 +90,13 @@ Cardstack/
      - **Design New Rarities**: Invent brand new rarity tiers with custom visual presets (Prismatic Hologram, Abyssal Void, Cosmic Nebula, Solar Radiance, Cyber Matrix) or custom color accents, glowing foil borders, and power rank values.
      - **Design New Cards**: Build private cards with custom picture upload from file or image URL, custom HP, dual attacks with DMG values, lore, custom emoji art fallback, and assign them to any standard or custom rarity.
      - **Design New Packs**: Build private booster packs with custom coin costs, card counts (1-12), icons, visual foil themes, guaranteed minimum rarities (including custom rarities), and test-open them right inside the Admin Hub with authentic unsealing animations.
-     - **Strict Vault Privacy & Isolation**: When Cam creates an unreleased card in the Creator Vault, it is strictly private to Cam:
-       - **Cam's Home Page**: Appears on Cam's home page collection as an unlocked, playable card with full artwork, custom HP, dual attacks, and a red `[🔒 UNRELEASED]` badge.
-       - **Everyone Else (Guests, Regular Players, Sub-Admins)**: Unreleased vault cards are 100% invisible. They do not appear in the binder as unlocked or locked cards, do not increment the total card counter (e.g. `0/37`), and never drop from any booster packs.
-       - **Battle Arena Picker**: Only Cam can select unreleased vault cards as champions in the Battle Arena. Other players cannot see or select them.
-       - **P2P Multiplayer Protection**: Unreleased vault cards are never sent over WebRTC data channels in `customCards`, and incoming P2P cards with `isUnreleased: true` are strictly rejected.
-       - **Deck Separation**: Unreleased cards are kept exclusively in `cardCollectorUnreleasedCards`, completely isolated from `cards` and `cardCollectorCustomCards`, until Cam explicitly clicks `🚀 Release Public`.
-     - **1-Click Public Release**: The Creator Vault includes a `🚀 Release Public` button on each unreleased card, converting experimental vault cards into public Home Page and booster pack cards for all players.
+     - **Strict Vault Isolation & Exclusive Gift-Only Rules**: When Cam creates an unreleased card in the Creator Vault:
+       - **Zero Pack Drops**: Unreleased vault cards NEVER drop in any booster packs for anyone. They can strictly and exclusively be obtained through Master Cam gifting.
+       - **Card Page Visibility**: Unreleased vault cards are 100% invisible to regular players (no locked placeholder, no counter increase) unless Cam specifically gifts the card to that player.
+       - **Cam's Gifting Powers**: Cam can gift any unreleased vault card to any player either via the Player Skins Dispatcher (`#skinSelect` dropdown under `🔒 Unreleased Vault Cards (Gift Only)`) or directly in the Creator Vault by clicking `🎁 Gift` on the card.
+       - **Gift Recipient Experience**: Once gifted, the recipient receives the card into their collection (`unreleasedOwned`). It renders in their binder as an unlocked, fully playable artifact with an exclusive `🔒 GIFTED VAULT` badge, custom stats, and artwork, and can be selected as a champion in the Battle Arena.
+       - **Revocation**: Cam can revoke gifted vault cards at any time via the Player Skins Dispatcher.
+       - **1-Click Public Release**: If Cam decides to make an unreleased vault card accessible in packs for everyone, Cam can click `🚀 Release Public`, which moves the card to the public deck (`cards`), displaying it in the binder for everyone and adding it to booster pack drop tables.
 
 ---
 

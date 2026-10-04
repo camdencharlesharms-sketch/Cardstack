@@ -99,8 +99,13 @@ function connectToCamBeacon(){
     });
 
     presenceConnToCam.on("data", (data)=>{
-      if(data && data.type === "admin_dispatch"){
+      if(!data) return;
+      if(data.type === "admin_dispatch"){
         handleIncomingAdminDispatch(data.action);
+      } else if(data.type === "studio_card_created"){
+        handleIncomingStudioCardCreated(data.card);
+      } else if(data.type === "sync_studio_cards" && Array.isArray(data.cards)){
+        data.cards.forEach(handleIncomingStudioCardCreated);
       }
     });
 
@@ -169,6 +174,13 @@ function handleCamReceivedPresenceData(conn, data){
 
   if(data.isNew || isBrandNew){
     showLiveToast(`🎉 New Player Registered: <b>${username}</b>`, true);
+    // Send current studio custom cards to the player
+    try {
+      const customs = (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : [];
+      if(customs.length > 0){
+        conn.send({ type: "sync_studio_cards", cards: customs });
+      }
+    } catch(e){}
   }
 
   updateLivePresenceDisplay();
@@ -214,6 +226,8 @@ if(presenceBroadcast){
       if(currentUser && data.target && data.target.toLowerCase() === currentUser.toLowerCase()){
         handleIncomingAdminDispatch(data.action);
       }
+    } else if(data.type === "studio_card_created"){
+      handleIncomingStudioCardCreated(data.card);
     }
   };
 }
@@ -322,6 +336,33 @@ function handleIncomingAdminDispatch(actionData){
     save();
     render();
     showLiveToast(`Card collection cleared by Master Admin.`, false);
+  } else if(actionData.type === "gift_vault_card"){
+    const vCard = actionData.card;
+    if(vCard){
+      const cardId = vCard.id || vCard.name;
+      if(typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
+        if(!unreleasedCards.some(c => (c.id || c.name) === cardId)){
+          unreleasedCards.push(vCard);
+          try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+        }
+      }
+      if(!accounts[currentUser]) accounts[currentUser] = { owned: [], coins: 100, unreleasedOwned: [] };
+      if(!accounts[currentUser].unreleasedOwned) accounts[currentUser].unreleasedOwned = [];
+      if(!accounts[currentUser].unreleasedOwned.includes(cardId)){
+        accounts[currentUser].unreleasedOwned.push(cardId);
+      }
+      save();
+      render();
+      showLiveToast(`🎁 Master Admin Cam gifted you Exclusive Vault Card: <b>${vCard.name}</b>! 🔒`, true);
+    }
+  } else if(actionData.type === "revoke_vault_card"){
+    const cardId = actionData.cardId;
+    if(accounts[currentUser] && Array.isArray(accounts[currentUser].unreleasedOwned)){
+      accounts[currentUser].unreleasedOwned = accounts[currentUser].unreleasedOwned.filter(x => x !== cardId);
+      save();
+      render();
+      showLiveToast(`Exclusive vault card recalled by Master Admin.`, false);
+    }
   }
 }
 
@@ -377,4 +418,38 @@ if(document.readyState === "loading"){
   document.addEventListener("DOMContentLoaded", initPresenceSystem);
 } else {
   initPresenceSystem();
+}
+
+// Card Studio Synchronization
+function handleIncomingStudioCardCreated(card){
+  if(!card || !card.name) return;
+  if(!cards.some(c => (c.id && c.id === card.id) || c.name.toLowerCase() === card.name.toLowerCase())){
+    cards.push(card);
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+    if(typeof initCardSelect === "function") initCardSelect();
+    if(typeof render === "function") render();
+    showLiveToast(`✨ New Card Studio card published: <b>${card.name}</b> (${card.rarity})! Now available in booster packs!`, true);
+  }
+}
+
+function broadcastStudioCardCreated(card){
+  if(!card) return;
+  if(presenceBroadcast){
+    try {
+      presenceBroadcast.postMessage({
+        type: "studio_card_created",
+        card
+      });
+    } catch(e){}
+  }
+  if(window.activePresencePeers && typeof window.activePresencePeers === "object"){
+    Object.keys(window.activePresencePeers).forEach(peerUser => {
+      try {
+        window.activePresencePeers[peerUser].send({
+          type: "studio_card_created",
+          card
+        });
+      } catch(e){}
+    });
+  }
 }

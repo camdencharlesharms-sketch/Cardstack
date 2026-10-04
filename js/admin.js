@@ -29,15 +29,36 @@ function updatePackPriceLabels(){
 
 function initCardSelect(){
   const select = document.getElementById("skinSelect");
+  if(!select) return;
   select.innerHTML = '<option value="">Select Card to Grant / Edit...</option>';
+
+  const publicGroup = document.createElement("optgroup");
+  publicGroup.label = "✨ Public & Studio Cards (Drop in Packs)";
   cards.forEach((c, idx) => {
     const opt = document.createElement("option");
-    opt.value = idx;
-    const atkNames = c.attacks.map(a => `${a.name} (${a.dmg})`).join(" / ");
+    opt.value = idx.toString();
+    const atkNames = (c.attacks || []).map(a => `${a.name} (${a.dmg})`).join(" / ");
     opt.textContent = `${c.name} (${c.rarity}) - ATK: ${atkNames}`;
-    select.appendChild(opt);
+    publicGroup.appendChild(opt);
   });
-  document.getElementById("totalCardsCount").textContent = cards.length;
+  select.appendChild(publicGroup);
+
+  if(Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
+    const vaultGroup = document.createElement("optgroup");
+    vaultGroup.label = "🔒 Unreleased Vault Cards (Gift Only - Never In Packs)";
+    unreleasedCards.forEach((c) => {
+      const opt = document.createElement("option");
+      const cId = c.id || c.name;
+      opt.value = "vault_" + cId;
+      const atkNames = (c.attacks || []).map(a => `${a.name} (${a.dmg})`).join(" / ");
+      opt.textContent = `🔒 [Vault Gift] ${c.name} (${c.rarity}) - ATK: ${atkNames}`;
+      vaultGroup.appendChild(opt);
+    });
+    select.appendChild(vaultGroup);
+  }
+
+  const totalEl = document.getElementById("totalCardsCount");
+  if(totalEl) totalEl.textContent = cards.length;
   renderSubAdminSkinChecklist();
 }
 
@@ -574,6 +595,10 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
   cards.push(newCard);
   if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
 
+  if(typeof broadcastStudioCardCreated === "function"){
+    broadcastStudioCardCreated(newCard);
+  }
+
   initCardSelect();
   render();
   renderStudioCustomCards();
@@ -601,8 +626,36 @@ document.getElementById("adminUpdateCardArtBtn").onclick = ()=>{
 
 document.getElementById("adminGiveSkinBtn").onclick = ()=>{
   const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
-  const idx = parseInt(document.getElementById("skinSelect").value, 10);
-  if(!target || isNaN(idx)) return alert("Type or select recipient username and valid card.");
+  const rawVal = document.getElementById("skinSelect").value;
+  if(!target || !rawVal) return alert("Type or select recipient username and valid card.");
+
+  // Handle Unreleased Vault Cards (Gift Only)
+  if(rawVal.startsWith("vault_")){
+    if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift unreleased vault cards.");
+    const vaultId = rawVal.replace("vault_", "");
+    const vCard = unreleasedCards.find(c => (c.id || c.name) === vaultId);
+    if(!vCard) return alert("Selected vault card not found in unreleased vault.");
+
+    if(!accounts[target]) accounts[target] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+    if(!accounts[target].unreleasedOwned) accounts[target].unreleasedOwned = [];
+    if(!accounts[target].unreleasedOwned.includes(vaultId)){
+      accounts[target].unreleasedOwned.push(vaultId);
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+
+      if(typeof broadcastAdminActionToTarget === "function"){
+        broadcastAdminActionToTarget(target, { type: "gift_vault_card", card: vCard });
+      }
+      refreshAdminPlayerData();
+      render();
+      alert(`🎁 Exclusive Vault Card "${vCard.name}" gifted to ${target}!\n\nThis card is now unlocked in ${target}'s binder and arena, and will NEVER drop in booster packs for anyone.`);
+    } else {
+      alert(`${target} already possesses this exclusive vault card.`);
+    }
+    return;
+  }
+
+  const idx = parseInt(rawVal, 10);
+  if(isNaN(idx)) return alert("Select a valid card to grant.");
 
   if(isSubAdmin() && !isMasterAdmin()){
     const role = subAdminRoles[currentUser];
@@ -634,8 +687,32 @@ document.getElementById("adminTakeSkinBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only master admin Cam can revoke cards.");
 
   const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
-  const idx = parseInt(document.getElementById("skinSelect").value, 10);
-  if(!target || isNaN(idx)) return alert("Type or select recipient username and valid card.");
+  const rawVal = document.getElementById("skinSelect").value;
+  if(!target || !rawVal) return alert("Type or select recipient username and valid card.");
+
+  // Handle Unreleased Vault Cards
+  if(rawVal.startsWith("vault_")){
+    const vaultId = rawVal.replace("vault_", "");
+    const vCard = unreleasedCards.find(c => (c.id || c.name) === vaultId);
+    const cardTitle = vCard ? vCard.name : vaultId;
+
+    if(accounts[target] && Array.isArray(accounts[target].unreleasedOwned) && accounts[target].unreleasedOwned.includes(vaultId)){
+      accounts[target].unreleasedOwned = accounts[target].unreleasedOwned.filter(x => x !== vaultId);
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      if(typeof broadcastAdminActionToTarget === "function"){
+        broadcastAdminActionToTarget(target, { type: "revoke_vault_card", cardId: vaultId });
+      }
+      refreshAdminPlayerData();
+      render();
+      alert(`Revoked exclusive vault card "${cardTitle}" from ${target}.`);
+    } else {
+      alert(`${target} does not possess this exclusive vault card.`);
+    }
+    return;
+  }
+
+  const idx = parseInt(rawVal, 10);
+  if(isNaN(idx)) return alert("Select a valid card to revoke.");
 
   if(accounts[target] && accounts[target].owned){
     accounts[target].owned = accounts[target].owned.filter(x => x !== idx);
@@ -1064,9 +1141,12 @@ function renderUnreleasedAdminUI(){
             <div style="font-size:11px;color:#94a3b8">${c.hp} HP • ${c.attacks ? c.attacks.map(a => a.name + " (" + a.dmg + ")").join(", ") : ""}</div>
           </div>
         </div>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="accountBtn" style="padding:5px 9px;font-size:11px;background:rgba(16,185,129,0.2);border-color:#10b981;color:#6ee7b7" onclick="quickGiftVaultCard('${cardId}')" title="Gift this exclusive card to a specific player">
+            🎁 Gift
+          </button>
           <button type="button" class="accountBtn" style="padding:5px 9px;font-size:11px;background:${isOwnedByCam ? "rgba(16,185,129,0.2)" : "rgba(56,189,248,0.2)"};border-color:${isOwnedByCam ? "#10b981" : "#38bdf8"};color:${isOwnedByCam ? "#6ee7b7" : "#38bdf8"}" onclick="toggleUnreleasedCardOwnership('${cardId}')">
-            ${isOwnedByCam ? "✓ In Vault" : "+ Add to Vault"}
+            ${isOwnedByCam ? "✓ Owned" : "+ Own"}
           </button>
           <button type="button" class="accountBtn" style="padding:5px 9px;font-size:11px;background:rgba(234,179,8,0.2);border-color:#eab308;color:#fde047" onclick="releaseVaultCardToStudio('${cardId}')" title="Release to Home Page and Booster Packs for everyone">
             🚀 Release Public
@@ -1441,6 +1521,9 @@ window.releaseVaultCardToStudio = function(cardId){
   if(!cards.some(c => c.name.toLowerCase() === publicCard.name.toLowerCase())){
     cards.push(publicCard);
     if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+    if(typeof broadcastStudioCardCreated === "function"){
+      broadcastStudioCardCreated(publicCard);
+    }
   }
 
   unreleasedCards.splice(idx, 1);
@@ -1456,3 +1539,44 @@ window.releaseVaultCardToStudio = function(cardId){
 // Initial render of studio cards
 renderStudioCustomCards();
 populateRarityDropdowns();
+
+window.quickGiftVaultCard = function(cardId){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift unreleased vault cards.");
+  const vCard = unreleasedCards.find(c => (c.id || c.name) === cardId);
+  if(!vCard) return alert("Vault card not found.");
+
+  const playerKeys = Object.keys(accounts).filter(k => k.toLowerCase() !== ADMIN_USERNAME.toLowerCase());
+  let promptMsg = `Gift Exclusive Vault Card "${vCard.name}" to which player?\n\n`;
+  if(playerKeys.length > 0){
+    promptMsg += `Available registered players: ${playerKeys.join(", ")}`;
+  } else {
+    promptMsg += `Enter any registered player username:`;
+  }
+
+  const defTarget = playerKeys[0] || "";
+  const recipient = prompt(promptMsg, defTarget);
+  if(!recipient) return;
+  const target = recipient.trim();
+  if(!target) return;
+
+  if(!accounts[target]){
+    accounts[target] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+  }
+  if(!accounts[target].unreleasedOwned) accounts[target].unreleasedOwned = [];
+  if(!accounts[target].unreleasedOwned.includes(cardId)){
+    accounts[target].unreleasedOwned.push(cardId);
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+
+    if(typeof broadcastAdminActionToTarget === "function"){
+      broadcastAdminActionToTarget(target, { type: "gift_vault_card", card: vCard });
+    }
+
+    refreshAdminPlayerData();
+    render();
+    renderUnreleasedAdminUI();
+    initCardSelect();
+    alert(`🎁 Exclusive Vault Card "${vCard.name}" successfully gifted to ${target}!\n\nThis card is now unlocked in ${target}'s binder and arena, and will NEVER drop in booster packs for anyone.`);
+  } else {
+    alert(`${target} already owns this exclusive vault card.`);
+  }
+};

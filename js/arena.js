@@ -23,11 +23,15 @@ function renderArenaCardPicker(){
     }
   });
 
-  // Only Master Cam can wield unreleased vault cards in the battle arena
-  if(isCam && accounts["Cam"] && Array.isArray(accounts["Cam"].unreleasedOwned) && Array.isArray(unreleasedCards)){
-    accounts["Cam"].unreleasedOwned.forEach(id => {
+  // Allow Master Cam and players who were gifted exclusive vault cards to wield them in battle
+  const curUserVaultOwned = (currentUser && accounts[currentUser] && Array.isArray(accounts[currentUser].unreleasedOwned))
+    ? accounts[currentUser].unreleasedOwned
+    : (isCam && accounts["Cam"] && Array.isArray(accounts["Cam"].unreleasedOwned) ? accounts["Cam"].unreleasedOwned : []);
+
+  if(Array.isArray(curUserVaultOwned) && Array.isArray(unreleasedCards)){
+    curUserVaultOwned.forEach(id => {
       const vCard = unreleasedCards.find(uc => (uc.id || uc.name) === id);
-      if(vCard){
+      if(vCard && !availableCards.some(ac => ac.card === vCard)){
         availableCards.push({ card: vCard, index: "vault_" + (vCard.id || vCard.name), isVault: true });
       }
     });

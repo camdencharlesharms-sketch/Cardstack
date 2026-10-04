@@ -160,25 +160,8 @@ function startPackOpening(tierKey){
       for(let i = 0; i < pack.count; i++){
         const guarantee = (i === 0 && pack.minRarity) ? pack.minRarity : null;
         let card;
-        if(pack.dropMode === "unreleased_only"){
-          if(isMasterAdmin() && Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
-            card = unreleasedCards[Math.floor(Math.random() * unreleasedCards.length)];
-          } else {
-            card = chooseCardFromWeights(pack.weights, guarantee);
-          }
-        } else if(pack.dropMode === "unreleased_guaranteed" && i === 0){
-          if(isMasterAdmin() && Array.isArray(unreleasedCards) && unreleasedCards.length > 0){
-            card = unreleasedCards[Math.floor(Math.random() * unreleasedCards.length)];
-          } else {
-            card = chooseCardFromWeights(pack.weights, guarantee);
-          }
-        } else {
-          if(isMasterAdmin() && pack.isUnreleased && Array.isArray(unreleasedCards) && unreleasedCards.length > 0 && Math.random() < 0.4){
-            card = unreleasedCards[Math.floor(Math.random() * unreleasedCards.length)];
-          } else {
-            card = chooseCardFromWeights(pack.weights, guarantee);
-          }
-        }
+        // Booster packs strictly drop public & studio cards. Unreleased vault cards can ONLY be gifted by Cam!
+        card = chooseCardFromWeights(pack.weights, guarantee, false);
 
         const isUnrel = !!card.isUnreleased;
         let isNew = false;
@@ -255,21 +238,38 @@ function render(){
   const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
   const showUnreleasedInBinder = isCam && ((typeof shouldShowUnreleasedInBinder === "function") && shouldShowUnreleasedInBinder());
 
+  // Collect gifted vault cards for the current user
+  const curUserVaultOwned = (currentUser && accounts[currentUser] && Array.isArray(accounts[currentUser].unreleasedOwned))
+    ? accounts[currentUser].unreleasedOwned
+    : (isCam && accounts["Cam"] && Array.isArray(accounts["Cam"].unreleasedOwned) ? accounts["Cam"].unreleasedOwned : []);
+
+  const userGiftedVaultCards = [];
+  if(Array.isArray(unreleasedCards)){
+    curUserVaultOwned.forEach(id => {
+      const vCard = unreleasedCards.find(c => (c.id || c.name) === id);
+      if(vCard && !userGiftedVaultCards.includes(vCard)){
+        userGiftedVaultCards.push(vCard);
+      }
+    });
+  }
+
   let binderPool = [...cards];
-  if(showUnreleasedInBinder && Array.isArray(unreleasedCards)){
+  if(isCam && showUnreleasedInBinder && Array.isArray(unreleasedCards)){
     binderPool = [...cards, ...unreleasedCards];
+  } else if(userGiftedVaultCards.length > 0){
+    binderPool = [...cards, ...userGiftedVaultCards];
   }
 
   const visible = binderPool.filter((c)=>{
     const isUnrel = !!c.isUnreleased;
-    // Strict privacy: Vault unreleased cards are 100% invisible to anyone except Cam
-    if(isUnrel && !isCam){
-      return false;
-    }
     let has = false;
     if(isUnrel){
       const cardId = c.id || c.name;
-      has = isCam && !!(accounts["Cam"] && accounts["Cam"].unreleasedOwned && accounts["Cam"].unreleasedOwned.includes(cardId));
+      has = curUserVaultOwned.includes(cardId);
+      // Strictly isolate unreleased vault cards: only Cam or players gifted this card can ever see it
+      if(!has && !isCam){
+        return false;
+      }
     } else {
       const cardIdx = cards.indexOf(c);
       has = owned.includes(cardIdx);
@@ -279,14 +279,12 @@ function render(){
 
   const totalCountEl = document.getElementById("totalCardsCount");
   if(totalCountEl) {
-    // Regular players and guests strictly see only the public cards count
-    totalCountEl.textContent = (isCam && showUnreleasedInBinder) ? binderPool.length : cards.length;
+    const extraVaultCount = isCam ? (showUnreleasedInBinder ? (Array.isArray(unreleasedCards) ? unreleasedCards.length : 0) : 0) : userGiftedVaultCards.length;
+    totalCountEl.textContent = cards.length + extraVaultCount;
   }
   
   let ownedCount = owned.filter(idx => idx < cards.length).length;
-  if(isCam && showUnreleasedInBinder && accounts["Cam"] && accounts["Cam"].unreleasedOwned){
-    ownedCount += accounts["Cam"].unreleasedOwned.length;
-  }
+  ownedCount += curUserVaultOwned.length;
   document.getElementById("count").textContent = ownedCount;
 
   const grid = document.getElementById("grid");
@@ -299,11 +297,11 @@ function render(){
 
   visible.forEach(c=>{
     const isUnrel = !!c.isUnreleased;
-    if(isUnrel && !isCam) return;
     let has = false;
     if(isUnrel){
       const cardId = c.id || c.name;
-      has = isCam && !!(accounts["Cam"] && accounts["Cam"].unreleasedOwned && accounts["Cam"].unreleasedOwned.includes(cardId));
+      has = curUserVaultOwned.includes(cardId);
+      if(!has && !isCam) return;
     } else {
       const i = cards.indexOf(c);
       has = owned.includes(i);
@@ -326,7 +324,11 @@ function render(){
       <div class="attack-preview"><span class="attack-name">⚔️ ???</span><span class="attack-dmg">?? DMG</span></div>
     `;
 
-    const unreleasedBadge = (isUnrel && has) ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : "";
+    const unreleasedBadge = (isUnrel && has) 
+      ? (isCam 
+          ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' 
+          : '<span style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 GIFTED VAULT</span>') 
+      : "";
     el.innerHTML = `
       <div class="face ${has ? c.rarity : ''}">
         <div class="card-top">
@@ -450,3 +452,21 @@ if(currentUser && accounts[currentUser]){
   render();
 }
 touchUserActive();
+
+window.addEventListener("storage", (e) => {
+  if(e.key === "cardCollectorCustomCards"){
+    if(typeof getCustomCardsFromStorage === "function"){
+      const customs = getCustomCardsFromStorage();
+      const defaultList = (typeof defaultCards !== "undefined") ? defaultCards : [];
+      cards = [...defaultList, ...customs].filter(c => !c.isUnreleased);
+      if(typeof initCardSelect === "function") initCardSelect();
+      render();
+    }
+  } else if(e.key === "cardCollectorUnreleasedCards"){
+    try {
+      unreleasedCards = JSON.parse(e.newValue) || [];
+      if(typeof initCardSelect === "function") initCardSelect();
+      render();
+    } catch(err){}
+  }
+});
