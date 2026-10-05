@@ -1,10 +1,15 @@
 function updatePackPriceLabels(){
+  const isLockActive = (typeof isLockdownMode !== "undefined" && isLockdownMode);
+  const isMaster = (typeof isMasterAdmin === "function" && isMasterAdmin());
+
   Object.keys(packTiers).forEach(key => {
     const tier = packTiers[key];
     const actual = getActualPackCost(tier.baseCost);
     const label = document.getElementById("price-" + key);
     if(label){
-      if(eventPackDiscount > 0){
+      if(isLockActive && !isMaster){
+        label.innerHTML = `<span style="color:#ef4444;font-weight:900">🚨 LOCKED DOWN</span>`;
+      } else if(eventPackDiscount > 0){
         label.innerHTML = `Open • <s style="opacity:0.6">${tier.baseCost}</s> <b style="color:#4ade80">${actual} 🪙</b>`;
       } else {
         label.textContent = `Open • ${actual} 🪙`;
@@ -13,18 +18,23 @@ function updatePackPriceLabels(){
   });
 
   const eventBanner = document.getElementById("serverEventBanner");
-  if(eventCoinMultiplier > 1 || eventPackDiscount > 0){
-    eventBanner.style.display = "block";
-    let desc = [];
-    if(eventCoinMultiplier > 1) desc.push(`${eventCoinMultiplier}X COINS ACTIVE`);
-    if(eventPackDiscount > 0) desc.push(`${eventPackDiscount}% OFF PACK SALE`);
-    eventBanner.textContent = `🎉 SPECIAL EVENT: ${desc.join(" + ")}!`;
-  } else {
-    eventBanner.style.display = "none";
+  if(eventBanner){
+    if(eventCoinMultiplier > 1 || eventPackDiscount > 0){
+      eventBanner.style.display = "block";
+      let desc = [];
+      if(eventCoinMultiplier > 1) desc.push(`${eventCoinMultiplier}X COINS ACTIVE`);
+      if(eventPackDiscount > 0) desc.push(`${eventPackDiscount}% OFF PACK SALE`);
+      eventBanner.textContent = `🎉 SPECIAL EVENT: ${desc.join(" + ")}!`;
+    } else {
+      eventBanner.style.display = "none";
+    }
   }
 
   const maintBanner = document.getElementById("maintenanceBanner");
-  maintBanner.style.display = isMaintenanceMode ? "block" : "none";
+  if(maintBanner) maintBanner.style.display = isMaintenanceMode ? "block" : "none";
+
+  const lockBanner = document.getElementById("lockdownBanner");
+  if(lockBanner) lockBanner.style.display = isLockdownMode ? "block" : "none";
 }
 
 function initCardSelect(){
@@ -481,6 +491,18 @@ document.getElementById("adminOpenBtn").onclick = ()=>{
   document.getElementById("eventPackDiscountSelect").value = eventPackDiscount.toString();
   document.getElementById("toggleMaintenanceBtn").textContent = isMaintenanceMode ? "ON" : "OFF";
   document.getElementById("toggleGodModeBtn").textContent = isGodModeEnabled ? "ENABLED" : "DISABLED";
+  const lockdownBtn = document.getElementById("toggleLockdownBtn");
+  const lockdownBadge = document.getElementById("lockdownBadgeStatus");
+  if(lockdownBtn){
+    lockdownBtn.textContent = isLockdownMode ? "LOCKDOWN: ON" : "LOCKDOWN: OFF";
+    lockdownBtn.style.background = isLockdownMode ? "#dc2626" : "#475569";
+    lockdownBtn.style.boxShadow = isLockdownMode ? "0 0 15px rgba(220, 38, 38, 0.7)" : "none";
+  }
+  if(lockdownBadge){
+    lockdownBadge.textContent = isLockdownMode ? "STATUS: ACTIVE (LOCKDOWN ENFORCED)" : "STATUS: INACTIVE";
+    lockdownBadge.style.color = isLockdownMode ? "#f87171" : "#94a3b8";
+    lockdownBadge.style.background = isLockdownMode ? "rgba(220,38,38,0.3)" : "rgba(239,68,68,0.1)";
+  }
   document.getElementById("adminModal").classList.add("show");
 
   clearInterval(window._adminAutoRefreshTimer);
@@ -514,6 +536,43 @@ document.getElementById("toggleMaintenanceBtn").onclick = ()=>{
   document.getElementById("toggleMaintenanceBtn").textContent = isMaintenanceMode ? "ON" : "OFF";
   updatePackPriceLabels();
 };
+
+const toggleLockdownBtn = document.getElementById("toggleLockdownBtn");
+if(toggleLockdownBtn){
+  toggleLockdownBtn.onclick = ()=>{
+    if(!isMasterAdmin()) return alert("Only master admin Cam can toggle server lockdown mode.");
+    isLockdownMode = !isLockdownMode;
+    localStorage.setItem("cardCollectorLockdown", isLockdownMode.toString());
+    if(typeof window !== "undefined") window.isLockdownMode = isLockdownMode;
+
+    const btn = document.getElementById("toggleLockdownBtn");
+    const badge = document.getElementById("lockdownBadgeStatus");
+    if(btn){
+      btn.textContent = isLockdownMode ? "LOCKDOWN: ON" : "LOCKDOWN: OFF";
+      btn.style.background = isLockdownMode ? "#dc2626" : "#475569";
+      btn.style.boxShadow = isLockdownMode ? "0 0 15px rgba(220, 38, 38, 0.7)" : "none";
+    }
+    if(badge){
+      badge.textContent = isLockdownMode ? "STATUS: ACTIVE (LOCKDOWN ENFORCED)" : "STATUS: INACTIVE";
+      badge.style.color = isLockdownMode ? "#f87171" : "#94a3b8";
+      badge.style.background = isLockdownMode ? "rgba(220,38,38,0.3)" : "rgba(239,68,68,0.1)";
+    }
+
+    updatePackPriceLabels();
+
+    if(typeof broadcastLockdownMode === "function"){
+      broadcastLockdownMode(isLockdownMode);
+    }
+
+    if(typeof showLiveToast === "function"){
+      showLiveToast(isLockdownMode 
+        ? "🚨 HIGH-ALERT SERVER LOCKDOWN ACTIVATED! All matches and booster packs are now blocked." 
+        : "✅ Server lockdown lifted! Arena matches and booster packs restored.", 
+        true
+      );
+    }
+  };
+}
 
 document.getElementById("toggleGodModeBtn").onclick = ()=>{
   isGodModeEnabled = !isGodModeEnabled;

@@ -71,6 +71,13 @@ function setupCamHostPresence(){
             });
           } catch(e){}
         }
+        // Send current lockdown state
+        try {
+          conn.send({
+            type: "sync_lockdown_mode",
+            isLockdown: !!isLockdownMode
+          });
+        } catch(e){}
       });
 
       conn.on("data", (data)=>{
@@ -153,6 +160,8 @@ function connectToCamBeacon(){
         handleIncomingStudioCardCreated(data.card);
       } else if(data.type === "sync_studio_cards" && Array.isArray(data.cards)){
         data.cards.forEach(handleIncomingStudioCardCreated);
+      } else if(data.type === "sync_lockdown_mode"){
+        handleIncomingLockdownSync(data.isLockdown);
       }
     });
 
@@ -332,6 +341,8 @@ if(presenceBroadcast){
       }
     } else if(data.type === "studio_card_created"){
       handleIncomingStudioCardCreated(data.card);
+    } else if(data.type === "sync_lockdown_mode"){
+      handleIncomingLockdownSync(data.isLockdown);
     }
   };
 }
@@ -863,3 +874,66 @@ window.onUserAccountSwitched = function(username){
     } catch(e){}
   }
 };
+
+function broadcastLockdownMode(isLockdown){
+  const payload = {
+    type: "sync_lockdown_mode",
+    isLockdown: !!isLockdown
+  };
+  if(presenceBroadcast){
+    try { presenceBroadcast.postMessage(payload); } catch(e){}
+  }
+  if(window.activePresencePeers && typeof window.activePresencePeers === "object"){
+    Object.keys(window.activePresencePeers).forEach(peerUser => {
+      try {
+        window.activePresencePeers[peerUser].send(payload);
+      } catch(e){}
+    });
+  }
+  if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+    window.allConnectedPresenceConns.forEach(conn => {
+      try {
+        if(conn && conn.open) conn.send(payload);
+      } catch(e){}
+    });
+  }
+}
+if(typeof window !== "undefined") window.broadcastLockdownMode = broadcastLockdownMode;
+
+function handleIncomingLockdownSync(isLockdown){
+  isLockdownMode = !!isLockdown;
+  localStorage.setItem("cardCollectorLockdown", isLockdownMode.toString());
+  if(typeof window !== "undefined") window.isLockdownMode = isLockdownMode;
+  if(typeof updatePackPriceLabels === "function") updatePackPriceLabels();
+  
+  const lockBanner = document.getElementById("lockdownBanner");
+  if(lockBanner) lockBanner.style.display = isLockdownMode ? "block" : "none";
+
+  const btn = document.getElementById("toggleLockdownBtn");
+  const badge = document.getElementById("lockdownBadgeStatus");
+  if(btn){
+    btn.textContent = isLockdownMode ? "LOCKDOWN: ON" : "LOCKDOWN: OFF";
+    btn.style.background = isLockdownMode ? "#dc2626" : "#475569";
+    btn.style.boxShadow = isLockdownMode ? "0 0 15px rgba(220, 38, 38, 0.7)" : "none";
+  }
+  if(badge){
+    badge.textContent = isLockdownMode ? "STATUS: ACTIVE (LOCKDOWN ENFORCED)" : "STATUS: INACTIVE";
+    badge.style.color = isLockdownMode ? "#f87171" : "#94a3b8";
+    badge.style.background = isLockdownMode ? "rgba(220,38,38,0.3)" : "rgba(239,68,68,0.1)";
+  }
+
+  if(isLockdownMode && (typeof isMasterAdmin === "function" && !isMasterAdmin())){
+    const battleModal = document.getElementById("battleModal");
+    if(battleModal && battleModal.classList.contains("show")){
+      battleModal.classList.remove("show");
+      alert("🚨 The server has entered Lockdown Mode! Arena battles have been suspended by administration.");
+    }
+  }
+
+  showLiveToast(isLockdownMode 
+    ? "🚨 SERVER LOCKDOWN ACTIVATED: Matches and Booster Packs are now blocked." 
+    : "✅ Server lockdown lifted! Normal operations restored.", 
+    true
+  );
+}
+if(typeof window !== "undefined") window.handleIncomingLockdownSync = handleIncomingLockdownSync;

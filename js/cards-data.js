@@ -180,12 +180,14 @@ let adminLuckMultiplier = parseFloat(localStorage.getItem("cardCollectorLuck") |
 let eventCoinMultiplier = parseInt(localStorage.getItem("cardCollectorEventCoins") || "1");
 let eventPackDiscount = parseInt(localStorage.getItem("cardCollectorEventDiscount") || "0");
 let isMaintenanceMode = localStorage.getItem("cardCollectorMaintenance") === "true";
+let isLockdownMode = localStorage.getItem("cardCollectorLockdown") === "true";
 let isGodModeEnabled = localStorage.getItem("cardCollectorGodMode") !== "false";
 if(typeof window !== "undefined"){
   window.owned = owned;
   window.cards = cards;
   window.currentUser = currentUser;
   window.accounts = accounts;
+  window.isLockdownMode = isLockdownMode;
 }
 
 function getSubAdminRole(username){

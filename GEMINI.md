@@ -137,3 +137,16 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 - **Universal Booster Pack Integration**: Studio cards are registered directly into the active cards pool and pack tiers matching their rarity (from Standard Booster up through Celestial Reliquary), allowing anyone to pull them from packs.
 - **Instant P2P Network Propagation**: Newly forged studio cards are immediately broadcasted to all connected peers and tabs via `broadcastStudioCardCreated`. When sub-admins create studio cards, the creation is relayed to Master Cam, who re-broadcasts to all connected players.
 - **Connection Handshake Studio Card Sync**: When any player or guest connects to Master Cam, all custom studio cards in storage are instantly pushed via `sync_studio_cards` on peer connection open, ensuring the cards section on their page is populated immediately without requiring page refreshes.
+
+### World Events: High-Alert Server Lockdown Mode
+- **Dedicated World Events Console**: Located under `🌪️ World Events` (`#tabEvents`) in the Admin Hub. Master Cam can toggle high-alert lockdown on and off with a single click.
+- **Strict Booster Pack Freeze**: While Lockdown Mode is active (`isLockdownMode`), all non-master-admin players and visiting guests are strictly prohibited from opening any booster packs (`startPackOpening`). Pack buttons display `🚨 LOCKED DOWN`.
+- **Complete Combat Match Lockout**: While Lockdown Mode is active, non-master-admin players are prohibited from:
+  - Entering the battle arena modal (`arenaBtn.onclick`).
+  - Starting solo AI matches (`startSoloBattle`).
+  - Hosting multiplayer matches with room codes (`hostMatchBtn.onclick`).
+  - Joining multiplayer rooms via battle codes (`confirmJoinCodeBtn.onclick`).
+  - Initiating rematch duels or clicking play again (`battlePlayAgainBtn.onclick`).
+- **Real-Time P2P & Tab Broadcast**: Toggling lockdown immediately broadcasts `sync_lockdown_mode` across all connected PeerJS sessions (`allConnectedPresenceConns` and `activePresencePeers`) and `BroadcastChannel("cardstack_presence_bus")`.
+- **Connection Handshake Sync**: When any player or guest connects to Master Cam, the current lockdown state is synchronized immediately on peer connection open.
+- **High-Alert Visual Banner**: When active, a prominent sticky high-alert banner (`#lockdownBanner`) pulses across the top of the screen: *"🚨 HIGH-ALERT SERVER LOCKDOWN IN EFFECT — Arena Matches and Booster Packs are Temporarily Prohibited 🚨"*.

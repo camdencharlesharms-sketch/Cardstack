@@ -151,6 +151,10 @@ function renderArenaCardPicker(){
 }
 
 document.getElementById("arenaBtn").onclick = ()=>{
+  if(isLockdownMode && (typeof isMasterAdmin === "function" && !isMasterAdmin())){
+    alert("🚨 SERVER LOCKDOWN IN EFFECT!\n\nAll battle matches and arena entries are currently locked down by administration.");
+    return;
+  }
   if(isMaintenanceMode && (typeof hasAdminAccess === "function" && !hasAdminAccess())){
     alert("The battle arena is offline for maintenance.");
     return;
@@ -215,6 +219,10 @@ function cleanupPeer(){
 }
 
 function startSoloBattle(){
+  if(isLockdownMode && (typeof isMasterAdmin === "function" && !isMasterAdmin())){
+    alert("🚨 SERVER LOCKDOWN IN EFFECT!\n\nMatches cannot be started during server lockdown.");
+    return;
+  }
   cleanupPeer();
   battlePlayerCard = getSelectedChampionCard();
   isMultiplayerMode = false;
@@ -247,6 +255,10 @@ document.getElementById("startAiMatchBtn").onclick = startSoloBattle;
 
 // 2. Host Multiplayer Match (Generates a 6-digit code)
 document.getElementById("hostMatchBtn").onclick = ()=>{
+  if(isLockdownMode && (typeof isMasterAdmin === "function" && !isMasterAdmin())){
+    alert("🚨 SERVER LOCKDOWN IN EFFECT!\n\nHosting online matches is currently prohibited during server lockdown.");
+    return;
+  }
   battlePlayerCard = getSelectedChampionCard();
   isMultiplayerMode = true;
   isLocalChannelMode = false;
@@ -334,6 +346,10 @@ document.getElementById("showJoinMatchBtn").onclick = ()=>{
 document.getElementById("cancelJoinBtn").onclick = resetArenaViews;
 
 document.getElementById("confirmJoinCodeBtn").onclick = ()=>{
+  if(isLockdownMode && (typeof isMasterAdmin === "function" && !isMasterAdmin())){
+    alert("🚨 SERVER LOCKDOWN IN EFFECT!\n\nJoining online matches is currently prohibited during server lockdown.");
+    return;
+  }
   const rawCode = document.getElementById("joinCodeInput").value.trim();
   const code = rawCode.replace(/\s+/g, "");
   if(code.length !== 6 || isNaN(code)){
@@ -818,6 +834,11 @@ function syncIncomingCustomCards(incomingCards){
 const playAgainBtn = document.getElementById("battlePlayAgainBtn");
 if(playAgainBtn){
   playAgainBtn.onclick = ()=>{
+    if(isLockdownMode && (typeof isMasterAdmin === "function" && !isMasterAdmin())){
+      alert("🚨 SERVER LOCKDOWN IN EFFECT!\n\nNew matches cannot be started during server lockdown.");
+      resetArenaViews();
+      return;
+    }
     const victoryBanner = document.getElementById("victoryBanner");
     if(victoryBanner) victoryBanner.classList.remove("show", "outcome-win", "outcome-lose");
 

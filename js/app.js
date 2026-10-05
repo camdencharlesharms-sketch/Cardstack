@@ -89,6 +89,13 @@ function loadAccount(username){
     }
   } catch(e){}
 
+  try {
+    isLockdownMode = localStorage.getItem("cardCollectorLockdown") === "true";
+    if(typeof window !== "undefined") window.isLockdownMode = isLockdownMode;
+    const lockBanner = document.getElementById("lockdownBanner");
+    if(lockBanner) lockBanner.style.display = isLockdownMode ? "block" : "none";
+  } catch(e){}
+
   const userAcc = getUserAccount(username) || accounts[username];
   if(userAcc){
     owned = (Array.isArray(userAcc.owned) ? userAcc.owned : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
@@ -201,7 +208,7 @@ function updateAccountUI(){
   if(godBtn) godBtn.style.display = (hasAdminAccess() && isGodModeEnabled) ? "block" : "none";
 
   checkLeaksDisplay();
-  updatePackPriceLabels();
+  if(typeof updatePackPriceLabels === "function") updatePackPriceLabels();
 }
 
 function chooseCardFromWeights(weightMap, minRarityFilter = null, allowUnreleased = false){
@@ -232,6 +239,12 @@ function chooseCardFromWeights(weightMap, minRarityFilter = null, allowUnrelease
 }
 
 function startPackOpening(tierKey){
+  if(isLockdownMode && !isMasterAdmin()){
+    alert("🚨 SERVER LOCKDOWN IN EFFECT!\n\nAll booster packs are currently locked down by administration. No packs can be opened at this time.");
+    if(typeof showLiveToast === "function") showLiveToast("🚨 Booster packs are currently disabled during Server Lockdown!", true);
+    return;
+  }
+
   if(isMaintenanceMode && !hasAdminAccess()){
     alert("The card vault is currently undergoing maintenance. Check back shortly!");
     return;
