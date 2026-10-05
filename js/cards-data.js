@@ -70,16 +70,69 @@ const defaultCards = [
   { name: "Seraphina", rarity: "divine", hp: 205, attacks: [{name:"Dawn's Radiance", dmg:72}, {name:"Heavenly Exorcism", dmg:94}], desc: "The archangel of creation radiating eternal divine light.", image: makeSvgArt("#065f46", "#022c22", "🕊️", "#fef08a", "rgba(250, 204, 21, 0.6)") }
 ];
 
+function getDeletedCardsFromStorage(){
+  try {
+    const saved = JSON.parse(localStorage.getItem("cardCollectorDeletedCards"));
+    if(Array.isArray(saved)) return saved;
+  } catch(e){}
+  return [];
+}
+if(typeof window !== "undefined") window.getDeletedCardsFromStorage = getDeletedCardsFromStorage;
+
+function getCardOverridesFromStorage(){
+  try {
+    const saved = JSON.parse(localStorage.getItem("cardCollectorCardOverrides"));
+    if(saved && typeof saved === "object") return saved;
+  } catch(e){}
+  return {};
+}
+if(typeof window !== "undefined") window.getCardOverridesFromStorage = getCardOverridesFromStorage;
+
+function saveDeletedCardsToStorage(list){
+  try {
+    localStorage.setItem("cardCollectorDeletedCards", JSON.stringify(list));
+  } catch(e){}
+}
+if(typeof window !== "undefined") window.saveDeletedCardsToStorage = saveDeletedCardsToStorage;
+
+function saveCardOverridesToStorage(overrides){
+  try {
+    localStorage.setItem("cardCollectorCardOverrides", JSON.stringify(overrides));
+  } catch(e){}
+}
+if(typeof window !== "undefined") window.saveCardOverridesToStorage = saveCardOverridesToStorage;
+
 function normalizeCards(cardList){
-  return cardList.map(c => {
-    if(!Array.isArray(c.attacks) || c.attacks.length === 0){
-      c.attacks = [
-        { name: c.attack || "Strike", dmg: c.dmg || 20 },
-        { name: "Heavy Strike", dmg: Math.floor((c.dmg || 20) * 1.5) }
-      ];
-    }
-    return c;
-  });
+  if(!Array.isArray(cardList)) return [];
+  const deleted = getDeletedCardsFromStorage();
+  const overrides = getCardOverridesFromStorage();
+
+  return cardList
+    .filter(c => {
+      if(!c || !c.name) return false;
+      const id = c.id || "card_" + c.name.toLowerCase().replace(/\s+/g, "_");
+      c.id = id;
+      if(deleted.includes(id) || deleted.includes(c.name.toLowerCase())) return false;
+      return true;
+    })
+    .map(c => {
+      const id = c.id || "card_" + c.name.toLowerCase().replace(/\s+/g, "_");
+      c.id = id;
+      const ov = overrides[id] || overrides[c.name.toLowerCase()];
+      if(ov){
+        if(Array.isArray(ov.attacks)) c.attacks = JSON.parse(JSON.stringify(ov.attacks));
+        if(ov.hp) c.hp = ov.hp;
+        if(ov.desc) c.desc = ov.desc;
+        if(ov.name) c.name = ov.name;
+      }
+      if(!Array.isArray(c.attacks) || c.attacks.length === 0){
+        c.attacks = [
+          { name: c.attack || "Strike", dmg: c.dmg || 20 },
+          { name: "Heavy Strike", dmg: Math.floor((c.dmg || 20) * 1.5) }
+        ];
+      }
+      return c;
+    });
 }
 
 function getCustomCardsFromStorage(){

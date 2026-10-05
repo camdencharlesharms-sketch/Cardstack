@@ -190,6 +190,7 @@
       <button class="admin-tab-btn active" data-tab="tabPlayers">👥 Player Manager</button>
       <button class="admin-tab-btn" data-tab="tabEconomy">🪙 Economy & RNG</button>
       <button class="admin-tab-btn" data-tab="tabStudio">🎨 Card Studio</button>
+      <button class="admin-tab-btn" data-tab="tabCardManager" id="cardManagerTabBtn">🃏 Card Manager</button>
       <button class="admin-tab-btn" data-tab="tabEvents">🌪️ World Events</button>
       <button class="admin-tab-btn" data-tab="tabBroadcast">📢 Broadcast & Leaks</button>
       <button class="admin-tab-btn" data-tab="tabPermissions" id="permissionsTabBtn" style="display:none">🛡 Sub-Admin Roles</button>
@@ -336,6 +337,41 @@
           </div>
           <div id="studioCustomCardsList" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- TAB: CARD MANAGER -->
+    <div class="admin-tab-content" id="tabCardManager">
+      <div class="adminCard" style="margin-bottom:12px;background:rgba(15,23,42,0.7);border:1px solid rgba(56,189,248,0.3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+          <div>
+            <h4 style="margin:0;color:#38bdf8;display:flex;align-items:center;gap:6px;font-size:16px">
+              <span>🃏</span> Master Card Manager
+            </h4>
+            <span style="font-size:12px;color:#94a3b8">Inspect every card in Cardstack, edit and delete their attacks, and permanently delete cards.</span>
+          </div>
+          <div style="font-size:12px;color:#38bdf8;font-weight:900;background:rgba(56,189,248,0.15);padding:4px 12px;border-radius:20px;border:1px solid rgba(56,189,248,0.4)">
+            Total Active Cards: <span id="cardManagerTotalCount">0</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <input type="text" id="cardManagerSearchInput" class="adminInput" placeholder="🔍 Search cards by name or attack..." style="flex:2;margin:0;min-width:180px">
+          <select id="cardManagerRarityFilter" class="adminSelect" style="flex:1;margin:0;min-width:140px">
+            <option value="all">All Rarities & Types</option>
+            <option value="common">Common</option>
+            <option value="rare">Rare</option>
+            <option value="epic">Epic</option>
+            <option value="legendary">Legendary</option>
+            <option value="mythic">Mythic</option>
+            <option value="divine">Divine</option>
+            <option value="studio">🎨 Studio Cards Only</option>
+            <option value="vault">🔒 Unreleased Vault Only</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="cardManagerList" style="display:flex;flex-direction:column;gap:12px;max-height:500px;overflow-y:auto;padding-right:4px">
+        <!-- Rendered dynamically -->
       </div>
     </div>
 

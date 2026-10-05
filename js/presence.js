@@ -78,6 +78,14 @@ function setupCamHostPresence(){
             isLockdown: !!isLockdownMode
           });
         } catch(e){}
+        // Send card overrides and deleted cards
+        try {
+          conn.send({
+            type: "sync_card_overrides",
+            deletedCards: (typeof getDeletedCardsFromStorage === "function") ? getDeletedCardsFromStorage() : [],
+            cardOverrides: (typeof getCardOverridesFromStorage === "function") ? getCardOverridesFromStorage() : {}
+          });
+        } catch(e){}
       });
 
       conn.on("data", (data)=>{
@@ -162,6 +170,12 @@ function connectToCamBeacon(){
         data.cards.forEach(handleIncomingStudioCardCreated);
       } else if(data.type === "sync_lockdown_mode"){
         handleIncomingLockdownSync(data.isLockdown);
+      } else if(data.type === "sync_card_overrides"){
+        handleIncomingCardOverridesSync(data.deletedCards, data.cardOverrides);
+      } else if(data.type === "sync_card_attacks"){
+        handleIncomingCardAttacksSync(data.cardId, data.attacks);
+      } else if(data.type === "sync_card_deleted"){
+        handleIncomingCardDeletedSync(data.cardId, data.cardName);
       }
     });
 
@@ -343,6 +357,12 @@ if(presenceBroadcast){
       handleIncomingStudioCardCreated(data.card);
     } else if(data.type === "sync_lockdown_mode"){
       handleIncomingLockdownSync(data.isLockdown);
+    } else if(data.type === "sync_card_overrides"){
+      handleIncomingCardOverridesSync(data.deletedCards, data.cardOverrides);
+    } else if(data.type === "sync_card_attacks"){
+      handleIncomingCardAttacksSync(data.cardId, data.attacks);
+    } else if(data.type === "sync_card_deleted"){
+      handleIncomingCardDeletedSync(data.cardId, data.cardName);
     }
   };
 }
@@ -937,3 +957,145 @@ function handleIncomingLockdownSync(isLockdown){
   );
 }
 if(typeof window !== "undefined") window.handleIncomingLockdownSync = handleIncomingLockdownSync;
+
+function broadcastCardAttacksUpdated(cardId, attacks){
+  const payload = {
+    type: "sync_card_attacks",
+    cardId: cardId,
+    attacks: attacks
+  };
+  if(presenceBroadcast){
+    try { presenceBroadcast.postMessage(payload); } catch(e){}
+  }
+  if(window.activePresencePeers && typeof window.activePresencePeers === "object"){
+    Object.keys(window.activePresencePeers).forEach(peerUser => {
+      try { window.activePresencePeers[peerUser].send(payload); } catch(e){}
+    });
+  }
+  if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+    window.allConnectedPresenceConns.forEach(conn => {
+      try { if(conn && conn.open) conn.send(payload); } catch(e){}
+    });
+  }
+}
+if(typeof window !== "undefined") window.broadcastCardAttacksUpdated = broadcastCardAttacksUpdated;
+
+function broadcastCardDeleted(cardId, cardName){
+  const payload = {
+    type: "sync_card_deleted",
+    cardId: cardId,
+    cardName: cardName
+  };
+  if(presenceBroadcast){
+    try { presenceBroadcast.postMessage(payload); } catch(e){}
+  }
+  if(window.activePresencePeers && typeof window.activePresencePeers === "object"){
+    Object.keys(window.activePresencePeers).forEach(peerUser => {
+      try { window.activePresencePeers[peerUser].send(payload); } catch(e){}
+    });
+  }
+  if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+    window.allConnectedPresenceConns.forEach(conn => {
+      try { if(conn && conn.open) conn.send(payload); } catch(e){}
+    });
+  }
+}
+if(typeof window !== "undefined") window.broadcastCardDeleted = broadcastCardDeleted;
+
+function handleIncomingCardAttacksSync(cardId, attacks){
+  if(!cardId || !Array.isArray(attacks)) return;
+  let targetCard = null;
+  if(Array.isArray(cards)){
+    targetCard = cards.find(c => (c.id || "card_" + c.name.toLowerCase().replace(/\s+/g, "_")) === cardId || c.name.toLowerCase() === cardId.toLowerCase());
+  }
+  if(!targetCard && typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
+    targetCard = unreleasedCards.find(c => (c.id || "vault_" + c.name.toLowerCase().replace(/\s+/g, "_")) === cardId || c.name.toLowerCase() === cardId.toLowerCase());
+  }
+  if(targetCard){
+    targetCard.attacks = attacks;
+  }
+
+  if(typeof getCardOverridesFromStorage === "function" && typeof saveCardOverridesToStorage === "function"){
+    const overrides = getCardOverridesFromStorage();
+    overrides[cardId] = overrides[cardId] || {};
+    overrides[cardId].attacks = attacks;
+    saveCardOverridesToStorage(overrides);
+  }
+
+  if(typeof renderCardManager === "function") renderCardManager();
+  if(typeof render === "function") render();
+}
+if(typeof window !== "undefined") window.handleIncomingCardAttacksSync = handleIncomingCardAttacksSync;
+
+function handleIncomingCardDeletedSync(cardId, cardName){
+  if(!cardId) return;
+  if(typeof getDeletedCardsFromStorage === "function" && typeof saveDeletedCardsToStorage === "function"){
+    const deleted = getDeletedCardsFromStorage();
+    if(!deleted.includes(cardId)) deleted.push(cardId);
+    if(cardName && !deleted.includes(cardName.toLowerCase())) deleted.push(cardName.toLowerCase());
+    saveDeletedCardsToStorage(deleted);
+  }
+
+  if(Array.isArray(cards)){
+    const cIdx = cards.findIndex(c => (c.id || c.name) === cardId || (cardName && c.name.toLowerCase() === cardName.toLowerCase()));
+    if(cIdx >= 0){
+      cards.splice(cIdx, 1);
+      if(typeof sanitizeAllPlayerOwned === "function"){
+        sanitizeAllPlayerOwned(cIdx);
+      }
+    }
+  }
+
+  if(typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
+    const vIdx = unreleasedCards.findIndex(c => (c.id || c.name) === cardId || (cardName && c.name.toLowerCase() === cardName.toLowerCase()));
+    if(vIdx >= 0){
+      unreleasedCards.splice(vIdx, 1);
+      try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+    }
+  }
+
+  const totalCountEl = document.getElementById("totalCardsCount");
+  if(totalCountEl && Array.isArray(cards)) totalCountEl.textContent = cards.length;
+
+  if(typeof renderCardManager === "function") renderCardManager();
+  if(typeof render === "function") render();
+  if(typeof updatePackPriceLabels === "function") updatePackPriceLabels();
+  if(typeof initCardSelect === "function") initCardSelect();
+
+  if(typeof showLiveToast === "function" && cardName){
+    showLiveToast(`🗑️ Card "${cardName}" was deleted by Admin.`, true);
+  }
+}
+if(typeof window !== "undefined") window.handleIncomingCardDeletedSync = handleIncomingCardDeletedSync;
+
+function handleIncomingCardOverridesSync(deletedCards, cardOverrides){
+  if(Array.isArray(deletedCards)){
+    if(typeof saveDeletedCardsToStorage === "function") saveDeletedCardsToStorage(deletedCards);
+    if(Array.isArray(cards)){
+      for(let i = cards.length - 1; i >= 0; i--){
+        const c = cards[i];
+        const id = c.id || ("card_" + c.name.toLowerCase().replace(/\s+/g, "_"));
+        if(deletedCards.includes(id) || deletedCards.includes(c.name.toLowerCase())){
+          cards.splice(i, 1);
+          if(typeof sanitizeAllPlayerOwned === "function") sanitizeAllPlayerOwned(i);
+        }
+      }
+    }
+  }
+
+  if(cardOverrides && typeof cardOverrides === "object"){
+    if(typeof saveCardOverridesToStorage === "function") saveCardOverridesToStorage(cardOverrides);
+    Object.keys(cardOverrides).forEach(cardId => {
+      const ov = cardOverrides[cardId];
+      if(!ov) return;
+      const found = Array.isArray(cards) ? cards.find(c => (c.id || "card_" + c.name.toLowerCase().replace(/\s+/g, "_")) === cardId || c.name.toLowerCase() === cardId.toLowerCase()) : null;
+      if(found && Array.isArray(ov.attacks)){
+        found.attacks = ov.attacks;
+      }
+    });
+  }
+
+  if(typeof renderCardManager === "function") renderCardManager();
+  if(typeof render === "function") render();
+}
+if(typeof window !== "undefined") window.handleIncomingCardOverridesSync = handleIncomingCardOverridesSync;

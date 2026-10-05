@@ -82,9 +82,10 @@ function loadAccount(username){
   } catch(e){}
   try {
     const storedCustoms = JSON.parse(localStorage.getItem("cardCollectorCustomCards"));
-    if(Array.isArray(storedCustoms) && typeof defaultCards !== "undefined"){
+    const customList = Array.isArray(storedCustoms) ? storedCustoms : (typeof getCustomCardsFromStorage === "function" ? getCustomCardsFromStorage() : []);
+    if(typeof defaultCards !== "undefined"){
       const normDefaults = (typeof normalizeCards === "function") ? normalizeCards(defaultCards) : defaultCards;
-      const normCustoms = (typeof normalizeCards === "function") ? normalizeCards(storedCustoms) : storedCustoms;
+      const normCustoms = (typeof normalizeCards === "function") ? normalizeCards(customList) : customList;
       cards = [...normDefaults, ...normCustoms].filter(c => !c.isUnreleased);
     }
   } catch(e){}
@@ -651,7 +652,9 @@ window.addEventListener("storage", (e) => {
     if(typeof getCustomCardsFromStorage === "function"){
       const customs = getCustomCardsFromStorage();
       const defaultList = (typeof defaultCards !== "undefined") ? defaultCards : [];
-      cards = [...defaultList, ...customs].filter(c => !c.isUnreleased);
+      const normDefaults = (typeof normalizeCards === "function") ? normalizeCards(defaultList) : defaultList;
+      const normCustoms = (typeof normalizeCards === "function") ? normalizeCards(customs) : customs;
+      cards = [...normDefaults, ...normCustoms].filter(c => !c.isUnreleased);
       if(typeof initCardSelect === "function") initCardSelect();
       render();
     }

@@ -1880,3 +1880,434 @@ window.quickGiftPlayerCardPrompt = function(name){
     }, 1500);
   }
 };
+
+// ==========================================
+// MASTER CARD MANAGER
+// (Inspect every card, edit/delete attacks, delete cards)
+// ==========================================
+
+function sanitizeAllPlayerOwned(deletedIdx){
+  try {
+    const rawAccs = localStorage.getItem("cardCollectorAccounts");
+    if(rawAccs){
+      const accs = JSON.parse(rawAccs);
+      Object.keys(accs).forEach(uname => {
+        const u = accs[uname];
+        if(Array.isArray(u.owned)){
+          u.owned = u.owned
+            .filter(idx => idx !== deletedIdx)
+            .map(idx => (idx > deletedIdx ? idx - 1 : idx));
+          if(u.owned.length === 0 && Array.isArray(cards) && cards.length > 0){
+            u.owned = [0];
+          }
+        }
+      });
+      accounts = accs;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      if(currentUser && accounts[currentUser]){
+        owned = accounts[currentUser].owned;
+        if(typeof window !== "undefined") window.owned = owned;
+      }
+    }
+  } catch(e){}
+}
+if(typeof window !== "undefined") window.sanitizeAllPlayerOwned = sanitizeAllPlayerOwned;
+
+function getAllCardsForManager(){
+  const list = [];
+  const seen = new Set();
+
+  if(Array.isArray(cards)){
+    cards.forEach((c, idx) => {
+      const id = c.id || ("card_" + c.name.toLowerCase().replace(/\s+/g, "_"));
+      c.id = id;
+      if(!seen.has(id)){
+        seen.add(id);
+        list.push({
+          card: c,
+          id: id,
+          source: (c.isStudio || c.isCustom) ? "studio" : "default",
+          index: idx
+        });
+      }
+    });
+  }
+
+  if(typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
+    unreleasedCards.forEach((c, idx) => {
+      const id = c.id || ("vault_" + c.name.toLowerCase().replace(/\s+/g, "_"));
+      c.id = id;
+      if(!seen.has(id)){
+        seen.add(id);
+        list.push({
+          card: c,
+          id: id,
+          source: "vault",
+          index: idx
+        });
+      }
+    });
+  }
+
+  return list;
+}
+
+function renderCardManager(){
+  const container = document.getElementById("cardManagerList");
+  if(!container) return;
+
+  const searchInput = document.getElementById("cardManagerSearchInput");
+  const raritySelect = document.getElementById("cardManagerRarityFilter");
+  const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+  const filterRarity = (raritySelect && raritySelect.value) ? raritySelect.value : "all";
+
+  const allItems = getAllCardsForManager();
+
+  const filtered = allItems.filter(item => {
+    const c = item.card;
+    if(filterRarity !== "all"){
+      if(filterRarity === "studio" && item.source !== "studio") return false;
+      if(filterRarity === "vault" && item.source !== "vault") return false;
+      if(filterRarity !== "studio" && filterRarity !== "vault" && c.rarity !== filterRarity) return false;
+    }
+    if(query){
+      const nameMatch = c.name && c.name.toLowerCase().includes(query);
+      const descMatch = c.desc && c.desc.toLowerCase().includes(query);
+      const attackMatch = Array.isArray(c.attacks) && c.attacks.some(a => a.name && a.name.toLowerCase().includes(query));
+      if(!nameMatch && !descMatch && !attackMatch) return false;
+    }
+    return true;
+  });
+
+  const totalCountEl = document.getElementById("cardManagerTotalCount");
+  if(totalCountEl) totalCountEl.textContent = filtered.length;
+
+  if(filtered.length === 0){
+    container.innerHTML = `<div style="text-align:center;padding:30px;color:#94a3b8;background:rgba(15,23,42,0.5);border-radius:8px">
+      No cards match your current search and filter criteria.
+    </div>`;
+    return;
+  }
+
+  const rarityColors = {
+    common: { bg: "rgba(100,116,139,0.2)", border: "#64748b", text: "#94a3b8" },
+    rare: { bg: "rgba(59,130,246,0.2)", border: "#3b82f6", text: "#60a5fa" },
+    epic: { bg: "rgba(168,85,247,0.2)", border: "#a855f7", text: "#c084fc" },
+    legendary: { bg: "rgba(245,158,11,0.2)", border: "#f59e0b", text: "#fbbf24" },
+    mythic: { bg: "rgba(236,72,153,0.2)", border: "#ec4899", text: "#f472b6" },
+    divine: { bg: "rgba(56,189,248,0.2)", border: "#38bdf8", text: "#38bdf8" }
+  };
+
+  let html = "";
+  filtered.forEach(item => {
+    const c = item.card;
+    const cardId = item.id;
+    const rTheme = rarityColors[c.rarity] || rarityColors.common;
+    const attacks = Array.isArray(c.attacks) ? c.attacks : [];
+
+    let typeBadge = "";
+    if(item.source === "studio"){
+      typeBadge = `<span style="font-size:10px;font-weight:900;background:rgba(168,85,247,0.25);color:#d8b4fe;border:1px solid rgba(168,85,247,0.4);padding:2px 7px;border-radius:4px">🎨 STUDIO</span>`;
+    } else if(item.source === "vault"){
+      typeBadge = `<span style="font-size:10px;font-weight:900;background:rgba(244,63,94,0.25);color:#fda4af;border:1px solid rgba(244,63,94,0.4);padding:2px 7px;border-radius:4px">🔒 VAULT</span>`;
+    } else {
+      typeBadge = `<span style="font-size:10px;font-weight:900;background:rgba(100,116,139,0.2);color:#cbd5e1;border:1px solid rgba(100,116,139,0.3);padding:2px 7px;border-radius:4px">DEFAULT</span>`;
+    }
+
+    let imgHtml = "";
+    if(c.image && c.image.startsWith("data:image")){
+      imgHtml = `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover">`;
+    } else if(c.image && (c.image.startsWith("http://") || c.image.startsWith("https://"))){
+      imgHtml = `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover" onerror="this.src='assets/placeholder.png'">`;
+    } else {
+      imgHtml = `<div style="font-size:28px">🃏</div>`;
+    }
+
+    let attacksListHtml = "";
+    if(attacks.length === 0){
+      attacksListHtml = `<div style="font-size:11px;color:#94a3b8;font-style:italic;padding:4px 0">No attacks configured for this card. Use the form below to add one!</div>`;
+    } else {
+      attacks.forEach((atk, aIdx) => {
+        attacksListHtml += `
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.06)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:#f59e0b">⚔️</span>
+              <b style="font-size:12px;color:#f1f5f9">${atk.name || "Unnamed Attack"}</b>
+              <span style="font-size:11px;font-weight:900;color:#ef4444;background:rgba(239,68,68,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(239,68,68,0.3)">
+                ${atk.dmg || 20} DMG
+              </span>
+            </div>
+            <button class="accountBtn mgr-del-atk-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:#7f1d1d;color:#fca5a5;padding:2px 8px;font-size:10px;font-weight:700">
+              🗑️ Delete Attack
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    html += `
+      <div class="adminCard" style="border:1px solid rgba(255,255,255,0.1);background:rgba(30,41,59,0.7);padding:14px;border-radius:10px;margin-bottom:0">
+        <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+          <!-- Thumbnail preview -->
+          <div style="width:70px;height:95px;flex-shrink:0;border-radius:8px;overflow:hidden;border:2px solid ${rTheme.border};background:#0f172a;display:flex;align-items:center;justify-content:center">
+            ${imgHtml}
+          </div>
+
+          <!-- Card Details & Actions -->
+          <div style="flex:1;min-width:220px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <b style="font-size:15px;color:#fff">${c.name}</b>
+                <span style="font-size:10px;font-weight:900;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:${rTheme.bg};color:${rTheme.text};border:1px solid ${rTheme.border}">
+                  ${c.rarity}
+                </span>
+                <span style="font-size:11px;color:#94a3b8;font-weight:700">❤️ ${c.hp || 80} HP</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                ${typeBadge}
+                <button class="accountBtn mgr-del-card-btn" data-card-id="${cardId}" style="background:#dc2626;color:#fff;padding:4px 10px;font-size:11px;font-weight:800;border:1px solid rgba(239,68,68,0.5)">
+                  🗑️ Delete Card
+                </button>
+              </div>
+            </div>
+
+            <p style="font-size:11px;color:#94a3b8;margin:2px 0 8px 0;line-height:1.3">${c.desc || "No description provided."}</p>
+
+            <!-- Attacks Manager Section -->
+            <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <span style="font-size:12px;font-weight:800;color:#38bdf8">⚔️ Combat Attacks (${attacks.length})</span>
+                <span style="font-size:10px;color:#64748b">Changes apply immediately across battles & packs</span>
+              </div>
+
+              <!-- List of attacks -->
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+                ${attacksListHtml}
+              </div>
+
+              <!-- Add Attack Form -->
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:rgba(0,0,0,0.3);padding:6px 8px;border-radius:6px;border:1px dashed rgba(56,189,248,0.35)">
+                <input type="text" class="adminInput mgr-new-atk-name" placeholder="Attack Name (e.g. Inferno Blitz)" style="flex:2;min-width:130px;margin:0;padding:5px 8px;font-size:12px">
+                <input type="number" class="adminInput mgr-new-atk-dmg" placeholder="DMG" min="1" max="999" value="25" style="width:70px;margin:0;padding:5px 8px;font-size:12px">
+                <button class="accountBtn mgr-add-atk-btn" data-card-id="${cardId}" style="background:#0284c7;color:#fff;padding:5px 12px;font-size:11px;font-weight:800;white-space:nowrap">
+                  ➕ Add Attack
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+
+  // Wire Delete Attack Buttons
+  container.querySelectorAll(".mgr-del-atk-btn").forEach(btn => {
+    btn.onclick = ()=>{
+      const cardId = btn.getAttribute("data-card-id");
+      const atkIdx = parseInt(btn.getAttribute("data-atk-idx"), 10);
+      handleCardManagerDeleteAttack(cardId, atkIdx);
+    };
+  });
+
+  // Wire Add Attack Buttons
+  container.querySelectorAll(".mgr-add-atk-btn").forEach(btn => {
+    btn.onclick = ()=>{
+      const cardId = btn.getAttribute("data-card-id");
+      const parentForm = btn.parentElement;
+      const nameInput = parentForm.querySelector(".mgr-new-atk-name");
+      const dmgInput = parentForm.querySelector(".mgr-new-atk-dmg");
+      const attackName = nameInput ? nameInput.value.trim() : "";
+      const dmgVal = dmgInput ? parseInt(dmgInput.value, 10) : 25;
+      handleCardManagerAddAttack(cardId, attackName, dmgVal);
+    };
+  });
+
+  // Wire Delete Card Buttons
+  container.querySelectorAll(".mgr-del-card-btn").forEach(btn => {
+    btn.onclick = ()=>{
+      const cardId = btn.getAttribute("data-card-id");
+      handleCardManagerDeleteCard(cardId);
+    };
+  });
+}
+if(typeof window !== "undefined") window.renderCardManager = renderCardManager;
+
+function findCardByIdInManager(cardId){
+  if(Array.isArray(cards)){
+    const c = cards.find(item => (item.id || "card_" + item.name.toLowerCase().replace(/\s+/g, "_")) === cardId || item.name.toLowerCase() === cardId.toLowerCase());
+    if(c) return { card: c, source: "active" };
+  }
+  if(typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
+    const c = unreleasedCards.find(item => (item.id || "vault_" + item.name.toLowerCase().replace(/\s+/g, "_")) === cardId || item.name.toLowerCase() === cardId.toLowerCase());
+    if(c) return { card: c, source: "vault" };
+  }
+  return null;
+}
+
+function handleCardManagerDeleteAttack(cardId, atkIdx){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can modify card attacks.");
+  const found = findCardByIdInManager(cardId);
+  if(!found) return alert("Card not found.");
+
+  const card = found.card;
+  if(!Array.isArray(card.attacks) || atkIdx < 0 || atkIdx >= card.attacks.length){
+    return alert("Invalid attack index.");
+  }
+
+  const deletedAtk = card.attacks.splice(atkIdx, 1)[0];
+
+  // Persist attack changes
+  if(typeof getCardOverridesFromStorage === "function" && typeof saveCardOverridesToStorage === "function"){
+    const overrides = getCardOverridesFromStorage();
+    const idKey = card.id || ("card_" + card.name.toLowerCase().replace(/\s+/g, "_"));
+    overrides[idKey] = overrides[idKey] || {};
+    overrides[idKey].attacks = card.attacks;
+    saveCardOverridesToStorage(overrides);
+  }
+
+  if(card.isStudio || card.isCustom){
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+  }
+  if(found.source === "vault"){
+    try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+  }
+
+  if(typeof broadcastCardAttacksUpdated === "function"){
+    broadcastCardAttacksUpdated(card.id || card.name, card.attacks);
+  }
+
+  renderCardManager();
+  if(typeof render === "function") render();
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🗑️ Attack "${deletedAtk ? deletedAtk.name : "Attack"}" removed from ${card.name}.`, true);
+  }
+}
+if(typeof window !== "undefined") window.handleCardManagerDeleteAttack = handleCardManagerDeleteAttack;
+
+function handleCardManagerAddAttack(cardId, attackName, dmgVal){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can modify card attacks.");
+  if(!attackName){
+    return alert("Please enter a valid attack name.");
+  }
+  if(isNaN(dmgVal) || dmgVal <= 0){
+    return alert("Please enter a valid damage value (minimum 1).");
+  }
+
+  const found = findCardByIdInManager(cardId);
+  if(!found) return alert("Card not found.");
+
+  const card = found.card;
+  if(!Array.isArray(card.attacks)) card.attacks = [];
+
+  const newAtk = { name: attackName, dmg: dmgVal };
+  card.attacks.push(newAtk);
+
+  // Persist attack changes
+  if(typeof getCardOverridesFromStorage === "function" && typeof saveCardOverridesToStorage === "function"){
+    const overrides = getCardOverridesFromStorage();
+    const idKey = card.id || ("card_" + card.name.toLowerCase().replace(/\s+/g, "_"));
+    overrides[idKey] = overrides[idKey] || {};
+    overrides[idKey].attacks = card.attacks;
+    saveCardOverridesToStorage(overrides);
+  }
+
+  if(card.isStudio || card.isCustom){
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+  }
+  if(found.source === "vault"){
+    try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+  }
+
+  if(typeof broadcastCardAttacksUpdated === "function"){
+    broadcastCardAttacksUpdated(card.id || card.name, card.attacks);
+  }
+
+  renderCardManager();
+  if(typeof render === "function") render();
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`⚔️ Added "${attackName}" (${dmgVal} DMG) to ${card.name}!`, true);
+  }
+}
+if(typeof window !== "undefined") window.handleCardManagerAddAttack = handleCardManagerAddAttack;
+
+function handleCardManagerDeleteCard(cardId){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can delete cards.");
+  const found = findCardByIdInManager(cardId);
+  if(!found) return alert("Card not found.");
+
+  const card = found.card;
+  if(!confirm(`Are you sure you want to permanently delete "${card.name}"?\n\nThis will remove the card from all booster packs, the binder, and the battle arena for all players.`)){
+    return;
+  }
+
+  // 1. Mark as deleted persistently
+  if(typeof getDeletedCardsFromStorage === "function" && typeof saveDeletedCardsToStorage === "function"){
+    const deleted = getDeletedCardsFromStorage();
+    const idKey = card.id || ("card_" + card.name.toLowerCase().replace(/\s+/g, "_"));
+    if(!deleted.includes(idKey)) deleted.push(idKey);
+    if(card.name && !deleted.includes(card.name.toLowerCase())) deleted.push(card.name.toLowerCase());
+    saveDeletedCardsToStorage(deleted);
+  }
+
+  // 2. Remove from active cards & sanitize player owned indices
+  if(Array.isArray(cards)){
+    const cIdx = cards.findIndex(item => item === card || (item.id && (item.id === card.id || item.id === cardId)) || (item.name && card.name && item.name.toLowerCase() === card.name.toLowerCase()));
+    if(cIdx >= 0){
+      cards.splice(cIdx, 1);
+      sanitizeAllPlayerOwned(cIdx);
+    }
+  }
+
+  // 3. Remove from vault cards if applicable
+  if(found.source === "vault" && typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
+    const vIdx = unreleasedCards.findIndex(item => (item.id || item.name) === (card.id || card.name));
+    if(vIdx >= 0){
+      unreleasedCards.splice(vIdx, 1);
+      try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+    }
+  }
+
+  // 4. Save custom cards if studio
+  if(card.isStudio || card.isCustom){
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+  }
+
+  // 5. Update UI & Broadcast
+  const totalCountEl = document.getElementById("totalCardsCount");
+  if(totalCountEl && Array.isArray(cards)) totalCountEl.textContent = cards.length;
+
+  renderCardManager();
+  if(typeof render === "function") render();
+  if(typeof updatePackPriceLabels === "function") updatePackPriceLabels();
+  if(typeof initCardSelect === "function") initCardSelect();
+  if(typeof renderStudioCustomCards === "function") renderStudioCustomCards();
+  if(typeof renderUnreleasedAdminUI === "function") renderUnreleasedAdminUI();
+
+  if(typeof broadcastCardDeleted === "function"){
+    broadcastCardDeleted(card.id || card.name, card.name);
+  }
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🗑️ Card "${card.name}" permanently deleted from Cardstack.`, true);
+  }
+}
+if(typeof window !== "undefined") window.handleCardManagerDeleteCard = handleCardManagerDeleteCard;
+
+// Wire Card Manager inputs
+const cardMgrSearch = document.getElementById("cardManagerSearchInput");
+if(cardMgrSearch){
+  cardMgrSearch.oninput = renderCardManager;
+}
+const cardMgrFilter = document.getElementById("cardManagerRarityFilter");
+if(cardMgrFilter){
+  cardMgrFilter.onchange = renderCardManager;
+}
+
+const cardMgrTabBtn = document.getElementById("cardManagerTabBtn");
+if(cardMgrTabBtn){
+  cardMgrTabBtn.addEventListener("click", renderCardManager);
+}

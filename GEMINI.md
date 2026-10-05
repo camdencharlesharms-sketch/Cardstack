@@ -90,6 +90,8 @@ All application state is persisted client-side in the browser's `localStorage`:
 | `cardCollectorUnreleasedPacks` | `Object` | Unreleased prototype booster packs openable exclusively by Master Admin (`Cam`) |
 | `cardCollectorCustomRarities` | `Object` | Custom designed rarity tiers with background gradients, border colors, and glow effects |
 | `cardCollectorShowUnreleasedInBinder` | `string` | `"true"` or `"false"` (Cam's optional toggle to view private cards in their main binder) |
+| `cardCollectorDeletedCards` | `Array` | List of permanently deleted card IDs and lowercase card names filtered out of all packs, binders, and arena battles |
+| `cardCollectorCardOverrides` | `Object` | Map of card ID/name to customized attack lists and stats |
 
 ---
 
@@ -115,6 +117,14 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 - **Full Player State Sync on Connect**: Connected players automatically receive their latest account status, gifted cards, unreleased vault unlocks, coin balances, and studio cards upon handshake or reconnection.
 - **Vault Card Arena Readiness**: Gifted exclusive vault cards are recognized as owned battle-eligible cards, permitting arena entry even before standard packs are opened.
 - **Resilient Vault & Skin Identifier Matching**: Unreleased vault cards are matched across both card `id` and `name` (case-insensitive) using `findVaultCardByIdOrName` and `isVaultCardOwnedByUser`. This guarantees gifted vault cards and custom skins always show as unlocked in the recipient's binder grid and combat arena, irrespective of whether the identifier was saved by ID or by card name.
+
+
+### Master Card Manager Architecture
+- **Complete Game Card Inspection**: A dedicated "🃏 Card Manager" tab in Admin Hub displays all cards across default cards, Card Studio cards, and Vault prototype cards with real-time text search and rarity/source filtering.
+- **Custom Attack Editing**: For every card in the game, administrators can inspect all active combat attacks, delete existing attacks with a single click, and append new custom attacks with customized damage numbers.
+- **Persistent Attack & Stat Overrides**: Attack additions and deletions are recorded in `cardCollectorCardOverrides`, persisting across browser reloads, and immediately applying to packs, binder inspect dialogs, and combat arenas.
+- **Permanent Card Deletion with Index Sanitization**: Deleting a card permanently purges it from `cards`, `unreleasedCards`, and `customCards`, records the ID in `cardCollectorDeletedCards`, and sanitizes `owned` card indices across all player accounts (shifting higher indices down and preventing orphan index drift).
+- **Instant Peer & Tab Synchronization**: Card attack changes and card deletions broadcast via PeerJS and `BroadcastChannel` (`sync_card_attacks` and `sync_card_deleted`), keeping all connected multiplayer tabs and opponents synchronized in real-time.
 
 ### Combat Arena Accessibility & Network Resilience
 - **Starter Champion Auto-Provisioning**: Every new player, guest, or account starts with Card 0 ("Blaze") in `owned: [0]`, ensuring immediate access to the arena without lockouts.
