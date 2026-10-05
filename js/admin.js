@@ -738,6 +738,28 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
     isCustom: true
   };
   cards.push(newCard);
+  const newCardIdx = cards.length - 1;
+
+  // Creator automatically owns the newly forged studio card so they can use it immediately in Arena and collection
+  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+  if(curAcc){
+    if(!Array.isArray(curAcc.owned)) curAcc.owned = [];
+    if(!curAcc.owned.some(x => parseInt(x, 10) === newCardIdx)){
+      curAcc.owned.push(newCardIdx);
+    }
+  }
+  if(typeof owned !== "undefined" && Array.isArray(owned)){
+    if(!owned.some(x => parseInt(x, 10) === newCardIdx)){
+      owned.push(newCardIdx);
+    }
+  }
+  if(typeof window !== "undefined" && Array.isArray(window.owned)){
+    if(!window.owned.some(x => parseInt(x, 10) === newCardIdx)){
+      window.owned.push(newCardIdx);
+    }
+  }
+  if(typeof save === "function") save();
+
   if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
 
   if(typeof broadcastStudioCardCreated === "function"){
@@ -745,7 +767,6 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
   }
 
   initCardSelect();
-  render();
   renderStudioCustomCards();
 
   document.getElementById("newCardName").value = "";
@@ -754,7 +775,33 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
   document.getElementById("newCardAttack2Name").value = "";
   document.getElementById("newCardImageUrl").value = "";
   clearCanvas();
-  alert(`✨ Created "${name}"!\n\nThis card is now live on the Home Page binder and ready to be unlocked in Booster Packs for everyone!`);
+
+  // Close Admin Hub modal so user is immediately viewing the Cards section on the main page
+  const adminModalEl = document.getElementById("adminModal");
+  if(adminModalEl) adminModalEl.classList.remove("show");
+
+  // Switch to Full Binder so the new card is immediately in view
+  filter = "all";
+  document.querySelectorAll("[data-filter]").forEach(b => {
+    b.classList.toggle("active", b.dataset.filter === "all");
+  });
+
+  render();
+
+  // Smoothly scroll down to the new card in the Cards section and highlight with an illuminating aura
+  setTimeout(()=>{
+    const cardEls = Array.from(document.querySelectorAll("#grid .card"));
+    const foundCardEl = cardEls.find(el => el.textContent.includes(name) || el.innerHTML.includes(name));
+    if(foundCardEl){
+      foundCardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      foundCardEl.style.boxShadow = "0 0 35px #a855f7";
+      setTimeout(()=>{ foundCardEl.style.boxShadow = ""; }, 3000);
+    }
+  }, 150);
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🎨 "<b>${name}</b>" (${rarity}) is now live in the Cards Section for everyone to see and unlock in Booster Packs!`, true);
+  }
 };
 
 document.getElementById("adminUpdateCardArtBtn").onclick = ()=>{
@@ -763,7 +810,7 @@ document.getElementById("adminUpdateCardArtBtn").onclick = ()=>{
 
   const image = getFinalArtworkSrc();
   cards[idx].image = image;
-  localStorage.setItem("cardCollectorCustomCards", JSON.stringify(cards));
+  if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
 
   render();
   alert(`Updated picture for card "${cards[idx].name}"!`);

@@ -36,8 +36,9 @@ if(typeof window !== "undefined") window.isVaultCardOwnedByUser = isVaultCardOwn
 
 function save(){
   let targetAcc = getUserAccount(currentUser);
+  const activeOwned = (typeof owned !== "undefined" && Array.isArray(owned)) ? owned : (window.owned || []);
   if(targetAcc){
-    targetAcc.owned = owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+    targetAcc.owned = activeOwned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
     targetAcc.coins = coins;
     if(Array.isArray(targetAcc.unreleasedOwned)){
       targetAcc.unreleasedOwned = Array.from(new Set(targetAcc.unreleasedOwned));
@@ -47,7 +48,7 @@ function save(){
   } else if(currentUser && accounts) {
     accounts[currentUser] = {
       password: "",
-      owned: owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n)),
+      owned: activeOwned.map(x => parseInt(x, 10)).filter(n => !isNaN(n)),
       coins: coins,
       unreleasedOwned: [],
       hasPlayed: true,
@@ -82,7 +83,9 @@ function loadAccount(username){
   try {
     const storedCustoms = JSON.parse(localStorage.getItem("cardCollectorCustomCards"));
     if(Array.isArray(storedCustoms) && typeof defaultCards !== "undefined"){
-      cards = [...defaultCards, ...storedCustoms].filter(c => !c.isUnreleased);
+      const normDefaults = (typeof normalizeCards === "function") ? normalizeCards(defaultCards) : defaultCards;
+      const normCustoms = (typeof normalizeCards === "function") ? normalizeCards(storedCustoms) : storedCustoms;
+      cards = [...normDefaults, ...normCustoms].filter(c => !c.isUnreleased);
     }
   } catch(e){}
 
@@ -94,6 +97,11 @@ function loadAccount(username){
   } else {
     owned = [0];
     coins = 100;
+  }
+  if(typeof window !== "undefined"){
+    window.owned = owned;
+    window.coins = coins;
+    window.currentUser = currentUser;
   }
 
   save();
@@ -373,12 +381,8 @@ function render(){
 
   // Ensure owned standard cards match user account
   if(userAcc && Array.isArray(userAcc.owned)){
-    userAcc.owned.forEach(idx => {
-      const num = parseInt(idx, 10);
-      if(!isNaN(num) && !owned.some(x => parseInt(x, 10) === num)){
-        owned.push(num);
-      }
-    });
+    owned = userAcc.owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+    if(typeof window !== "undefined") window.owned = owned;
   }
 
   const userGiftedVaultCards = [];
@@ -434,6 +438,7 @@ function render(){
 
   visible.forEach(c=>{
     const isUnrel = !!c.isUnreleased;
+    const isStudioCard = !!(c.isCustom || (c.id && c.id.toString().startsWith("card_custom_")));
     let has = false;
     if(isUnrel){
       has = isVaultCardOwnedByUser(c, curUserVaultOwned);
@@ -443,14 +448,21 @@ function render(){
       has = owned.some(x => parseInt(x, 10) === i);
     }
     const el = document.createElement("div");
-    el.className = "card" + (has ? "" : " locked");
+    // Standard locked cards get blacked out, but Studio cards are always visible for everyone to see!
+    const isLockedBlackout = !has && !isStudioCard;
+    el.className = "card" + (isLockedBlackout ? " locked" : (isStudioCard ? " studio-card" : ""));
 
     let rarityDisplayName = c.rarity;
     if(typeof customRarities === "object" && customRarities[c.rarity]){
       rarityDisplayName = customRarities[c.rarity].name;
     }
 
-    const attacksHtml = has ? c.attacks.map(atk => `
+    const attacksList = (Array.isArray(c.attacks) && c.attacks.length) ? c.attacks : [
+      { name: c.attack || "Strike", dmg: c.dmg || 20 },
+      { name: "Heavy Strike", dmg: Math.floor((c.dmg || 20) * 1.5) }
+    ];
+
+    const attacksHtml = (has || isStudioCard) ? attacksList.map(atk => `
       <div class="attack-preview">
         <span class="attack-name">⚔️ ${atk.name}</span>
         <span class="attack-dmg">${atk.dmg} DMG</span>
@@ -460,27 +472,43 @@ function render(){
       <div class="attack-preview"><span class="attack-name">⚔️ ???</span><span class="attack-dmg">?? DMG</span></div>
     `;
 
+    const studioBadge = isStudioCard 
+      ? '<span style="background:linear-gradient(135deg,#9333ea,#7c3aed);color:#fff;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:900;margin-left:4px">🎨 STUDIO</span>' 
+      : "";
+
     const unreleasedBadge = (isUnrel && has) 
       ? (isCam 
           ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' 
           : '<span style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 GIFTED VAULT</span>') 
       : "";
+
+    const studioPackHint = (isStudioCard && !has)
+      ? '<div style="font-size:10px;font-weight:800;color:#38bdf8;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);border-radius:6px;padding:4px;text-align:center;margin-top:6px">📦 Available in Booster Packs</div>'
+      : "";
+
+    const cardFaceRarity = (has || isStudioCard) ? c.rarity : "";
+    const displayedRarity = (has || isStudioCard) ? rarityDisplayName : "Locked";
+    const displayedHp = (has || isStudioCard) ? ((c.hp || 80) + " HP") : "???";
+    const displayedName = (has || isStudioCard) ? c.name : "Unknown Card";
+    const displayedDesc = (has || isStudioCard) ? c.desc : "Discover this artifact by opening booster packs.";
+
     el.innerHTML = `
-      <div class="face ${has ? c.rarity : ''}">
+      <div class="face ${cardFaceRarity}">
         <div class="card-top">
-          <span class="rarity">${has ? rarityDisplayName : 'Locked'}${unreleasedBadge}</span>
-          <span style="font-size:11px;font-weight:800;color:#fca5a5">${has ? (c.hp || 80) + ' HP' : '???'}</span>
+          <span class="rarity">${displayedRarity}${studioBadge}${unreleasedBadge}</span>
+          <span style="font-size:11px;font-weight:800;color:#fca5a5">${displayedHp}</span>
         </div>
         <div class="card-art-frame">
           <img class="card-art-img" src="${c.image}" alt="${c.name}">
           <div class="card-aura"></div>
         </div>
         <div class="card-bottom">
-          <div class="name">${has ? c.name : 'Unknown Card'}</div>
-          <div class="desc">${has ? c.desc : 'Discover this artifact by opening booster packs.'}</div>
+          <div class="name">${displayedName}</div>
+          <div class="desc">${displayedDesc}</div>
           <div class="attacks-list">
             ${attacksHtml}
           </div>
+          ${studioPackHint}
         </div>
       </div>
     `;

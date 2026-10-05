@@ -57,11 +57,28 @@ function setupCamHostPresence(){
     });
 
     presencePeer.on("connection", (conn)=>{
+      window.allConnectedPresenceConns = window.allConnectedPresenceConns || new Set();
+      window.allConnectedPresenceConns.add(conn);
+
+      conn.on("open", ()=>{
+        // Immediately synchronize all public studio cards to newly connected peer (even before heartbeat!)
+        const customs = (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : [];
+        if(customs && customs.length > 0){
+          try {
+            conn.send({
+              type: "sync_studio_cards",
+              cards: customs
+            });
+          } catch(e){}
+        }
+      });
+
       conn.on("data", (data)=>{
         handleCamReceivedPresenceData(conn, data);
       });
 
       conn.on("close", ()=>{
+        if(window.allConnectedPresenceConns) window.allConnectedPresenceConns.delete(conn);
         if(conn.peerUser && window.activePresencePeers[conn.peerUser] === conn){
           delete window.activePresencePeers[conn.peerUser];
           updateLivePresenceDisplay();
@@ -69,7 +86,9 @@ function setupCamHostPresence(){
         }
       });
 
-      conn.on("error", ()=>{});
+      conn.on("error", ()=>{
+        if(window.allConnectedPresenceConns) window.allConnectedPresenceConns.delete(conn);
+      });
     });
 
     presencePeer.on("error", (err)=>{
@@ -108,6 +127,9 @@ function connectToCamBeacon(){
     presenceConnToCam.on("open", ()=>{
       // Announce identity immediately
       announcePresenceToCam(false);
+      try {
+        presenceConnToCam.send({ type: "request_studio_cards" });
+      } catch(e){}
 
       // Start periodic heartbeat every 15s
       clearInterval(presenceHeartbeatTimer);
@@ -148,11 +170,12 @@ function connectToCamBeacon(){
 
 function announcePresenceToCam(isNew = false){
   const name = currentUser || "Guest";
-  if(!name || name === "Guest") return;
+  const isGuest = (!name || name === "Guest");
 
   const payload = {
     type: isNew ? "account_register" : "presence_heartbeat",
-    user: name,
+    user: isGuest ? "Guest" : name,
+    isGuest: isGuest,
     isNew: !!isNew,
     coins: (typeof coins !== "undefined") ? coins : 100,
     owned: (typeof owned !== "undefined") ? owned : [],
@@ -164,7 +187,7 @@ function announcePresenceToCam(isNew = false){
   }
 
   // Also broadcast across same-device tabs
-  if(presenceBroadcast){
+  if(presenceBroadcast && !isGuest){
     try { presenceBroadcast.postMessage(payload); } catch(e){}
   }
 }
@@ -175,6 +198,25 @@ function handleCamReceivedPresenceData(conn, data){
   if(data.type === "subadmin_action_relay"){
     handleSubAdminActionRelay(conn, data);
     return;
+  }
+  if(data.type === "studio_card_created" && data.card){
+    handleIncomingStudioCardCreated(data.card);
+    if(typeof isMasterAdmin === "function" && isMasterAdmin()){
+      broadcastStudioCardCreated(data.card);
+    }
+    return;
+  }
+  if(data.type === "request_studio_cards" || data.isGuest){
+    const customs = (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : [];
+    if(customs && customs.length > 0 && conn && conn.open){
+      try {
+        conn.send({
+          type: "sync_studio_cards",
+          cards: customs
+        });
+      } catch(e){}
+    }
+    if(data.isGuest) return;
   }
   if(!data.user) return;
   const username = data.user.trim();
@@ -726,13 +768,16 @@ if(document.readyState === "loading"){
 // Card Studio Synchronization
 function handleIncomingStudioCardCreated(card){
   if(!card || !card.name) return;
-  if(!cards.some(c => (c.id && c.id === card.id) || c.name.toLowerCase() === card.name.toLowerCase())){
+  const existingIdx = cards.findIndex(c => (c.id && card.id && c.id === card.id) || c.name.toLowerCase() === card.name.toLowerCase());
+  if(existingIdx >= 0){
+    cards[existingIdx] = Object.assign({}, cards[existingIdx], card);
+  } else {
     cards.push(card);
-    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
-    if(typeof initCardSelect === "function") initCardSelect();
-    if(typeof render === "function") render();
-    showLiveToast(`✨ New Card Studio card published: <b>${card.name}</b> (${card.rarity})! Now available in booster packs!`, true);
   }
+  if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+  if(typeof initCardSelect === "function") initCardSelect();
+  if(typeof render === "function") render();
+  showLiveToast(`🎨 New Card Studio card published: <b>${card.name}</b> (${card.rarity}) is now visible in the Cards Section and booster packs!`, true);
 }
 
 function broadcastStudioCardCreated(card){
@@ -754,6 +799,30 @@ function broadcastStudioCardCreated(card){
         });
       } catch(e){}
     });
+  }
+  if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+    window.allConnectedPresenceConns.forEach(conn => {
+      try {
+        if(conn && conn.open){
+          conn.send({
+            type: "studio_card_created",
+            card
+          });
+        }
+      } catch(e){}
+    });
+  }
+  const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
+  if(!isCam){
+    const camConn = (presenceConnToCam && presenceConnToCam.open) ? presenceConnToCam : (window.presenceConnToCam && window.presenceConnToCam.open ? window.presenceConnToCam : null);
+    if(camConn){
+      try {
+        camConn.send({
+          type: "studio_card_created",
+          card
+        });
+      } catch(e){}
+    }
   }
 }
 

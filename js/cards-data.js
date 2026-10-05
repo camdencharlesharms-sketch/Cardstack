@@ -181,6 +181,12 @@ let eventCoinMultiplier = parseInt(localStorage.getItem("cardCollectorEventCoins
 let eventPackDiscount = parseInt(localStorage.getItem("cardCollectorEventDiscount") || "0");
 let isMaintenanceMode = localStorage.getItem("cardCollectorMaintenance") === "true";
 let isGodModeEnabled = localStorage.getItem("cardCollectorGodMode") !== "false";
+if(typeof window !== "undefined"){
+  window.owned = owned;
+  window.cards = cards;
+  window.currentUser = currentUser;
+  window.accounts = accounts;
+}
 
 function getSubAdminRole(username){
   if(!username) return null;
