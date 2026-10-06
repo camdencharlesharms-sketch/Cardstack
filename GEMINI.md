@@ -36,6 +36,14 @@ Cardstack/
 - **Opening Animation**: Authentic 3D card tear/foil unsealing effects with particle confetti for high-rarity pulls.
 - **Duplicate Protection**: Pulling duplicate cards awards coin compensation based on rarity.
 
+### Card Studio Custom Cards Lifecycle
+- **Standard First-Class Artifacts**: Cards forged in the Card Studio (`#tabStudio`) become standard first-class artifacts in the game deck (`cards`), persisted in `cardCollectorCustomCards`.
+- **Booster Pack Integration & Discovery**: Studio cards automatically roll from booster packs based on their assigned rarity tier (`chooseCardFromWeights`).
+- **Locked Binder Presentation**: Like all default cards, unowned studio cards appear locked in the collection binder (`card locked`, "Unknown Card", "??? HP", locked placeholder attacks) until discovered.
+- **Natural Discovery vs. Instant Claim**: Card Studio features a checkbox `#newCardAutoUnlock` ("Instant claim to my collection"), unchecked by default so players can pull the new card naturally from booster packs as a new discovery.
+- **Studio Card Manager Controls**: In the Admin Hub Studio list, administrators can toggle any custom card between `🔄 Return to Packs` (un-claims so it can be rolled from packs) and `🎁 Instant Claim` (immediately grants ownership).
+- **Arena Combat Usability**: Once unlocked (whether pulled from a booster pack or claimed), custom cards appear in the Arena champion carousel deck picker (`renderArenaCardPicker`), can be chosen as battle champions, and used in AI solo battles and real-time P2P multiplayer duels with their custom attacks and stats.
+
 ### B. Battle Arena & Combat Engine
 - **Champion Selection**: Players select any unlocked card from their collection or gifted vault skins to champion them into battle.
 - **Starter Champion Fallback**: If a player or guest owns 0 cards, Card 0 ("Blaze") is provided as a free Starter Champion so anyone can enter and battle immediately.

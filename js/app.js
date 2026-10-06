@@ -526,7 +526,6 @@ function render(){
 
   visible.forEach(c=>{
     const isUnrel = !!c.isUnreleased;
-    const isStudioCard = !!(c.isCustom || (c.id && c.id.toString().startsWith("card_custom_")));
     let has = false;
     if(isUnrel){
       has = isVaultCardOwnedByUser(c, curUserVaultOwned);
@@ -536,9 +535,7 @@ function render(){
       has = owned.some(x => parseInt(x, 10) === i);
     }
     const el = document.createElement("div");
-    // Standard locked cards get blacked out, but Studio cards are always visible for everyone to see!
-    const isLockedBlackout = !has && !isStudioCard;
-    el.className = "card" + (isLockedBlackout ? " locked" : (isStudioCard ? " studio-card" : ""));
+    el.className = "card" + (has ? "" : " locked");
 
     let rarityDisplayName = c.rarity;
     if(typeof customRarities === "object" && customRarities[c.rarity]){
@@ -550,7 +547,7 @@ function render(){
       { name: "Heavy Strike", dmg: Math.floor((c.dmg || 20) * 1.5) }
     ];
 
-    const attacksHtml = (has || isStudioCard) ? attacksList.map(atk => `
+    const attacksHtml = has ? attacksList.map(atk => `
       <div class="attack-preview">
         <span class="attack-name">⚔️ ${atk.name}</span>
         <span class="attack-dmg">${typeof formatDmg === "function" ? formatDmg(atk.dmg) : atk.dmg + " DMG"}</span>
@@ -560,30 +557,22 @@ function render(){
       <div class="attack-preview"><span class="attack-name">⚔️ ???</span><span class="attack-dmg">?? DMG</span></div>
     `;
 
-    const studioBadge = isStudioCard 
-      ? '<span style="background:linear-gradient(135deg,#9333ea,#7c3aed);color:#fff;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:900;margin-left:4px">🎨 STUDIO</span>' 
-      : "";
-
     const unreleasedBadge = (isUnrel && has) 
       ? (isCam 
           ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' 
           : '<span style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 GIFTED VAULT</span>') 
       : "";
 
-    const studioPackHint = (isStudioCard && !has)
-      ? '<div style="font-size:10px;font-weight:800;color:#38bdf8;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);border-radius:6px;padding:4px;text-align:center;margin-top:6px">📦 Available in Booster Packs</div>'
-      : "";
-
-    const cardFaceRarity = (has || isStudioCard) ? c.rarity : "";
-    const displayedRarity = (has || isStudioCard) ? rarityDisplayName : "Locked";
-    const displayedHp = (has || isStudioCard) ? ((typeof formatHp === "function") ? formatHp(c.hp) : ((c.hp || 80) + " HP")) : "???";
-    const displayedName = (has || isStudioCard) ? c.name : "Unknown Card";
-    const displayedDesc = (has || isStudioCard) ? c.desc : "Discover this artifact by opening booster packs.";
+    const cardFaceRarity = has ? c.rarity : "";
+    const displayedRarity = has ? rarityDisplayName : "Locked";
+    const displayedHp = has ? ((typeof formatHp === "function") ? formatHp(c.hp) : ((c.hp || 80) + " HP")) : "???";
+    const displayedName = has ? c.name : "Unknown Card";
+    const displayedDesc = has ? c.desc : "Discover this artifact by opening booster packs.";
 
     el.innerHTML = `
       <div class="face ${cardFaceRarity}">
         <div class="card-top">
-          <span class="rarity">${displayedRarity}${studioBadge}${unreleasedBadge}</span>
+          <span class="rarity">${displayedRarity}${unreleasedBadge}</span>
           <span style="font-size:11px;font-weight:800;color:#fca5a5">${displayedHp}</span>
         </div>
         <div class="card-art-frame">
@@ -596,12 +585,15 @@ function render(){
           <div class="attacks-list">
             ${attacksHtml}
           </div>
-          ${studioPackHint}
         </div>
       </div>
     `;
     grid.appendChild(el);
   });
+
+  if(typeof renderArenaCardPicker === "function"){
+    renderArenaCardPicker();
+  }
 }
 
 document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{

@@ -878,25 +878,30 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
   cards.push(newCard);
   const newCardIdx = cards.length - 1;
 
-  // Creator automatically owns the newly forged studio card so they can use it immediately in Arena and collection
-  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
-  if(curAcc){
-    if(!Array.isArray(curAcc.owned)) curAcc.owned = [];
-    if(!curAcc.owned.some(x => parseInt(x, 10) === newCardIdx)){
-      curAcc.owned.push(newCardIdx);
+// Check if auto-unlock was chosen (default is unchecked so it behaves like every other card and you can get it from a pack!)
+  const autoUnlockEl = document.getElementById("newCardAutoUnlock");
+  const shouldAutoUnlock = autoUnlockEl ? autoUnlockEl.checked : false;
+
+  if(shouldAutoUnlock){
+    const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+    if(curAcc){
+      if(!Array.isArray(curAcc.owned)) curAcc.owned = [];
+      if(!curAcc.owned.some(x => parseInt(x, 10) === newCardIdx)){
+        curAcc.owned.push(newCardIdx);
+      }
     }
-  }
-  if(typeof owned !== "undefined" && Array.isArray(owned)){
-    if(!owned.some(x => parseInt(x, 10) === newCardIdx)){
-      owned.push(newCardIdx);
+    if(typeof owned !== "undefined" && Array.isArray(owned)){
+      if(!owned.some(x => parseInt(x, 10) === newCardIdx)){
+        owned.push(newCardIdx);
+      }
     }
-  }
-  if(typeof window !== "undefined" && Array.isArray(window.owned)){
-    if(!window.owned.some(x => parseInt(x, 10) === newCardIdx)){
-      window.owned.push(newCardIdx);
+    if(typeof window !== "undefined" && Array.isArray(window.owned)){
+      if(!window.owned.some(x => parseInt(x, 10) === newCardIdx)){
+        window.owned.push(newCardIdx);
+      }
     }
+    if(typeof save === "function") save();
   }
-  if(typeof save === "function") save();
 
   if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
 
@@ -938,7 +943,10 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
   }, 150);
 
   if(typeof showLiveToast === "function"){
-    showLiveToast(`🎨 "<b>${name}</b>" (${rarity}) is now live in the Cards Section for everyone to see and unlock in Booster Packs!`, true);
+    const claimMsg = shouldAutoUnlock 
+      ? "claimed to your collection! Ready for battle in Arena!" 
+      : "added to Booster Packs! Open packs to discover and unlock it for battle!";
+    showLiveToast(`🎨 "<b>${name}</b>" (${rarity}) ${claimMsg}`, true);
   }
 };
 
@@ -1771,11 +1779,16 @@ function renderStudioCustomCards(){
     return;
   }
 
+  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+  const activeOwned = (curAcc && Array.isArray(curAcc.owned)) ? curAcc.owned : ((typeof owned !== "undefined" && Array.isArray(owned)) ? owned : []);
+
   customOnly.forEach((c) => {
+    const cardIdx = cards.indexOf(c);
+    const isOwned = activeOwned.some(x => parseInt(x, 10) === cardIdx);
     const item = document.createElement("div");
     item.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);padding:10px 12px;border-radius:12px;gap:10px";
     
-    const atkText = (c.attacks || []).map(a => `${a.name} (${a.dmg})`).join(", ");
+    const atkText = (c.attacks || []).map(a => `${a.name} (${typeof formatDmg === "function" ? formatDmg(a.dmg) : a.dmg})`).join(", ");
     item.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
         <img src="${c.image}" style="width:36px;height:48px;border-radius:6px;object-fit:cover;border:1px solid rgba(255,255,255,0.15);flex-shrink:0">
@@ -1783,12 +1796,16 @@ function renderStudioCustomCards(){
           <div style="font-size:13px;font-weight:700;color:#f1f5f9;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span>${c.name}</span>
             <span style="font-size:10px;text-transform:uppercase;color:#38bdf8;font-weight:800;background:rgba(56,189,248,0.15);padding:1px 5px;border-radius:4px">${c.rarity}</span>
-            <span style="font-size:10px;color:#4ade80;font-weight:800;background:rgba(74,222,128,0.15);padding:1px 5px;border-radius:4px">● Live in Packs</span>
+            <span style="font-size:10px;color:#4ade80;font-weight:800;background:rgba(74,222,128,0.15);padding:1px 5px;border-radius:4px">● In Booster Packs</span>
+            <span style="font-size:10px;color:${isOwned ? '#38bdf8' : '#eab308'};font-weight:800;background:${isOwned ? 'rgba(56,189,248,0.15)' : 'rgba(234,179,8,0.15)'};padding:1px 5px;border-radius:4px">${isOwned ? '✓ In Collection' : '🔒 Undiscovered (In Packs)'}</span>
           </div>
-          <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.hp || 100} HP • ${atkText}</div>
+          <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${typeof formatHp === "function" ? formatHp(c.hp) : (c.hp || 100) + " HP"} • ${atkText}</div>
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
+        <button type="button" class="accountBtn" style="padding:5px 8px;font-size:11px;background:${isOwned ? 'rgba(234,179,8,0.15)' : 'rgba(74,222,128,0.15)'};border-color:${isOwned ? '#eab308' : '#4ade80'};color:${isOwned ? '#fde047' : '#86efac'}" title="${isOwned ? 'Remove from collection so you can pull it from booster packs' : 'Instantly add to your collection'}" onclick="toggleStudioCardClaim('${c.name.replace(/'/g, "\\x27")}')">
+          ${isOwned ? '🔄 Return to Packs' : '🎁 Instant Claim'}
+        </button>
         <button type="button" class="accountBtn" style="padding:5px 8px;font-size:11px;background:rgba(56,189,248,0.15);border-color:#38bdf8;color:#38bdf8" title="View in Home Page Binder" onclick="viewStudioCardInBinder('${c.name.replace(/'/g, "\\x27")}')">
           👁️ Binder
         </button>
@@ -1803,6 +1820,37 @@ function renderStudioCustomCards(){
     listEl.appendChild(item);
   });
 }
+
+window.toggleStudioCardClaim = function(cardName){
+  const idx = cards.findIndex(c => c.name.toLowerCase() === cardName.toLowerCase());
+  if(idx === -1) return;
+  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+  if(!curAcc) return;
+  if(!Array.isArray(curAcc.owned)) curAcc.owned = [];
+
+  const has = curAcc.owned.some(x => parseInt(x, 10) === idx);
+  if(has){
+    curAcc.owned = curAcc.owned.filter(x => parseInt(x, 10) !== idx);
+    if(typeof owned !== "undefined" && Array.isArray(owned)){
+      owned = owned.filter(x => parseInt(x, 10) !== idx);
+      if(typeof window !== "undefined") window.owned = owned;
+    }
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+    renderStudioCustomCards();
+    if(typeof showLiveToast === "function") showLiveToast(`🔄 "${cardName}" returned to Booster Packs only! Open packs to discover and pull it!`, true);
+  } else {
+    curAcc.owned.push(idx);
+    if(typeof owned !== "undefined" && Array.isArray(owned)){
+      if(!owned.some(x => parseInt(x, 10) === idx)) owned.push(idx);
+      if(typeof window !== "undefined") window.owned = owned;
+    }
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+    renderStudioCustomCards();
+    if(typeof showLiveToast === "function") showLiveToast(`🎁 "${cardName}" claimed directly to your collection! You can now use it in the Arena.`, true);
+  }
+};
 
 window.viewStudioCardInBinder = function(cardName){
   document.getElementById("adminModal").classList.remove("show");
