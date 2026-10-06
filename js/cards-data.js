@@ -309,7 +309,8 @@ function getSubAdminPermissions(role){
       cardManager: !!role.permissions.cardManager,
       economy: !!role.permissions.economy,
       events: !!role.permissions.events,
-      broadcast: !!role.permissions.broadcast
+      broadcast: !!role.permissions.broadcast,
+      chaosLab: !!role.permissions.chaosLab
     };
   }
   return {
@@ -318,7 +319,8 @@ function getSubAdminPermissions(role){
     cardManager: false,
     economy: false,
     events: false,
-    broadcast: false
+    broadcast: false,
+    chaosLab: false
   };
 }
 if(typeof window !== "undefined") window.getSubAdminPermissions = getSubAdminPermissions;

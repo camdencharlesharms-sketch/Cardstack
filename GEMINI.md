@@ -75,6 +75,26 @@ Cardstack/
      - **Gift Recipient Experience**: Once gifted, the recipient receives the card into their collection (`unreleasedOwned`). It renders in their binder as an unlocked, fully playable artifact with an exclusive `🔒 GIFTED VAULT` badge, custom stats, and artwork, and can be selected as a champion in the Battle Arena.
      - **Revocation**: Cam can revoke gifted vault cards at any time via the Player Skins Dispatcher.
      - **1-Click Public Release**: If Cam decides to make an unreleased vault card accessible in packs for everyone, Cam can click `🚀 Release Public`, which moves the card to the public deck (`cards`), displaying it in the binder for everyone and adding it to booster pack drop tables.
+8. `⚡ Chaos Lab & God Tools`: Advanced sandbox suite for visual phenomena, economy simulations, audio synthesis, and live community raids:
+   - **Screen FX & Particle Cannons**:
+     - *🌧️ Cosmic Card Rain*: Rains down dozens of floating, 3D rotating mini-card sprites of rare/mythic/divine cards cascading down the screen with glowing neon borders.
+     - *🎉 Mega Confetti Storm*: Launches continuous dual-cannon confetti particle bursts using `canvas-confetti`.
+     - *💥 Nuclear EMP Screen Shake & Glitch*: Shakes the entire viewport with an RGB chromatic aberration glitch effect and sub-bass laser rumble.
+     - *🌈 Rainbow Disco Aura*: Toggles an animated chromatic rainbow glow border across all binder cards, packs, and header.
+   - **🎰 High-Roller Lucky Wheel**:
+     - Live animated casino reel rewarding 10k–50k Coins, guaranteed Mythic & Divine drops, or 5x God Luck boosts to any selected player or self with celebratory fanfare.
+   - **🌪️ 100x Speed Pack Buster & Drop Matrix Benchmark**:
+     - Benchmarks booster pack odds by opening 10, 25, 50, or 100 packs instantly in background simulation.
+     - Displays comprehensive statistical analytics (cards drawn, rarity distribution % breakdown, and top high-tier discoveries).
+     - Includes a toggleable "Keep Pulled Cards in Collection" mode to mass-claim packs directly into inventory.
+   - **🔊 Master SFX Synth Soundboard**:
+     - Zero-dependency browser Web Audio API synthesizer producing 8 retro arcade sound effects: Victory Fanfare, Pack Foil Tear, Critical Laser Zap, Cosmic Void Warp, Coin Chimes, Alert Siren, Celestial Ascension, and Nuclear Blast, with a live master volume slider.
+   - **👾 World Boss Raid Summoner**:
+     - Spawns a global raid boss banner right on the main page above the binder (`#worldBossBanner`).
+     - Choose from *🔥 Ignis, The Solar Behemoth* (10k HP), *🌑 Umbra, The Void Leviathan* (25k HP), *⚡ Chronos, The Time Devourer* (50k HP), or build a *✨ Custom World Boss*.
+     - Players can click "⚔️ STRIKE BOSS!" using their active champion card to deal real damage with floating damage numbers and critical strike multipliers.
+     - Defeating the boss triggers screen shake, confetti, and awards +2,500 Coins to the victor.
+     - Full Admin Hub controls: Full Boss HP Restore, Admin 5,000 DMG True Strike, and Raid Dismissal.
 
 ---
 
@@ -88,6 +108,7 @@ All application state is persisted client-side in the browser's `localStorage`:
 | `cardCollectorCurrentUser` | `string` | Currently active session username |
 | `cardCollectorCustomCards` | `Array` | Custom cards created via Card Studio |
 | `cardCollectorSubAdmins` | `Object` | Sub-admin configurations: `{ active, dailyCap, canGiftSkins, allowedSkinIds, giftedToday, lastGiftDate }` |
+| `cardCollectorWorldBoss` | `Object` | Active World Boss Raid state: `{ id, name, element, hp, maxHp, icon, weakness, desc }` |
 | `cardCollectorMaintenance` | `string` | `"true"` or `"false"` |
 | `cardCollectorGodMode` | `string` | `"true"` or `"false"` |
 | `cardCollectorEventCoins` | `string` | Coin multiplier (`"1"`, `"2"`, `"3"`) |

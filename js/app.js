@@ -167,6 +167,7 @@ function updateAccountUI(){
   const tabBtnCardMgr = document.getElementById("cardManagerTabBtn") || document.querySelector('.admin-tab-btn[data-tab="tabCardManager"]');
   const tabBtnEvents = document.querySelector('.admin-tab-btn[data-tab="tabEvents"]');
   const tabBtnBroadcast = document.querySelector('.admin-tab-btn[data-tab="tabBroadcast"]');
+  const tabBtnChaos = document.getElementById("chaosLabTabBtn") || document.querySelector('.admin-tab-btn[data-tab="tabChaosLab"]');
 
   let statusBanner = document.getElementById("subAdminStatusBanner");
 
@@ -182,6 +183,7 @@ function updateAccountUI(){
     if(tabBtnCardMgr) tabBtnCardMgr.style.display = "block";
     if(tabBtnEvents) tabBtnEvents.style.display = "block";
     if(tabBtnBroadcast) tabBtnBroadcast.style.display = "block";
+    if(tabBtnChaos) tabBtnChaos.style.display = "block";
 
     const headerEl = document.getElementById("adminHubHeader");
     if(headerEl) headerEl.textContent = "⚡ Supreme Admin Suite (Cam)";
@@ -189,6 +191,7 @@ function updateAccountUI(){
   } else if(isSub){
     if(permTabBtn) permTabBtn.style.display = "none";
     if(unreleasedTabBtn) unreleasedTabBtn.style.display = "none";
+    if(tabBtnChaos) tabBtnChaos.style.display = "none";
     if(masterDepositSec) masterDepositSec.style.display = "none";
     if(adminWipeSec) adminWipeSec.style.display = "none";
 
@@ -204,6 +207,7 @@ function updateAccountUI(){
     if(tabBtnCardMgr) tabBtnCardMgr.style.display = perms.cardManager ? "block" : "none";
     if(tabBtnEvents) tabBtnEvents.style.display = perms.events ? "block" : "none";
     if(tabBtnBroadcast) tabBtnBroadcast.style.display = perms.broadcast ? "block" : "none";
+    if(tabBtnChaos) tabBtnChaos.style.display = perms.chaosLab ? "block" : "none";
 
     // Reset tab if currently on disallowed or Cam-only tabs
     const activeTab = document.querySelector(".admin-tab-content.active");
@@ -213,7 +217,8 @@ function updateAccountUI(){
       (activeTab.id === "tabStudio" && perms.studio) ||
       (activeTab.id === "tabCardManager" && perms.cardManager) ||
       (activeTab.id === "tabEvents" && perms.events) ||
-      (activeTab.id === "tabBroadcast" && perms.broadcast)
+      (activeTab.id === "tabBroadcast" && perms.broadcast) ||
+      (activeTab.id === "tabChaosLab" && perms.chaosLab)
     );
 
     if(!isCurrentAllowed){
@@ -593,6 +598,9 @@ function render(){
 
   if(typeof renderArenaCardPicker === "function"){
     renderArenaCardPicker();
+  }
+  if(typeof renderWorldBossBanner === "function"){
+    renderWorldBossBanner();
   }
 }
 

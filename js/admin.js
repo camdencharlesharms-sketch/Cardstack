@@ -125,6 +125,9 @@ document.querySelectorAll(".admin-tab-btn").forEach(btn => {
     if(targetId === "tabCardManager" && typeof renderCardManager === "function"){
       renderCardManager();
     }
+    if(targetId === "tabChaosLab" && typeof initChaosLabUI === "function"){
+      initChaosLabUI();
+    }
   };
 });
 
@@ -219,6 +222,9 @@ function refreshAdminPlayerData(){
   const prevSkinPlayer = playerSelect ? playerSelect.value : "";
   const prevEcoPlayer = ecoPlayerSelect ? ecoPlayerSelect.value : "";
   const prevSubPlayer = subAdminSelect ? subAdminSelect.value : "";
+  const casinoSelect = document.getElementById("chaosCasinoTargetSelect");
+  const prevCasinoPlayer = casinoSelect ? casinoSelect.value : "";
+  if(casinoSelect) casinoSelect.innerHTML = '<option value="">Select Target Beneficiary (Default: Yourself)...</option>';
 
   if(playerSelect) playerSelect.innerHTML = '<option value="">Select Target Player...</option>';
   if(subAdminSelect) subAdminSelect.innerHTML = '<option value="">Select Player...</option>';
@@ -439,6 +445,7 @@ window.editSubAdminRole = function(user){
   if(document.getElementById("subAdminPermEconomy")) document.getElementById("subAdminPermEconomy").checked = !!perms.economy;
   if(document.getElementById("subAdminPermEvents")) document.getElementById("subAdminPermEvents").checked = !!perms.events;
   if(document.getElementById("subAdminPermBroadcast")) document.getElementById("subAdminPermBroadcast").checked = !!perms.broadcast;
+  if(document.getElementById("subAdminPermChaosLab")) document.getElementById("subAdminPermChaosLab").checked = !!perms.chaosLab;
 
   const card = document.getElementById("subAdminDailyCapInput") ? document.getElementById("subAdminDailyCapInput").closest(".adminCard") : null;
   if(card) card.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -753,7 +760,8 @@ document.getElementById("saveSubAdminRoleBtn").onclick = ()=>{
     cardManager: document.getElementById("subAdminPermCardManager") ? document.getElementById("subAdminPermCardManager").checked : false,
     economy: document.getElementById("subAdminPermEconomy") ? document.getElementById("subAdminPermEconomy").checked : false,
     events: document.getElementById("subAdminPermEvents") ? document.getElementById("subAdminPermEvents").checked : false,
-    broadcast: document.getElementById("subAdminPermBroadcast") ? document.getElementById("subAdminPermBroadcast").checked : false
+    broadcast: document.getElementById("subAdminPermBroadcast") ? document.getElementById("subAdminPermBroadcast").checked : false,
+    chaosLab: document.getElementById("subAdminPermChaosLab") ? document.getElementById("subAdminPermChaosLab").checked : false
   };
 
   subAdminRoles[target] = {
@@ -2916,4 +2924,789 @@ if(cardMgrFilter){
 const cardMgrTabBtn = document.getElementById("cardManagerTabBtn");
 if(cardMgrTabBtn){
   cardMgrTabBtn.addEventListener("click", renderCardManager);
+}
+
+
+// ==========================================
+// ⚡ TAB: CHAOS LAB & GOD TOOLS MODULE
+// ==========================================
+
+let chaosAudioCtx = null;
+function getChaosAudioCtx(){
+  if(!chaosAudioCtx){
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if(AudioCtx) chaosAudioCtx = new AudioCtx();
+  }
+  if(chaosAudioCtx && chaosAudioCtx.state === "suspended"){
+    chaosAudioCtx.resume();
+  }
+  return chaosAudioCtx;
+}
+
+function getChaosVolume(){
+  const slider = document.getElementById("chaosSfxVolume");
+  return slider ? (parseInt(slider.value, 10) / 100) * 0.35 : 0.25;
+}
+
+function playChaosSfx(type){
+  const ctx = getChaosAudioCtx();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  const vol = getChaosVolume();
+
+  if(type === "triumph"){
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now + idx * 0.11);
+      gain.gain.setValueAtTime(vol, now + idx * 0.11);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.11 + 0.38);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.11);
+      osc.stop(now + idx * 0.11 + 0.4);
+    });
+  } else if(type === "packTear"){
+    const bufferSize = Math.floor(ctx.sampleRate * 0.25);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(1400, now);
+    filter.frequency.exponentialRampToValueAtTime(320, now + 0.22);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(vol * 1.5, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(now);
+  } else if(type === "laser"){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(950, now);
+    osc.frequency.exponentialRampToValueAtTime(90, now + 0.2);
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.22);
+  } else if(type === "warp"){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(80, now);
+    osc.frequency.linearRampToValueAtTime(380, now + 0.25);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.55);
+    gain.gain.setValueAtTime(vol * 1.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.62);
+  } else if(type === "coins"){
+    [987.77, 1318.51, 1567.98].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+      gain.gain.setValueAtTime(vol, now + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.07);
+      osc.stop(now + idx * 0.07 + 0.24);
+    });
+  } else if(type === "siren"){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(650, now);
+    osc.frequency.linearRampToValueAtTime(880, now + 0.18);
+    osc.frequency.linearRampToValueAtTime(650, now + 0.36);
+    osc.frequency.linearRampToValueAtTime(880, now + 0.54);
+    gain.gain.setValueAtTime(vol * 0.8, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.72);
+  } else if(type === "ascension"){
+    [523.25, 659.25, 783.99, 987.77, 1174.66].forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(f, now + i * 0.05);
+      gain.gain.setValueAtTime(vol * 0.65, now + i * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.05 + 0.75);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.05);
+      osc.stop(now + i * 0.05 + 0.8);
+    });
+  } else if(type === "detonation"){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(25, now + 0.5);
+    gain.gain.setValueAtTime(vol * 1.5, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.58);
+  }
+}
+window.playChaosSfx = playChaosSfx;
+
+// 1. SCREEN FX: Card Rain
+function triggerCardRain(durationSec = 6){
+  playChaosSfx("ascension");
+  const containerId = "chaosCardRainContainer";
+  let container = document.getElementById(containerId);
+  if(!container){
+    container = document.createElement("div");
+    container.id = containerId;
+    container.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:999999;overflow:hidden";
+    document.body.appendChild(container);
+  }
+  
+  const highTierCards = (cards || []).filter(c => ["epic", "legendary", "mythic", "divine"].includes(c.rarity));
+  const pool = highTierCards.length ? highTierCards : (cards || []);
+  if(!pool.length) return;
+
+  function spawnCard(){
+    if(!container) return;
+    const card = pool[Math.floor(Math.random() * pool.length)];
+    const el = document.createElement("div");
+    el.className = "chaos-rain-card";
+    const startX = Math.random() * 92 + 2;
+    const duration = (Math.random() * 2 + 3.2).toFixed(2);
+    const size = Math.floor(Math.random() * 32 + 58);
+
+    el.style.cssText = `
+      position:absolute;
+      left:${startX}vw;
+      top:-120px;
+      width:${size}px;
+      height:${Math.floor(size * 1.4)}px;
+      border-radius:8px;
+      border:2px solid #fbbf24;
+      background:rgba(15,23,42,0.95);
+      box-shadow:0 0 18px rgba(251,191,36,0.65);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      animation: cardRainFall ${duration}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    `;
+    el.innerHTML = `
+      <img src="${card.image}" style="width:100%;height:70%;object-fit:cover">
+      <div style="font-size:8px;font-weight:900;color:#fff;background:rgba(0,0,0,0.85);width:100%;text-align:center;padding:1px;white-space:nowrap;overflow:hidden">${card.name}</div>
+    `;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), parseFloat(duration) * 1000 + 400);
+  }
+
+  for(let i=0; i<12; i++){
+    setTimeout(spawnCard, i * 140);
+  }
+  
+  let spawned = 12;
+  const loop = setInterval(() => {
+    spawnCard();
+    spawned++;
+    if(spawned >= durationSec * 6){
+      clearInterval(loop);
+      setTimeout(() => {
+        if(container && container.children.length === 0) container.remove();
+      }, 5500);
+    }
+  }, 220);
+
+  const status = document.getElementById("chaosFxStatus");
+  if(status) status.innerHTML = '<span style="color:#c084fc">🌧️ Cosmic Card Rain Storm in progress!</span>';
+  if(typeof showLiveToast === "function") showLiveToast("🌧️ Cosmic Card Rain descending across the realm!", true);
+}
+
+// 2. SCREEN FX: Mega Confetti Storm
+function triggerMegaConfetti(){
+  playChaosSfx("triumph");
+  if(typeof confetti === "function"){
+    const end = Date.now() + 3000;
+    const colors = ["#fbbf24", "#ec4899", "#38bdf8", "#a855f7", "#10b981"];
+    (function frame() {
+      confetti({ particleCount: 6, angle: 60, spread: 55, origin: { x: 0 }, colors });
+      confetti({ particleCount: 6, angle: 120, spread: 55, origin: { x: 1 }, colors });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    }());
+  }
+  const status = document.getElementById("chaosFxStatus");
+  if(status) status.innerHTML = '<span style="color:#f472b6">🎉 Mega Confetti Storm discharged!</span>';
+  if(typeof showLiveToast === "function") showLiveToast("🎉 Mega Confetti Storm detonated!", true);
+}
+
+// 3. SCREEN FX: Nuclear EMP Glitch & Shake
+function triggerEmpGlitch(){
+  playChaosSfx("detonation");
+  setTimeout(() => playChaosSfx("laser"), 180);
+
+  document.body.classList.add("chaos-screen-shake");
+  
+  const flash = document.createElement("div");
+  flash.style.cssText = "position:fixed;inset:0;background:rgba(239,68,68,0.35);mix-blend-mode:difference;pointer-events:none;z-index:999999;transition:opacity 0.7s ease-out";
+  document.body.appendChild(flash);
+
+  setTimeout(() => {
+    flash.style.opacity = "0";
+    setTimeout(() => flash.remove(), 750);
+  }, 350);
+
+  setTimeout(() => {
+    document.body.classList.remove("chaos-screen-shake");
+  }, 1100);
+
+  const status = document.getElementById("chaosFxStatus");
+  if(status) status.innerHTML = '<span style="color:#ef4444">💥 Nuclear EMP executed: Visual disturbance localized.</span>';
+  if(typeof showLiveToast === "function") showLiveToast("⚡ NUCLEAR EMP DETONATED: Seismic glitch shockwave unleashed!", true);
+}
+
+// 4. SCREEN FX: Rainbow Disco Mode
+function toggleDiscoMode(){
+  const active = document.body.classList.toggle("disco-mode-active");
+  const btn = document.getElementById("chaosDiscoModeBtn");
+  if(btn){
+    btn.style.background = active ? "linear-gradient(135deg, #ec4899, #8b5cf6)" : "#06b6d4";
+    btn.textContent = active ? "🌈 Rainbow Disco: ON" : "🌈 Rainbow Disco Aura";
+  }
+  playChaosSfx(active ? "ascension" : "packTear");
+  const status = document.getElementById("chaosFxStatus");
+  if(status) status.innerHTML = active ? '<span style="color:#38bdf8">🌈 Rainbow Disco Aura ACTIVE across all binder cards!</span>' : 'Rainbow Disco Aura deactivated.';
+  if(typeof showLiveToast === "function"){
+    showLiveToast(active ? "✨ Rainbow Disco Aura ACTIVATED across all cards!" : "Rainbow Disco Aura deactivated.", true);
+  }
+}
+
+// 5. HIGH-ROLLER CASINO LUCKY WHEEL
+const CASINO_PRIZES = [
+  { label: "💎 10,000 Gold Coins", type: "coins", amount: 10000 },
+  { label: "💰 25,000 Treasure Coins", type: "coins", amount: 25000 },
+  { label: "👑 50,000 MEGA JACKPOT", type: "coins", amount: 50000 },
+  { label: "✨ Guaranteed Random Mythic Card", type: "card", rarity: "mythic" },
+  { label: "🌟 Guaranteed Random Divine Relic", type: "card", rarity: "divine" },
+  { label: "⚡ 5X God Luck Multiplier (10 Packs)", type: "luck", multiplier: 5 }
+];
+
+let isCasinoSpinning = false;
+function spinChaosCasino(){
+  if(isCasinoSpinning) return;
+  const targetSel = document.getElementById("chaosCasinoTargetSelect");
+  const targetUser = (targetSel && targetSel.value) ? targetSel.value : currentUser;
+
+  const targetAcc = (typeof getUserAccount === "function") ? getUserAccount(targetUser) : (accounts && accounts[targetUser]);
+  if(!targetAcc) return alert("Please select an active player account to receive the prize.");
+
+  isCasinoSpinning = true;
+  const reel = document.getElementById("chaosCasinoReel");
+  const spinBtn = document.getElementById("chaosSpinReelBtn");
+  if(spinBtn) spinBtn.disabled = true;
+
+  playChaosSfx("warp");
+
+  let ticks = 0;
+  const maxTicks = 18;
+  const interval = setInterval(() => {
+    ticks++;
+    const randomPrize = CASINO_PRIZES[Math.floor(Math.random() * CASINO_PRIZES.length)];
+    if(reel) reel.textContent = randomPrize.label;
+    playChaosSfx("coins");
+
+    if(ticks >= maxTicks){
+      clearInterval(interval);
+      isCasinoSpinning = false;
+      if(spinBtn) spinBtn.disabled = false;
+
+      const prize = CASINO_PRIZES[Math.floor(Math.random() * CASINO_PRIZES.length)];
+      if(reel){
+        reel.textContent = `🎉 ${prize.label} 🎉`;
+        reel.style.transform = "scale(1.08)";
+        setTimeout(() => { if(reel) reel.style.transform = "none"; }, 600);
+      }
+
+      playChaosSfx("triumph");
+      if(typeof confetti === "function"){
+        confetti({ particleCount: 90, spread: 80, origin: { y: 0.6 } });
+      }
+
+      if(prize.type === "coins"){
+        targetAcc.coins = (targetAcc.coins || 0) + prize.amount;
+        if(targetUser === currentUser && typeof coins !== "undefined") coins = targetAcc.coins;
+      } else if(prize.type === "card"){
+        const pool = (cards || []).filter(c => c.rarity === prize.rarity && !c.isUnreleased);
+        const cardAwarded = pool.length ? pool[Math.floor(Math.random() * pool.length)] : cards[0];
+        const cardIdx = cards.indexOf(cardAwarded);
+        if(!Array.isArray(targetAcc.owned)) targetAcc.owned = [];
+        if(cardIdx !== -1 && !targetAcc.owned.includes(cardIdx)){
+          targetAcc.owned.push(cardIdx);
+          if(targetUser === currentUser && Array.isArray(owned) && !owned.includes(cardIdx)){
+            owned.push(cardIdx);
+          }
+        }
+      } else if(prize.type === "luck"){
+        localStorage.setItem("cardCollectorLuck", "5");
+      }
+
+      if(typeof save === "function") save();
+      if(typeof render === "function") render();
+
+      if(typeof showLiveToast === "function"){
+        showLiveToast(`🎰 CASINO WINNER! ${targetUser} received: ${prize.label}!`, true);
+      }
+    }
+  }, 100);
+}
+
+// 6. 100x SPEED PACK BUSTER (BENCHMARK & MASS OPENER)
+function runChaosPackBuster(){
+  const packSelect = document.getElementById("chaosPackSelect");
+  const countSelect = document.getElementById("chaosPackCountSelect");
+  const claimCheck = document.getElementById("chaosPackClaimCards");
+  const statsDiv = document.getElementById("chaosPackBusterStats");
+  if(!packSelect || !countSelect || !statsDiv) return;
+
+  const packKey = packSelect.value;
+  const count = parseInt(countSelect.value, 10) || 50;
+  const shouldClaim = claimCheck ? claimCheck.checked : false;
+
+  const pack = (typeof packTiers === "object" && packTiers) ? packTiers[packKey] : null;
+  if(!pack) return alert("Please select a valid booster pack tier.");
+
+  playChaosSfx("warp");
+
+  const rarityStats = { common: 0, rare: 0, epic: 0, legendary: 0, mythic: 0, divine: 0 };
+  const customRarityStats = {};
+  let totalCards = 0;
+  let newDiscoveries = 0;
+  const topPulls = [];
+
+  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+
+  for(let p = 0; p < count; p++){
+    const guarantee = pack.minRarity || null;
+    const packCount = pack.count || 5;
+
+    for(let c = 0; c < packCount; c++){
+      totalCards++;
+      const isGuaranteedSlot = (c === 0 && guarantee);
+      const drawn = (typeof chooseCardFromWeights === "function") ? chooseCardFromWeights(pack.weights, isGuaranteedSlot ? guarantee : null, false) : cards[0];
+      if(!drawn) continue;
+
+      const r = drawn.rarity;
+      if(rarityStats[r] !== undefined){
+        rarityStats[r]++;
+      } else {
+        customRarityStats[r] = (customRarityStats[r] || 0) + 1;
+      }
+
+      if(["legendary", "mythic", "divine"].includes(r) && topPulls.length < 8){
+        if(!topPulls.some(x => x.name === drawn.name)) topPulls.push(drawn);
+      }
+
+      if(shouldClaim && curAcc){
+        const idx = cards.indexOf(drawn);
+        if(!Array.isArray(curAcc.owned)) curAcc.owned = [];
+        if(idx !== -1 && !curAcc.owned.includes(idx)){
+          curAcc.owned.push(idx);
+          if(Array.isArray(owned) && !owned.includes(idx)) owned.push(idx);
+          newDiscoveries++;
+        }
+      }
+    }
+  }
+
+  if(shouldClaim){
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+  }
+
+  playChaosSfx("triumph");
+  if(typeof confetti === "function"){
+    confetti({ particleCount: 75, spread: 70 });
+  }
+
+  const colorMap = { common: "#64748b", rare: "#3b82f6", epic: "#a855f7", legendary: "#f59e0b", mythic: "#ec4899", divine: "#06b6d4" };
+  const rarityBadges = Object.keys(rarityStats).map(r => {
+    const num = rarityStats[r];
+    const pct = totalCards > 0 ? ((num / totalCards) * 100).toFixed(1) : 0;
+    return `
+      <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:6px 10px;border-radius:8px;text-align:center">
+        <div style="font-size:10px;text-transform:uppercase;color:${colorMap[r] || '#fff'};font-weight:900">${r}</div>
+        <div style="font-size:15px;font-weight:800;color:#fff">${num}</div>
+        <div style="font-size:10px;color:#94a3b8">${pct}%</div>
+      </div>
+    `;
+  }).join("");
+
+  const topPullsHtml = topPulls.length ? topPulls.map(tp => `
+    <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;color:#fff">
+      ${tp.name} (${tp.rarity})
+    </span>
+  `).join("") : '<span style="color:#94a3b8">None</span>';
+
+  statsDiv.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <b style="font-size:13px;color:#38bdf8">⚡ Simulation Completed: ${count} Packs (${totalCards} Cards Drawn)</b>
+      ${shouldClaim ? `<span style="font-size:11px;font-weight:800;color:#4ade80;background:rgba(74,222,128,0.15);padding:2px 8px;border-radius:6px">✓ ${newDiscoveries} New Discoveries Added to Collection</span>` : '<span style="font-size:11px;color:#94a3b8">Benchmark Test Only (Inventory Untouched)</span>'}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(90px, 1fr));gap:8px;margin-bottom:10px">
+      ${rarityBadges}
+    </div>
+    <div style="font-size:11px;color:#cbd5e1">
+      <b>Top High-Tier Discoveries:</b>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+        ${topPullsHtml}
+      </div>
+    </div>
+  `;
+}
+
+// 7. WORLD BOSS RAID SUMMONER
+const WORLD_BOSS_TEMPLATES = {
+  ignis: {
+    name: "🔥 Ignis, The Solar Behemoth",
+    element: "Divine Fire",
+    hp: 10000,
+    maxHp: 10000,
+    icon: "🌋",
+    weakness: "Water / Void",
+    desc: "A towering titan forged in the heart of a dying sun."
+  },
+  umbra: {
+    name: "🌑 Umbra, The Void Leviathan",
+    element: "Abyssal Void",
+    hp: 25000,
+    maxHp: 25000,
+    icon: "🌌",
+    weakness: "Solar / Divine",
+    desc: "An eldritch anomaly that devours celestial star clusters."
+  },
+  chronos: {
+    name: "⚡ Chronos, The Time Devourer",
+    element: "Temporal Storm",
+    hp: 50000,
+    maxHp: 50000,
+    icon: "⏳",
+    weakness: "Arcane / Prismatic",
+    desc: "An omnipotent temporal sovereign warping space and reality."
+  }
+};
+
+function summonWorldBoss(bossKey, customName, customHp){
+  let boss = null;
+  if(bossKey === "custom"){
+    const name = customName ? customName.trim() : "Titan Sovereign";
+    const hp = parseInt(customHp, 10) || 15000;
+    boss = {
+      id: "boss_" + Date.now(),
+      name: name,
+      element: "Cosmic Apex",
+      hp: hp,
+      maxHp: hp,
+      icon: "👾",
+      weakness: "All Elements",
+      desc: "An omnipotent entity summoned directly from the Chaos Lab."
+    };
+  } else {
+    const tmpl = WORLD_BOSS_TEMPLATES[bossKey] || WORLD_BOSS_TEMPLATES.ignis;
+    boss = {
+      id: "boss_" + bossKey,
+      name: tmpl.name,
+      element: tmpl.element,
+      hp: tmpl.hp,
+      maxHp: tmpl.maxHp,
+      icon: tmpl.icon,
+      weakness: tmpl.weakness,
+      desc: tmpl.desc
+    };
+  }
+
+  localStorage.setItem("cardCollectorWorldBoss", JSON.stringify(boss));
+  playChaosSfx("siren");
+  setTimeout(() => playChaosSfx("detonation"), 450);
+
+  renderWorldBossBanner();
+  updateChaosBossAdminControls();
+  
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🚨 WORLD BOSS SUMMONED: ${boss.name} has emerged on the home battlefield!`, true);
+  }
+}
+
+function dismissWorldBoss(){
+  localStorage.removeItem("cardCollectorWorldBoss");
+  renderWorldBossBanner();
+  updateChaosBossAdminControls();
+  if(typeof showLiveToast === "function") showLiveToast("🛑 World Boss Raid dismissed.", true);
+}
+
+function healWorldBoss(){
+  let boss = null;
+  try { boss = JSON.parse(localStorage.getItem("cardCollectorWorldBoss")); } catch(e){}
+  if(!boss) return;
+  boss.hp = boss.maxHp;
+  localStorage.setItem("cardCollectorWorldBoss", JSON.stringify(boss));
+  renderWorldBossBanner();
+  updateChaosBossAdminControls();
+  playChaosSfx("ascension");
+  if(typeof showLiveToast === "function") showLiveToast(`💖 ${boss.name} fully restored to ${boss.maxHp.toLocaleString()} HP!`, true);
+}
+
+function nukeWorldBoss(){
+  strikeWorldBoss(5000);
+}
+
+function updateChaosBossAdminControls(){
+  const controls = document.getElementById("chaosBossAdminControls");
+  if(!controls) return;
+  let boss = null;
+  try { boss = JSON.parse(localStorage.getItem("cardCollectorWorldBoss")); } catch(e){}
+  if(boss && boss.hp > 0){
+    controls.style.display = "flex";
+  } else {
+    controls.style.display = "none";
+  }
+}
+
+function renderWorldBossBanner(){
+  const banner = document.getElementById("worldBossBanner");
+  if(!banner) return;
+
+  let boss = null;
+  try {
+    boss = JSON.parse(localStorage.getItem("cardCollectorWorldBoss"));
+  } catch(e){}
+
+  if(!boss || !boss.hp || boss.hp <= 0){
+    banner.style.display = "none";
+    banner.innerHTML = "";
+    return;
+  }
+
+  banner.style.display = "block";
+  const pct = Math.max(0, Math.min(100, Math.round((boss.hp / boss.maxHp) * 100)));
+
+  const champ = (typeof getSelectedChampionCard === "function") ? getSelectedChampionCard() : (cards && cards[0] ? cards[0] : null);
+  const champName = champ ? champ.name : "Blaze";
+
+  banner.innerHTML = `
+    <div class="world-boss-container" id="worldBossWidget">
+      <div style="display:flex;align-items:center;gap:16px;min-width:260px">
+        <div style="font-size:46px;filter:drop-shadow(0 0 15px #ef4444);user-select:none">${boss.icon}</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:16px;font-weight:900;color:#fff">${boss.name}</span>
+            <span style="font-size:10px;font-weight:900;color:#ef4444;background:rgba(239,68,68,0.2);padding:2px 7px;border-radius:6px;border:1px solid #ef4444">GLOBAL RAID BOSS</span>
+          </div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:2px">
+            Element: <b style="color:#f87171">${boss.element}</b> • Weakness: <b style="color:#38bdf8">${boss.weakness}</b>
+          </div>
+          <div style="font-size:11px;color:#cbd5e1;margin-top:2px">
+            Your Champion: <b style="color:#fbbf24">${champName}</b>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:240px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:6px">
+          <span style="color:#fca5a5">Raid Boss Vitality</span>
+          <span id="worldBossHpDisplay" style="color:#fff">${boss.hp.toLocaleString()} / ${boss.maxHp.toLocaleString()} HP (${pct}%)</span>
+        </div>
+        <div style="background:rgba(0,0,0,0.6);border-radius:10px;height:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);position:relative">
+          <div id="worldBossHpFill" style="background:linear-gradient(90deg, #ef4444, #f59e0b);height:100%;width:${pct}%;transition:width 0.25s ease;box-shadow:0 0 10px #ef4444"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px">
+        <button id="strikeWorldBossBtn" class="accountBtn" onclick="strikeWorldBoss()" style="background:linear-gradient(135deg, #ef4444, #b91c1c);color:#fff;font-weight:900;font-size:14px;padding:12px 22px;border-radius:12px;box-shadow:0 0 25px rgba(239,68,68,0.6);letter-spacing:0.5px">
+          ⚔️ STRIKE BOSS!
+        </button>
+      </div>
+    </div>
+  `;
+}
+window.renderWorldBossBanner = renderWorldBossBanner;
+
+window.strikeWorldBoss = function(overrideDmg){
+  let boss = null;
+  try {
+    boss = JSON.parse(localStorage.getItem("cardCollectorWorldBoss"));
+  } catch(e){}
+  if(!boss || !boss.hp || boss.hp <= 0) return;
+
+  const champ = (typeof getSelectedChampionCard === "function") ? getSelectedChampionCard() : (cards && cards[0] ? cards[0] : null);
+  let dmg = 0;
+  if(typeof overrideDmg === "number"){
+    dmg = overrideDmg;
+  } else if(champ && Array.isArray(champ.attacks) && champ.attacks.length > 0){
+    const highestAtk = Math.max(...champ.attacks.map(a => parseInt(a.dmg, 10) || 25));
+    const isCrit = Math.random() < 0.25;
+    const mult = isCrit ? (1.5 + Math.random() * 0.5) : (0.95 + Math.random() * 0.25);
+    dmg = Math.round(highestAtk * mult);
+    if(isCrit && typeof showLiveToast === "function"){
+      showLiveToast(`💥 CRITICAL STRIKE! ${champ.name} dealt ${dmg} CRIT DMG to ${boss.name}!`, false);
+    }
+  } else {
+    dmg = Math.floor(Math.random() * 50) + 40;
+  }
+
+  if(dmg > 999999) dmg = 999999;
+
+  boss.hp = Math.max(0, boss.hp - dmg);
+  localStorage.setItem("cardCollectorWorldBoss", JSON.stringify(boss));
+
+  playChaosSfx("laser");
+
+  const widget = document.getElementById("worldBossWidget");
+  if(widget){
+    const floatEl = document.createElement("div");
+    floatEl.className = "chaos-floating-dmg";
+    floatEl.textContent = `-${dmg.toLocaleString()} DMG!`;
+    floatEl.style.left = `${Math.random() * 40 + 30}%`;
+    floatEl.style.top = "20px";
+    widget.appendChild(floatEl);
+    setTimeout(() => floatEl.remove(), 900);
+  }
+
+  const pct = Math.max(0, Math.min(100, Math.round((boss.hp / boss.maxHp) * 100)));
+  const hpDisp = document.getElementById("worldBossHpDisplay");
+  const hpFill = document.getElementById("worldBossHpFill");
+  if(hpDisp) hpDisp.textContent = `${boss.hp.toLocaleString()} / ${boss.maxHp.toLocaleString()} HP (${pct}%)`;
+  if(hpFill) hpFill.style.width = `${pct}%`;
+
+  updateChaosBossAdminControls();
+
+  if(boss.hp <= 0){
+    playChaosSfx("detonation");
+    setTimeout(() => playChaosSfx("triumph"), 400);
+    if(typeof confetti === "function"){
+      confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
+    }
+
+    if(typeof coins !== "undefined"){
+      coins += 2500;
+    }
+    const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+    if(curAcc){
+      curAcc.coins = (curAcc.coins || 0) + 2500;
+    }
+
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+
+    localStorage.removeItem("cardCollectorWorldBoss");
+    renderWorldBossBanner();
+    updateChaosBossAdminControls();
+
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🏆 WORLD BOSS SLAIN! ${boss.name} was vanquished! You received +2,500 Coins!`, true);
+    }
+  }
+};
+
+function initChaosLabPacks(){
+  const packSelect = document.getElementById("chaosPackSelect");
+  if(!packSelect || typeof packTiers !== "object" || !packTiers) return;
+  const prevVal = packSelect.value;
+  packSelect.innerHTML = "";
+  Object.keys(packTiers).forEach(key => {
+    const p = packTiers[key];
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = `${p.icon || "📦"} ${p.name || key} (${p.count || 5} Cards • ${p.baseCost || 100} Coins)`;
+    packSelect.appendChild(opt);
+  });
+  if(prevVal && packSelect.querySelector(`option[value="${prevVal}"]`)){
+    packSelect.value = prevVal;
+  }
+}
+
+function initChaosLabUI(){
+  initChaosLabPacks();
+  refreshAdminPlayerData();
+  updateChaosBossAdminControls();
+}
+window.initChaosLabUI = initChaosLabUI;
+
+// Wire up event listeners
+document.addEventListener("DOMContentLoaded", () => {
+  const rainBtn = document.getElementById("chaosCardRainBtn");
+  if(rainBtn) rainBtn.onclick = () => triggerCardRain(6);
+
+  const confettiBtn = document.getElementById("chaosConfettiStormBtn");
+  if(confettiBtn) confettiBtn.onclick = () => triggerMegaConfetti();
+
+  const empBtn = document.getElementById("chaosEmpGlitchBtn");
+  if(empBtn) empBtn.onclick = () => triggerEmpGlitch();
+
+  const discoBtn = document.getElementById("chaosDiscoModeBtn");
+  if(discoBtn) discoBtn.onclick = () => toggleDiscoMode();
+
+  const spinBtn = document.getElementById("chaosSpinReelBtn");
+  if(spinBtn) spinBtn.onclick = () => spinChaosCasino();
+
+  const busterBtn = document.getElementById("chaosRunPackBusterBtn");
+  if(busterBtn) busterBtn.onclick = () => runChaosPackBuster();
+
+  const bossSelect = document.getElementById("chaosBossSelect");
+  const customInputs = document.getElementById("chaosCustomBossInputs");
+  if(bossSelect && customInputs){
+    bossSelect.onchange = () => {
+      customInputs.style.display = bossSelect.value === "custom" ? "grid" : "none";
+    };
+  }
+
+  const summonBtn = document.getElementById("chaosSummonBossBtn");
+  if(summonBtn) summonBtn.onclick = () => {
+    const bossKey = bossSelect ? bossSelect.value : "ignis";
+    const customName = document.getElementById("chaosCustomBossName") ? document.getElementById("chaosCustomBossName").value : "";
+    const customHp = document.getElementById("chaosCustomBossHp") ? document.getElementById("chaosCustomBossHp").value : "";
+    summonWorldBoss(bossKey, customName, customHp);
+  };
+
+  const dismissBtn = document.getElementById("chaosDismissBossBtn");
+  if(dismissBtn) dismissBtn.onclick = () => dismissWorldBoss();
+
+  const healBtn = document.getElementById("chaosHealBossBtn");
+  if(healBtn) healBtn.onclick = () => healWorldBoss();
+
+  const nukeBtn = document.getElementById("chaosNukeBossBtn");
+  if(nukeBtn) nukeBtn.onclick = () => nukeWorldBoss();
+
+  document.querySelectorAll(".chaosSoundBtn").forEach(btn => {
+    btn.onclick = () => {
+      const sfx = btn.getAttribute("data-sfx");
+      playChaosSfx(sfx);
+      btn.style.transform = "scale(0.95)";
+      setTimeout(() => btn.style.transform = "none", 120);
+    };
+  });
+
+  renderWorldBossBanner();
+});
+
+// Immediate execution fallback if DOM already loaded
+if(document.readyState === "complete" || document.readyState === "interactive"){
+  setTimeout(() => {
+    renderWorldBossBanner();
+    updateChaosBossAdminControls();
+  }, 100);
 }

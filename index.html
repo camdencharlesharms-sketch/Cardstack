@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <!-- Free WebRTC P2P library to connect two devices via room codes -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <link rel="stylesheet" href="css/styles.css?v=3.0">
 </head>
 <body>
@@ -193,6 +194,7 @@
       <button class="admin-tab-btn" data-tab="tabCardManager" id="cardManagerTabBtn">🃏 Card Manager</button>
       <button class="admin-tab-btn" data-tab="tabEvents">🌪️ World Events</button>
       <button class="admin-tab-btn" data-tab="tabBroadcast">📢 Broadcast & Leaks</button>
+      <button class="admin-tab-btn" data-tab="tabChaosLab" id="chaosLabTabBtn" style="color:#fbbf24">⚡ Chaos Lab</button>
       <button class="admin-tab-btn" data-tab="tabPermissions" id="permissionsTabBtn" style="display:none">🛡 Sub-Admin Roles</button>
       <button class="admin-tab-btn" data-tab="tabUnreleased" id="unreleasedTabBtn" style="display:none;color:#fb7185">🔒 Unreleased Vault</button>
     </div>
@@ -453,6 +455,119 @@
       </div>
     </div>
 
+    <!-- TAB: CHAOS LAB & GOD TOOLS -->
+    <div class="admin-tab-content" id="tabChaosLab">
+      <div class="adminGrid">
+
+        <!-- CARD 1: VISUAL GOD POWERS & SCREEN FX -->
+        <div class="adminCard">
+          <h4>⚡ Screen FX & Particle Cannons</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0">
+            Trigger visual phenomena, card showers, and chromatic screen FX across the client.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button id="chaosCardRainBtn" class="accountBtn" style="background:#8b5cf6;padding:9px;font-size:12px;font-weight:700">🌧️ Card Rain Storm</button>
+            <button id="chaosConfettiStormBtn" class="accountBtn" style="background:#ec4899;padding:9px;font-size:12px;font-weight:700">🎉 Mega Confetti</button>
+            <button id="chaosEmpGlitchBtn" class="accountBtn" style="background:#ef4444;padding:9px;font-size:12px;font-weight:700">💥 Nuclear EMP Shake</button>
+            <button id="chaosDiscoModeBtn" class="accountBtn" style="background:#06b6d4;padding:9px;font-size:12px;font-weight:700">🌈 Rainbow Disco Aura</button>
+          </div>
+          <div id="chaosFxStatus" style="font-size:11px;color:#cbd5e1;background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:6px;min-height:22px;display:flex;align-items:center">
+            Ready to broadcast visual phenomena.
+          </div>
+        </div>
+
+        <!-- CARD 2: HIGH-ROLLER CASINO & LUCKY WHEEL -->
+        <div class="adminCard">
+          <h4>🎰 High-Roller Lucky Wheel</h4>
+          <label style="font-size:12px;color:#94a3b8">Target Beneficiary:</label>
+          <div style="display:flex;gap:8px">
+            <select id="chaosCasinoTargetSelect" class="adminSelect" style="flex:1;margin:0"></select>
+          </div>
+          <div id="chaosCasinoDisplay" style="background:radial-gradient(circle, #1e1b4b, #0f172a);border:2px solid #f59e0b;border-radius:12px;padding:14px;text-align:center;box-shadow:0 0 15px rgba(245,158,11,0.25)">
+            <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#fde68a;letter-spacing:1px">Lucky Wheel Prize Reel</div>
+            <div id="chaosCasinoReel" style="font-size:16px;font-weight:900;color:#fff;margin:8px 0;text-shadow:0 0 10px #fbbf24">✨ PULL LEVER TO SPIN ✨</div>
+            <div id="chaosCasinoSub" style="font-size:11px;color:#94a3b8">Prizes: 10k-50k Coins, Mythic & Divine Cards, God Luck Boosts</div>
+          </div>
+          <button id="chaosSpinReelBtn" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#000;font-weight:900;font-size:13px;padding:10px">🎰 SPIN LUCKY REEL</button>
+        </div>
+
+        <!-- CARD 3: 100x SPEED PACK BUSTER (BENCHMARK & MASS OPENER) -->
+        <div class="adminCard" style="grid-column: 1 / -1">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <h4>🌪️ 100x Pack Buster & Drop Matrix Benchmark</h4>
+            <div style="display:flex;align-items:center;gap:12px">
+              <label style="font-size:12px;color:#cbd5e1;display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="chaosPackClaimCards" style="cursor:pointer;accent-color:#10b981;width:15px;height:15px">
+                <span>Keep Pulled Cards in Collection</span>
+              </label>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center">
+            <select id="chaosPackSelect" class="adminSelect" style="margin:0"></select>
+            <select id="chaosPackCountSelect" class="adminSelect" style="margin:0">
+              <option value="10">10 Packs</option>
+              <option value="25">25 Packs</option>
+              <option value="50">50 Packs</option>
+              <option value="100" selected>100 Packs</option>
+            </select>
+            <button id="chaosRunPackBusterBtn" style="background:linear-gradient(135deg, #8b5cf6, #6366f1);font-weight:900;margin:0;padding:10px 14px">⚡ Unleash Simulation</button>
+          </div>
+          <div id="chaosPackBusterStats" style="background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;font-size:12px;min-height:60px">
+            <span style="color:#94a3b8">Select a booster pack tier and run simulation to benchmark drop rates or instantly mass-open into your collection.</span>
+          </div>
+        </div>
+
+        <!-- CARD 4: SYNTH SFX SOUNDBOARD -->
+        <div class="adminCard">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h4>🔊 Master SFX Synth Soundboard</h4>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="font-size:11px;color:#94a3b8">Vol:</label>
+              <input type="range" id="chaosSfxVolume" min="0" max="100" value="70" style="width:70px;accent-color:#38bdf8">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <button class="accountBtn chaosSoundBtn" data-sfx="triumph" style="background:rgba(16,185,129,0.15);border-color:#10b981;color:#6ee7b7">🎺 Victory Fanfare</button>
+            <button class="accountBtn chaosSoundBtn" data-sfx="packTear" style="background:rgba(56,189,248,0.15);border-color:#38bdf8;color:#7dd3fc">📦 Pack Foil Tear</button>
+            <button class="accountBtn chaosSoundBtn" data-sfx="laser" style="background:rgba(236,72,153,0.15);border-color:#ec4899;color:#f472b6">⚡ Critical Laser</button>
+            <button class="accountBtn chaosSoundBtn" data-sfx="warp" style="background:rgba(139,92,246,0.15);border-color:#8b5cf6;color:#c084fc">🌌 Cosmic Warp</button>
+            <button class="accountBtn chaosSoundBtn" data-sfx="coins" style="background:rgba(245,158,11,0.15);border-color:#f59e0b;color:#fcd34d">💰 Coin Waterfall</button>
+            <button class="accountBtn chaosSoundBtn" data-sfx="siren" style="background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5">🚨 Alert Siren</button>
+            <button class="accountBtn chaosSoundBtn" data-sfx="ascension" style="background:rgba(6,182,212,0.15);border-color:#06b6d4;color:#67e8f9">👑 Celestial Chimes</button>
+            <button class="accountBtn chaosSoundBtn" data-sfx="detonation" style="background:rgba(220,38,38,0.15);border-color:#dc2626;color:#f87171">💣 Nuclear Blast</button>
+          </div>
+        </div>
+
+        <!-- CARD 5: WORLD BOSS RAID SUMMONER -->
+        <div class="adminCard">
+          <h4>👾 World Boss Raid Summoner</h4>
+          <div style="display:flex;gap:8px">
+            <select id="chaosBossSelect" class="adminSelect" style="flex:1;margin:0">
+              <option value="ignis">🔥 Ignis, The Solar Behemoth (10,000 HP)</option>
+              <option value="umbra">🌑 Umbra, The Void Leviathan (25,000 HP)</option>
+              <option value="chronos">⚡ Chronos, The Time Devourer (50,000 HP)</option>
+              <option value="custom">✨ Custom World Boss...</option>
+            </select>
+          </div>
+          <div id="chaosCustomBossInputs" style="display:none;grid-template-columns:1fr 1fr;gap:6px">
+            <input id="chaosCustomBossName" class="adminInput" placeholder="Boss Name..." style="margin:0">
+            <input id="chaosCustomBossHp" class="adminInput" type="number" placeholder="Boss Max HP..." value="15000" style="margin:0">
+          </div>
+          <div class="adminBtnGroup">
+            <button id="chaosSummonBossBtn" style="background:linear-gradient(135deg, #dc2626, #b91c1c);color:#fff;font-weight:900">⚔️ Summon World Boss</button>
+            <button id="chaosDismissBossBtn" style="background:#475569">🛑 Dismiss Raid</button>
+          </div>
+          <div id="chaosBossAdminControls" style="display:none;margin-top:6px;gap:6px" class="adminBtnGroup">
+            <button id="chaosHealBossBtn" class="accountBtn" style="background:#059669;font-size:11px">💖 Restore Full HP</button>
+            <button id="chaosNukeBossBtn" class="accountBtn" style="background:#991b1b;font-size:11px">⚡ Admin 5,000 DMG Strike</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+
     <!-- TAB 6: SUB-ADMIN PERMISSIONS (Master Cam Only) -->
     <div class="admin-tab-content" id="tabPermissions">
       <div class="adminGrid">
@@ -503,6 +618,10 @@
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#e2e8f0;cursor:pointer">
               <input type="checkbox" id="subAdminPermBroadcast" style="width:15px;height:15px">
               <span>📢 Broadcast & Leaks</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#e2e8f0;cursor:pointer">
+              <input type="checkbox" id="subAdminPermChaosLab" style="width:15px;height:15px">
+              <span>⚡ Chaos Lab</span>
             </label>
           </div>
 
@@ -767,6 +886,7 @@
     <div id="message" style="margin-top:14px;font-weight:700;color:#60a5fa;min-height:24px"></div>
   </section>
 
+  <div id="worldBossBanner" style="display:none"></div>
   <div class="controls">
     <button class="active" data-filter="all">Full Binder</button>
     <button data-filter="collected">Owned</button>
