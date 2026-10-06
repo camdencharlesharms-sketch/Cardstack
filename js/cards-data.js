@@ -117,6 +117,26 @@ function formatDmg(val){
 }
 if(typeof window !== "undefined") window.formatDmg = formatDmg;
 
+function getRarityTheme(rarity){
+  const r = (rarity || "common").toLowerCase().trim();
+  switch(r){
+    case "divine":
+      return { bg: "rgba(56,189,248,0.2)", text: "#38bdf8", border: "#38bdf8" };
+    case "mythic":
+      return { bg: "rgba(236,72,153,0.2)", text: "#ec4899", border: "#ec4899" };
+    case "legendary":
+      return { bg: "rgba(245,158,11,0.2)", text: "#f59e0b", border: "#f59e0b" };
+    case "epic":
+      return { bg: "rgba(168,85,247,0.2)", text: "#a855f7", border: "#a855f7" };
+    case "rare":
+      return { bg: "rgba(59,130,246,0.2)", text: "#60a5fa", border: "#3b82f6" };
+    case "common":
+    default:
+      return { bg: "rgba(148,163,184,0.15)", text: "#cbd5e1", border: "#64748b" };
+  }
+}
+if(typeof window !== "undefined") window.getRarityTheme = getRarityTheme;
+
 function normalizeCards(cardList){
   if(!Array.isArray(cardList)) return [];
   const deleted = getDeletedCardsFromStorage();
@@ -256,6 +276,7 @@ if(typeof window !== "undefined"){
   window.cards = cards;
   window.currentUser = currentUser;
   window.accounts = accounts;
+  window.defaultCards = defaultCards;
   window.isLockdownMode = isLockdownMode;
 }
 
