@@ -138,7 +138,19 @@ function updateAccountUI(){
     adminOpenBtn.style.display = "inline-block";
     const homeBadge = document.getElementById("homeOnlineBadge");
     const badgeHtml = (homeBadge && homeBadge.outerHTML) ? homeBadge.outerHTML : "<span id=\"homeOnlineBadge\" style=\"background:#10b981;color:#052e16;font-size:10px;font-weight:900;padding:1px 6px;border-radius:10px;margin-left:4px\">🟢 1</span>";
-    adminOpenBtn.innerHTML = (isMaster ? "⚡ Admin Hub " : "🛡️ Sub-Admin Hub ") + badgeHtml;
+    if(isMaster){
+      adminOpenBtn.innerHTML = `⚡ Admin Hub ${badgeHtml}`;
+      adminOpenBtn.style.background = "";
+      adminOpenBtn.style.borderColor = "";
+      adminOpenBtn.style.color = "";
+      adminOpenBtn.style.boxShadow = "";
+    } else {
+      adminOpenBtn.innerHTML = `🛡️ Sub Admin ${badgeHtml}`;
+      adminOpenBtn.style.background = "linear-gradient(135deg, #0284c7, #0369a1)";
+      adminOpenBtn.style.borderColor = "#38bdf8";
+      adminOpenBtn.style.color = "#ffffff";
+      adminOpenBtn.style.boxShadow = "0 0 10px rgba(56,189,248,0.3)";
+    }
   } else {
     adminOpenBtn.style.display = "none";
     document.getElementById("adminModal").classList.remove("show");
@@ -149,6 +161,13 @@ function updateAccountUI(){
   const adminWipeSec = document.getElementById("adminWipeSection");
   const unreleasedTabBtn = document.getElementById("unreleasedTabBtn");
 
+  const tabBtnPlayers = document.querySelector('.admin-tab-btn[data-tab="tabPlayers"]');
+  const tabBtnEconomy = document.querySelector('.admin-tab-btn[data-tab="tabEconomy"]');
+  const tabBtnStudio = document.querySelector('.admin-tab-btn[data-tab="tabStudio"]');
+  const tabBtnCardMgr = document.getElementById("cardManagerTabBtn") || document.querySelector('.admin-tab-btn[data-tab="tabCardManager"]');
+  const tabBtnEvents = document.querySelector('.admin-tab-btn[data-tab="tabEvents"]');
+  const tabBtnBroadcast = document.querySelector('.admin-tab-btn[data-tab="tabBroadcast"]');
+
   let statusBanner = document.getElementById("subAdminStatusBanner");
 
   if(isMaster){
@@ -156,6 +175,14 @@ function updateAccountUI(){
     if(unreleasedTabBtn) unreleasedTabBtn.style.display = "block";
     if(masterDepositSec) masterDepositSec.style.display = "block";
     if(adminWipeSec) adminWipeSec.style.display = "flex";
+
+    if(tabBtnPlayers) tabBtnPlayers.style.display = "block";
+    if(tabBtnEconomy) tabBtnEconomy.style.display = "block";
+    if(tabBtnStudio) tabBtnStudio.style.display = "block";
+    if(tabBtnCardMgr) tabBtnCardMgr.style.display = "block";
+    if(tabBtnEvents) tabBtnEvents.style.display = "block";
+    if(tabBtnBroadcast) tabBtnBroadcast.style.display = "block";
+
     const headerEl = document.getElementById("adminHubHeader");
     if(headerEl) headerEl.textContent = "⚡ Supreme Admin Suite (Cam)";
     if(statusBanner) statusBanner.style.display = "none";
@@ -164,18 +191,49 @@ function updateAccountUI(){
     if(unreleasedTabBtn) unreleasedTabBtn.style.display = "none";
     if(masterDepositSec) masterDepositSec.style.display = "none";
     if(adminWipeSec) adminWipeSec.style.display = "none";
+
     const headerEl = document.getElementById("adminHubHeader");
     if(headerEl) headerEl.textContent = `🛡️ Sub-Admin Console (${currentUser})`;
 
-    // Reset tab to tabPlayer if currently on Cam-only tabs
+    const role = (typeof getSubAdminRole === "function") ? getSubAdminRole(currentUser) : (typeof subAdminRoles !== "undefined" ? subAdminRoles[currentUser] : null);
+    const perms = (typeof getSubAdminPermissions === "function") ? getSubAdminPermissions(role) : (role && role.permissions ? role.permissions : { players: true });
+
+    if(tabBtnPlayers) tabBtnPlayers.style.display = perms.players ? "block" : "none";
+    if(tabBtnEconomy) tabBtnEconomy.style.display = perms.economy ? "block" : "none";
+    if(tabBtnStudio) tabBtnStudio.style.display = perms.studio ? "block" : "none";
+    if(tabBtnCardMgr) tabBtnCardMgr.style.display = perms.cardManager ? "block" : "none";
+    if(tabBtnEvents) tabBtnEvents.style.display = perms.events ? "block" : "none";
+    if(tabBtnBroadcast) tabBtnBroadcast.style.display = perms.broadcast ? "block" : "none";
+
+    // Reset tab if currently on disallowed or Cam-only tabs
     const activeTab = document.querySelector(".admin-tab-content.active");
-    if(activeTab && (activeTab.id === "tabPermissions" || activeTab.id === "tabUnreleased")){
+    const isCurrentAllowed = activeTab && (
+      (activeTab.id === "tabPlayers" && perms.players) ||
+      (activeTab.id === "tabEconomy" && perms.economy) ||
+      (activeTab.id === "tabStudio" && perms.studio) ||
+      (activeTab.id === "tabCardManager" && perms.cardManager) ||
+      (activeTab.id === "tabEvents" && perms.events) ||
+      (activeTab.id === "tabBroadcast" && perms.broadcast)
+    );
+
+    if(!isCurrentAllowed){
       document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("active"));
       document.querySelectorAll(".admin-tab-content").forEach(c => c.classList.remove("active"));
-      const firstTabBtn = document.querySelector('.admin-tab-btn[data-tab="tabPlayer"]');
-      const firstTabContent = document.getElementById("tabPlayer");
-      if(firstTabBtn) firstTabBtn.classList.add("active");
-      if(firstTabContent) firstTabContent.classList.add("active");
+
+      let fallbackTabId = null;
+      if(perms.players) fallbackTabId = "tabPlayers";
+      else if(perms.studio) fallbackTabId = "tabStudio";
+      else if(perms.cardManager) fallbackTabId = "tabCardManager";
+      else if(perms.economy) fallbackTabId = "tabEconomy";
+      else if(perms.events) fallbackTabId = "tabEvents";
+      else if(perms.broadcast) fallbackTabId = "tabBroadcast";
+
+      if(fallbackTabId){
+        const fbBtn = document.querySelector('.admin-tab-btn[data-tab="' + fallbackTabId + '"]');
+        const fbContent = document.getElementById(fallbackTabId);
+        if(fbBtn) fbBtn.classList.add("active");
+        if(fbContent) fbContent.classList.add("active");
+      }
     }
 
     if(!statusBanner){
@@ -186,16 +244,32 @@ function updateAccountUI(){
         headerArea.parentNode.insertBefore(statusBanner, headerArea.nextSibling);
       }
     }
-    const role = (typeof getSubAdminRole === "function") ? getSubAdminRole(currentUser) : subAdminRoles[currentUser];
+
     if(statusBanner && role){
       const today = new Date().toDateString();
       const gifted = (role.lastGiftDate === today) ? (role.giftedToday || 0) : 0;
       const remCoins = Math.max(0, (role.dailyCap || 0) - gifted);
-      statusBanner.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.3);padding:8px 14px;border-radius:10px;margin-bottom:12px;font-size:12px;color:#bae6fd";
+
+      const grantedList = [];
+      if(perms.players) grantedList.push(`👥 Player Gifting (${remCoins.toLocaleString()} coins left today)`);
+      if(perms.players && role.canGiftSkins) grantedList.push(`🎨 Skin Gifting (${(role.allowedSkinIds || []).length} skins)`);
+      if(perms.studio) grantedList.push("🎨 Card Studio");
+      if(perms.cardManager) grantedList.push("🃏 Card Manager");
+      if(perms.economy) grantedList.push("🪙 Economy & RNG");
+      if(perms.events) grantedList.push("🌪️ World Events");
+      if(perms.broadcast) grantedList.push("📢 Broadcast & Leaks");
+
+      statusBanner.style.cssText = "display:flex;flex-direction:column;gap:6px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.3);padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:12px;color:#bae6fd";
       statusBanner.innerHTML = `
-        <div>🪙 Daily Coins: <b>${remCoins.toLocaleString()} / ${(role.dailyCap || 0).toLocaleString()}</b> remaining today</div>
-        <div>🎨 Skin Gifting: <b style="color:${role.canGiftSkins ? "#4ade80" : "#f87171"}">${role.canGiftSkins ? "Enabled" : "Disabled"}</b></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div>🛡️ <b>Sub-Admin: ${currentUser}</b></div>
+          <div>🪙 Daily Coin Budget: <b>${remCoins.toLocaleString()} / ${(role.dailyCap || 0).toLocaleString()}</b> left</div>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);padding-top:6px">
+          <b style="color:#7dd3fc">Granted Privileges:</b> ${grantedList.length > 0 ? grantedList.join(" • ") : "<span style=\"color:#f87171\">No console powers granted yet by Cam</span>"}
+        </div>
       `;
+      statusBanner.style.display = "flex";
     }
   } else {
     if(permTabBtn) permTabBtn.style.display = "none";
@@ -335,7 +409,7 @@ function startPackOpening(tierKey){
         const attacksHtml = card.attacks.map(atk => `
           <div class="attack-preview">
             <span class="attack-name">⚔️ ${atk.name}</span>
-            <span class="attack-dmg">${atk.dmg} DMG</span>
+            <span class="attack-dmg">${typeof formatDmg === "function" ? formatDmg(atk.dmg) : atk.dmg + " DMG"}</span>
           </div>
         `).join("");
 
@@ -348,7 +422,7 @@ function startPackOpening(tierKey){
             <div class="face ${card.rarity}">
               <div class="card-top">
                 <span class="rarity">${card.rarity}${card.isUnreleased ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : ""}</span>
-                <span style="font-size:11px;font-weight:800;color:#fca5a5">${card.hp || 80} HP</span>
+                <span style="font-size:11px;font-weight:800;color:#fca5a5">${typeof formatHp === "function" ? formatHp(card.hp) : (card.hp || 80) + " HP"}</span>
               </div>
               <div class="card-art-frame">
                 <img class="card-art-img" src="${card.image}" alt="${card.name}">
@@ -479,7 +553,7 @@ function render(){
     const attacksHtml = (has || isStudioCard) ? attacksList.map(atk => `
       <div class="attack-preview">
         <span class="attack-name">⚔️ ${atk.name}</span>
-        <span class="attack-dmg">${atk.dmg} DMG</span>
+        <span class="attack-dmg">${typeof formatDmg === "function" ? formatDmg(atk.dmg) : atk.dmg + " DMG"}</span>
       </div>
     `).join("") : `
       <div class="attack-preview"><span class="attack-name">⚔️ ???</span><span class="attack-dmg">?? DMG</span></div>
@@ -502,7 +576,7 @@ function render(){
 
     const cardFaceRarity = (has || isStudioCard) ? c.rarity : "";
     const displayedRarity = (has || isStudioCard) ? rarityDisplayName : "Locked";
-    const displayedHp = (has || isStudioCard) ? ((c.hp || 80) + " HP") : "???";
+    const displayedHp = (has || isStudioCard) ? ((typeof formatHp === "function") ? formatHp(c.hp) : ((c.hp || 80) + " HP")) : "???";
     const displayedName = (has || isStudioCard) ? c.name : "Unknown Card";
     const displayedDesc = (has || isStudioCard) ? c.desc : "Discover this artifact by opening booster packs.";
 

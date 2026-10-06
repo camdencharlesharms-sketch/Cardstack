@@ -174,6 +174,8 @@ function connectToCamBeacon(){
         handleIncomingCardOverridesSync(data.deletedCards, data.cardOverrides);
       } else if(data.type === "sync_card_attacks"){
         handleIncomingCardAttacksSync(data.cardId, data.attacks);
+      } else if(data.type === "sync_card_hp"){
+        handleIncomingCardHpSync(data.cardId, data.hp);
       } else if(data.type === "sync_card_deleted"){
         handleIncomingCardDeletedSync(data.cardId, data.cardName);
       }
@@ -361,6 +363,8 @@ if(presenceBroadcast){
       handleIncomingCardOverridesSync(data.deletedCards, data.cardOverrides);
     } else if(data.type === "sync_card_attacks"){
       handleIncomingCardAttacksSync(data.cardId, data.attacks);
+    } else if(data.type === "sync_card_hp"){
+      handleIncomingCardHpSync(data.cardId, data.hp);
     } else if(data.type === "sync_card_deleted"){
       handleIncomingCardDeletedSync(data.cardId, data.cardName);
     }
@@ -958,6 +962,53 @@ function handleIncomingLockdownSync(isLockdown){
 }
 if(typeof window !== "undefined") window.handleIncomingLockdownSync = handleIncomingLockdownSync;
 
+function broadcastCardHpUpdated(cardId, hp){
+  const payload = {
+    type: "sync_card_hp",
+    cardId: cardId,
+    hp: hp
+  };
+  if(presenceBroadcast){
+    try { presenceBroadcast.postMessage(payload); } catch(e){}
+  }
+  if(window.activePresencePeers && typeof window.activePresencePeers === "object"){
+    Object.keys(window.activePresencePeers).forEach(peerUser => {
+      try { window.activePresencePeers[peerUser].send(payload); } catch(e){}
+    });
+  }
+  if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+    window.allConnectedPresenceConns.forEach(conn => {
+      try { if(conn && conn.open) conn.send(payload); } catch(e){}
+    });
+  }
+}
+if(typeof window !== "undefined") window.broadcastCardHpUpdated = broadcastCardHpUpdated;
+
+function handleIncomingCardHpSync(cardId, hp){
+  if(!cardId || hp === undefined) return;
+  let targetCard = null;
+  if(Array.isArray(cards)){
+    targetCard = cards.find(c => (c.id || "card_" + c.name.toLowerCase().replace(/\s+/g, "_")) === cardId || c.name.toLowerCase() === cardId.toLowerCase());
+  }
+  if(!targetCard && typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
+    targetCard = unreleasedCards.find(c => (c.id || "vault_" + c.name.toLowerCase().replace(/\s+/g, "_")) === cardId || c.name.toLowerCase() === cardId.toLowerCase());
+  }
+  if(targetCard){
+    targetCard.hp = hp;
+  }
+
+  if(typeof getCardOverridesFromStorage === "function" && typeof saveCardOverridesToStorage === "function"){
+    const overrides = getCardOverridesFromStorage();
+    overrides[cardId] = overrides[cardId] || {};
+    overrides[cardId].hp = hp;
+    saveCardOverridesToStorage(overrides);
+  }
+
+  if(typeof renderCardManager === "function") renderCardManager();
+  if(typeof render === "function") render();
+}
+if(typeof window !== "undefined") window.handleIncomingCardHpSync = handleIncomingCardHpSync;
+
 function broadcastCardAttacksUpdated(cardId, attacks){
   const payload = {
     type: "sync_card_attacks",
@@ -1089,8 +1140,9 @@ function handleIncomingCardOverridesSync(deletedCards, cardOverrides){
       const ov = cardOverrides[cardId];
       if(!ov) return;
       const found = Array.isArray(cards) ? cards.find(c => (c.id || "card_" + c.name.toLowerCase().replace(/\s+/g, "_")) === cardId || c.name.toLowerCase() === cardId.toLowerCase()) : null;
-      if(found && Array.isArray(ov.attacks)){
-        found.attacks = ov.attacks;
+      if(found){
+        if(Array.isArray(ov.attacks)) found.attacks = ov.attacks;
+        if(ov.hp !== undefined) found.hp = ov.hp;
       }
     });
   }

@@ -123,7 +123,7 @@ function renderArenaCardPicker(){
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;font-weight:900;text-transform:uppercase">
           <span style="color:#38bdf8">${c.rarity || 'Common'} ${vaultBadge}</span>
-          <span style="color:#fca5a5">${c.hp || 80} HP</span>
+          <span style="color:#fca5a5">${typeof formatHp === "function" ? formatHp(c.hp) : (c.hp || 80) + " HP"}</span>
         </div>
         <img src="${c.image || ''}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin:6px 0;border:1px solid rgba(255,255,255,0.1)">
         <b style="font-size:13px;display:block;text-align:center">${c.name}</b>
@@ -146,7 +146,7 @@ function renderArenaCardPicker(){
   battlePlayerCard = activeCard;
   const badgeEl = document.getElementById("selectedChampionBadge");
   if(badgeEl){
-    badgeEl.textContent = `Selected: ${activeCard.name} (${activeCard.hp || 80} HP)${selectedItem.isVault ? ' [Vault Card]' : (selectedItem.isStarter ? ' [Starter]' : '')}`;
+    badgeEl.textContent = `Selected: ${activeCard.name} (${typeof formatHp === "function" ? formatHp(activeCard.hp) : (activeCard.hp || 80) + " HP"})${selectedItem.isVault ? ' [Vault Card]' : (selectedItem.isStarter ? ' [Starter]' : '')}`;
   }
 }
 
@@ -524,11 +524,31 @@ function handleIncomingBattleData(data, isHost){
     setupCombatInterface("YOU (CHALLENGER)", hostName.toUpperCase(), false);
     appendBattleLog(`<div style="color:#4ade80">⚔️ Connected to Host! <b>${hostName}</b> strikes first.</div>`);
   } else if(data.type === "attack"){
-    const dmg = Number(data.dmg) || 15;
+    const isAtkInf = (typeof isInfiniteValue === "function" && isInfiniteValue(data.dmg)) || data.dmg === "Infinity";
     const attackName = data.attackName || "Strike";
 
     triggerBattleAnimation("ai", "player");
 
+    if(isAtkInf){
+      battlePlayerHp = 0;
+      updateBattleHpBars();
+      appendBattleLog(`💥 <b>${battleOppCard.name}</b> hit you with <span style="color:#fca5a5">${attackName}</span> dealing <b style="color:#ef4444">⚡ ∞ INFINITE DAMAGE (INSTANT KO)!</b>`);
+      appendBattleLog(`💀 <b style="color:#ef4444">DEFEAT!</b> Your champion was knocked out!`);
+      triggerDefeat();
+      return;
+    }
+
+    if(typeof isInfiniteValue === "function" && isInfiniteValue(battlePlayerHp)){
+      updateBattleHpBars();
+      appendBattleLog(`🛡️ <b>${battleOppCard.name}</b> attacked with <span style="color:#fca5a5">${attackName}</span>, but your champion has <b style="color:#38bdf8">∞ INFINITE HP</b> and took 0 damage!`);
+      isPlayerTurn = true;
+      setAttacksDisabled(false);
+      document.getElementById("turnInstructionText").textContent = "Your turn! Choose an attack:";
+      appendBattleLog(`<span style="color:#38bdf8">It's your turn to strike!</span>`);
+      return;
+    }
+
+    const dmg = Number(data.dmg) || 15;
     battlePlayerHp = Math.max(0, battlePlayerHp - dmg);
     updateBattleHpBars();
     appendBattleLog(`⚔️ <b>${battleOppCard.name}</b> hit you with <span style="color:#fca5a5">${attackName}</span> for <b>${dmg}</b> damage!`);
@@ -587,8 +607,8 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
   if(!battlePlayerCard) battlePlayerCard = cards[0];
   if(!battleOppCard) battleOppCard = cards[1] || cards[0];
 
-  battlePlayerHp = battlePlayerCard.hp || 85;
-  battleOppHp = battleOppCard.hp || 85;
+  battlePlayerHp = (typeof isInfiniteValue === "function" && isInfiniteValue(battlePlayerCard.hp)) ? Infinity : (battlePlayerCard.hp || 85);
+  battleOppHp = (typeof isInfiniteValue === "function" && isInfiniteValue(battleOppCard.hp)) ? Infinity : (battleOppCard.hp || 85);
   isPlayerTurn = playerStartsFirst;
 
   const victoryBanner = document.getElementById("victoryBanner");
@@ -617,7 +637,9 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
   playerAttacks.forEach((atk) => {
     const btn = document.createElement("button");
     btn.className = "attack-btn";
-    btn.innerHTML = `<span>⚔️ <b>${atk.name}</b></span> <span style="color:#fbbf24">${atk.dmg} DMG</span>`;
+    const isInf = (typeof isInfiniteValue === "function" && isInfiniteValue(atk.dmg)) || atk.dmg === "Infinity";
+    const dmgLabel = isInf ? "∞ INFINITE DMG" : (typeof formatDmg === "function" ? formatDmg(atk.dmg) : `${atk.dmg} DMG`);
+    btn.innerHTML = `<span>⚔️ <b>${atk.name}</b></span> <span style="color:${isInf ? "#f43f5e;font-weight:900" : "#fbbf24"}">${dmgLabel}</span>`;
     btn.onclick = () => performPlayerAttack(atk);
     attacksContainer.appendChild(btn);
   });
@@ -640,17 +662,25 @@ function setAttacksDisabled(disabled){
 }
 
 function updateBattleHpBars(){
-  const maxPlayerHp = (battlePlayerCard && battlePlayerCard.hp) ? battlePlayerCard.hp : 85;
-  const maxOppHp = (battleOppCard && battleOppCard.hp) ? battleOppCard.hp : 85;
+  const isPlayerInf = (typeof isInfiniteValue === "function" && (isInfiniteValue(battlePlayerHp) || (battlePlayerCard && isInfiniteValue(battlePlayerCard.hp))));
+  const isOppInf = (typeof isInfiniteValue === "function" && (isInfiniteValue(battleOppHp) || (battleOppCard && isInfiniteValue(battleOppCard.hp))));
 
-  const playerPct = Math.max(0, (battlePlayerHp / maxPlayerHp) * 100);
-  const oppPct = Math.max(0, (battleOppHp / maxOppHp) * 100);
+  const maxPlayerHp = isPlayerInf ? "Infinity" : ((battlePlayerCard && battlePlayerCard.hp) ? battlePlayerCard.hp : 85);
+  const maxOppHp = isOppInf ? "Infinity" : ((battleOppCard && battleOppCard.hp) ? battleOppCard.hp : 85);
+
+  const playerPct = isPlayerInf ? (battlePlayerHp > 0 ? 100 : 0) : Math.max(0, (battlePlayerHp / maxPlayerHp) * 100);
+  const oppPct = isOppInf ? (battleOppHp > 0 ? 100 : 0) : Math.max(0, (battleOppHp / maxOppHp) * 100);
 
   document.getElementById("playerHpBar").style.width = playerPct + "%";
   document.getElementById("aiHpBar").style.width = oppPct + "%";
 
-  document.getElementById("playerHpText").textContent = `${Math.max(0, battlePlayerHp)} / ${maxPlayerHp} HP`;
-  document.getElementById("aiHpText").textContent = `${Math.max(0, battleOppHp)} / ${maxOppHp} HP`;
+  document.getElementById("playerHpText").textContent = isPlayerInf
+    ? (battlePlayerHp > 0 ? "∞ / ∞ HP" : "0 / ∞ HP")
+    : `${Math.max(0, battlePlayerHp)} / ${maxPlayerHp} HP`;
+
+  document.getElementById("aiHpText").textContent = isOppInf
+    ? (battleOppHp > 0 ? "∞ / ∞ HP" : "0 / ∞ HP")
+    : `${Math.max(0, battleOppHp)} / ${maxOppHp} HP`;
 }
 
 function appendBattleLog(msg){
@@ -742,16 +772,42 @@ function performPlayerAttack(attackObj){
 
   triggerBattleAnimation("player", "ai");
 
+  const isAtkInf = (typeof isInfiniteValue === "function" && isInfiniteValue(attackObj.dmg)) || attackObj.dmg === "Infinity";
+
+  if(isAtkInf){
+    battleOppHp = 0;
+    updateBattleHpBars();
+    appendBattleLog(`💥 <b>${battlePlayerCard.name}</b> executed <span style="color:#fca5a5">${attackObj.name}</span> dealing <b style="color:#ef4444">⚡ ∞ INFINITE DAMAGE (INSTANT KO)!</b>`);
+
+    if(isMultiplayerMode){
+      if(p2pConnection && p2pConnection.open){
+        p2pConnection.send({ type: "attack", attackName: attackObj.name, dmg: "Infinity" });
+      } else if(isLocalChannelMode && localArenaChannel){
+        localArenaChannel.postMessage({ type: "attack", room: myRoomCode, attackName: attackObj.name, dmg: "Infinity" });
+      }
+    }
+
+    triggerVictory();
+    appendBattleLog(`🏆 <b style="color:#4ade80">YOU WON!</b> Earned <span style="color:#fbbf24">+${25 * eventCoinMultiplier} Coins</span>!`);
+    return;
+  }
+
+  const isOppHpInf = (typeof isInfiniteValue === "function" && isInfiniteValue(battleOppHp));
   const playerDmg = Math.floor(attackObj.dmg * (0.85 + Math.random() * 0.3));
-  battleOppHp = Math.max(0, battleOppHp - playerDmg);
-  appendBattleLog(`💥 <b>${battlePlayerCard.name}</b> executed <span style="color:#fca5a5">${attackObj.name}</span> dealing <b>${playerDmg}</b> damage!`);
+
+  if(isOppHpInf){
+    appendBattleLog(`🛡️ <b>${battleOppCard.name}</b> has <b style="color:#38bdf8">∞ INFINITE HP</b> and absorbed ${attackObj.name} with 0 damage!`);
+  } else {
+    battleOppHp = Math.max(0, battleOppHp - playerDmg);
+    appendBattleLog(`💥 <b>${battlePlayerCard.name}</b> executed <span style="color:#fca5a5">${attackObj.name}</span> dealing <b>${playerDmg}</b> damage!`);
+  }
   updateBattleHpBars();
 
   if(isMultiplayerMode){
     if(p2pConnection && p2pConnection.open){
-      p2pConnection.send({ type: "attack", attackName: attackObj.name, dmg: playerDmg });
+      p2pConnection.send({ type: "attack", attackName: attackObj.name, dmg: isOppHpInf ? 0 : playerDmg });
     } else if(isLocalChannelMode && localArenaChannel){
-      localArenaChannel.postMessage({ type: "attack", room: myRoomCode, attackName: attackObj.name, dmg: playerDmg });
+      localArenaChannel.postMessage({ type: "attack", room: myRoomCode, attackName: attackObj.name, dmg: isOppHpInf ? 0 : playerDmg });
     }
   }
 
@@ -774,10 +830,30 @@ function performPlayerAttack(attackObj){
         : [{ name: "Quick Strike", dmg: 18 }, { name: "Power Burst", dmg: 32 }];
 
       const aiAttack = oppAttacks[Math.floor(Math.random() * oppAttacks.length)];
-      const aiDmg = Math.floor(aiAttack.dmg * (0.85 + Math.random() * 0.3));
+      const isAiAtkInf = (typeof isInfiniteValue === "function" && isInfiniteValue(aiAttack.dmg)) || aiAttack.dmg === "Infinity";
 
       triggerBattleAnimation("ai", "player");
 
+      if(isAiAtkInf){
+        battlePlayerHp = 0;
+        updateBattleHpBars();
+        appendBattleLog(`💥 <b>AI's ${battleOppCard.name}</b> unleashed <span style="color:#fca5a5">${aiAttack.name}</span> dealing <b style="color:#ef4444">⚡ ∞ INFINITE DAMAGE (INSTANT KO)!</b>`);
+        appendBattleLog(`💀 <b style="color:#ef4444">DEFEAT!</b> Your champion was knocked out!`);
+        triggerDefeat();
+        return;
+      }
+
+      if(typeof isInfiniteValue === "function" && isInfiniteValue(battlePlayerHp)){
+        updateBattleHpBars();
+        appendBattleLog(`🛡️ <b>AI's ${battleOppCard.name}</b> used <span style="color:#fca5a5">${aiAttack.name}</span>, but your champion has <b style="color:#38bdf8">∞ INFINITE HP</b> and took 0 damage!`);
+        isPlayerTurn = true;
+        setAttacksDisabled(false);
+        document.getElementById("turnInstructionText").textContent = "Your turn! Choose an attack:";
+        appendBattleLog(`<span style="color:#38bdf8">It's your turn to strike!</span>`);
+        return;
+      }
+
+      const aiDmg = Math.floor(aiAttack.dmg * (0.85 + Math.random() * 0.3));
       battlePlayerHp = Math.max(0, battlePlayerHp - aiDmg);
       updateBattleHpBars();
       appendBattleLog(`🤖 <b>AI's ${battleOppCard.name}</b> used <span style="color:#fca5a5">${aiAttack.name}</span> dealing <b>${aiDmg}</b> damage!`);
@@ -791,7 +867,8 @@ function performPlayerAttack(attackObj){
       isPlayerTurn = true;
       setAttacksDisabled(false);
       document.getElementById("turnInstructionText").textContent = "Your turn! Choose an attack:";
-    }, 900);
+      appendBattleLog(`<span style="color:#38bdf8">It's your turn to strike!</span>`);
+    }, 1100);
   }
 }
 

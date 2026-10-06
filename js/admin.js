@@ -351,6 +351,7 @@ function refreshAdminPlayerData(){
 
 function renderSubAdminRolesList(){
   const listEl = document.getElementById("subAdminRolesList");
+  if(!listEl) return;
   listEl.innerHTML = "";
   const subAdminKeys = Object.keys(subAdminRoles);
 
@@ -363,19 +364,80 @@ function renderSubAdminRolesList(){
     const role = subAdminRoles[user];
     if(!role || !role.active) return;
 
+    const perms = (typeof getSubAdminPermissions === "function") ? getSubAdminPermissions(role) : (role.permissions || { players: true });
+    const permLabels = [];
+    if(perms.players) permLabels.push("👥 Players");
+    if(perms.studio) permLabels.push("🎨 Studio");
+    if(perms.cardManager) permLabels.push("🃏 Card Mgr");
+    if(perms.economy) permLabels.push("🪙 Economy");
+    if(perms.events) permLabels.push("🌪️ Events");
+    if(perms.broadcast) permLabels.push("📢 Broadcast");
+    const permsSummary = permLabels.length > 0 ? permLabels.join(", ") : "None";
+
     const div = document.createElement("div");
-    div.style = "background:rgba(0,0,0,0.35);padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center";
+    div.style = "background:rgba(0,0,0,0.35);padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px";
     div.innerHTML = `
-      <div>
-        <b style="color:#38bdf8">${user}</b>
-        <div style="font-size:12px;color:#cbd5e1">Daily Coin Cap: <b>${role.dailyCap || 0} 🪙</b> | Gifted Today: ${role.giftedToday || 0}</div>
+      <div style="flex:1;min-width:200px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <b style="color:#38bdf8;font-size:14px">${user}</b>
+          <span style="font-size:10px;font-weight:900;background:rgba(56,189,248,0.2);color:#38bdf8;padding:1px 6px;border-radius:4px;border:1px solid rgba(56,189,248,0.4)">SUB-ADMIN</span>
+        </div>
+        <div style="font-size:12px;color:#cbd5e1;margin-top:2px">Daily Cap: <b>${role.dailyCap || 0} 🪙</b> | Gifted Today: ${role.giftedToday || 0}</div>
         <div style="font-size:11px;color:#94a3b8">Can Gift Skins: <b>${role.canGiftSkins ? 'Yes' : 'No'}</b> (${(role.allowedSkinIds || []).length} allowed)</div>
+        <div style="font-size:11px;color:#a78bfa;margin-top:2px"><b>Powers:</b> ${permsSummary}</div>
       </div>
-      <button class="accountBtn" style="background:#dc2626;padding:6px 12px;font-size:12px" onclick="revokeSubAdminRole('${user}')">Revoke</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="accountBtn" style="background:#0284c7;padding:5px 10px;font-size:11px;font-weight:700" onclick="editSubAdminRole('${user}')">✏️ Edit</button>
+        <button class="accountBtn" style="background:#dc2626;padding:5px 10px;font-size:11px;font-weight:700" onclick="revokeSubAdminRole('${user}')">Revoke</button>
+      </div>
     `;
     listEl.appendChild(div);
   });
 }
+
+window.editSubAdminRole = function(user){
+  const role = (typeof getSubAdminRole === "function") ? getSubAdminRole(user) : subAdminRoles[user];
+  if(!role) return;
+
+  const targetSelect = document.getElementById("subAdminTargetSelect");
+  const customInput = document.getElementById("subAdminCustomPlayerInput");
+  if(targetSelect){
+    let foundOption = false;
+    for(let i = 0; i < targetSelect.options.length; i++){
+      if(targetSelect.options[i].value.toLowerCase() === user.toLowerCase()){
+        targetSelect.selectedIndex = i;
+        foundOption = true;
+        break;
+      }
+    }
+    if(!foundOption && customInput) customInput.value = user;
+    else if(customInput) customInput.value = "";
+  } else if(customInput){
+    customInput.value = user;
+  }
+
+  const dailyCapInput = document.getElementById("subAdminDailyCapInput");
+  if(dailyCapInput) dailyCapInput.value = role.dailyCap || 0;
+
+  const allowSkinsCheck = document.getElementById("subAdminAllowSkinsCheck");
+  if(allowSkinsCheck) allowSkinsCheck.checked = !!role.canGiftSkins;
+
+  const allowedIds = role.allowedSkinIds || [];
+  document.querySelectorAll(".subadmin-skin-check").forEach(cb => {
+    cb.checked = allowedIds.includes(parseInt(cb.value, 10));
+  });
+
+  const perms = (typeof getSubAdminPermissions === "function") ? getSubAdminPermissions(role) : (role.permissions || { players: true });
+  if(document.getElementById("subAdminPermPlayers")) document.getElementById("subAdminPermPlayers").checked = perms.players !== false;
+  if(document.getElementById("subAdminPermStudio")) document.getElementById("subAdminPermStudio").checked = !!perms.studio;
+  if(document.getElementById("subAdminPermCardManager")) document.getElementById("subAdminPermCardManager").checked = !!perms.cardManager;
+  if(document.getElementById("subAdminPermEconomy")) document.getElementById("subAdminPermEconomy").checked = !!perms.economy;
+  if(document.getElementById("subAdminPermEvents")) document.getElementById("subAdminPermEvents").checked = !!perms.events;
+  if(document.getElementById("subAdminPermBroadcast")) document.getElementById("subAdminPermBroadcast").checked = !!perms.broadcast;
+
+  const card = document.getElementById("subAdminDailyCapInput") ? document.getElementById("subAdminDailyCapInput").closest(".adminCard") : null;
+  if(card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+};
 
 function checkLeaksDisplay(){
   const currentLeak = localStorage.getItem("cardCollectorLeak");
@@ -517,7 +579,7 @@ document.getElementById("adminCloseBtn").onclick = ()=>{
 
 // Event modifiers handler
 document.getElementById("applyServerEventsBtn").onclick = ()=>{
-  if(!isMasterAdmin()) return alert("Only master admin Cam can alter world events.");
+  if(!isMasterAdmin() && !canSubAdminPerform("events")) return alert("You do not have permission to alter world events.");
 
   eventCoinMultiplier = parseInt(document.getElementById("eventCoinMultiplierSelect").value);
   eventPackDiscount = parseInt(document.getElementById("eventPackDiscountSelect").value);
@@ -530,7 +592,7 @@ document.getElementById("applyServerEventsBtn").onclick = ()=>{
 };
 
 document.getElementById("toggleMaintenanceBtn").onclick = ()=>{
-  if(!isMasterAdmin()) return alert("Only Cam can toggle maintenance mode.");
+  if(!isMasterAdmin() && !canSubAdminPerform("events")) return alert("You do not have permission to toggle maintenance mode.");
   isMaintenanceMode = !isMaintenanceMode;
   localStorage.setItem("cardCollectorMaintenance", isMaintenanceMode.toString());
   document.getElementById("toggleMaintenanceBtn").textContent = isMaintenanceMode ? "ON" : "OFF";
@@ -540,7 +602,7 @@ document.getElementById("toggleMaintenanceBtn").onclick = ()=>{
 const toggleLockdownBtn = document.getElementById("toggleLockdownBtn");
 if(toggleLockdownBtn){
   toggleLockdownBtn.onclick = ()=>{
-    if(!isMasterAdmin()) return alert("Only master admin Cam can toggle server lockdown mode.");
+    if(!isMasterAdmin() && !canSubAdminPerform("events")) return alert("You do not have permission to toggle server lockdown mode.");
     isLockdownMode = !isLockdownMode;
     localStorage.setItem("cardCollectorLockdown", isLockdownMode.toString());
     if(typeof window !== "undefined") window.isLockdownMode = isLockdownMode;
@@ -679,13 +741,23 @@ document.getElementById("saveSubAdminRoleBtn").onclick = ()=>{
     }
   });
 
+  const permissions = {
+    players: document.getElementById("subAdminPermPlayers") ? document.getElementById("subAdminPermPlayers").checked : true,
+    studio: document.getElementById("subAdminPermStudio") ? document.getElementById("subAdminPermStudio").checked : false,
+    cardManager: document.getElementById("subAdminPermCardManager") ? document.getElementById("subAdminPermCardManager").checked : false,
+    economy: document.getElementById("subAdminPermEconomy") ? document.getElementById("subAdminPermEconomy").checked : false,
+    events: document.getElementById("subAdminPermEvents") ? document.getElementById("subAdminPermEvents").checked : false,
+    broadcast: document.getElementById("subAdminPermBroadcast") ? document.getElementById("subAdminPermBroadcast").checked : false
+  };
+
   subAdminRoles[target] = {
     active: true,
     dailyCap: dailyCap,
     giftedToday: 0,
     lastGiftDate: new Date().toDateString(),
     canGiftSkins: canGiftSkins,
-    allowedSkinIds: allowedSkinIds
+    allowedSkinIds: allowedSkinIds,
+    permissions: permissions
   };
 
   localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
@@ -754,6 +826,7 @@ window.revokeSubAdminRole = function(user){
 };
 
 document.getElementById("adminCreateCardBtn").onclick = ()=>{
+  if(!isMasterAdmin() && !canSubAdminPerform("studio")) return alert("You do not have permission to use the Card Studio.");
   const name = document.getElementById("newCardName").value.trim();
   const rarity = document.getElementById("newCardRarity").value;
   const desc = document.getElementById("newCardDesc").value.trim();
@@ -864,6 +937,7 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
 };
 
 document.getElementById("adminUpdateCardArtBtn").onclick = ()=>{
+  if(!isMasterAdmin() && !canSubAdminPerform("studio")) return alert("You do not have permission to use the Card Studio.");
   const idx = parseInt(document.getElementById("skinSelect").value, 10);
   if(isNaN(idx)) return alert("Select an existing card from the dropdown to update.");
 
@@ -909,6 +983,7 @@ document.getElementById("adminGiveSkinBtn").onclick = ()=>{
   if(isNaN(idx)) return alert("Select a valid card to grant.");
 
   if(isSubAdmin() && !isMasterAdmin()){
+    if(!canSubAdminPerform("players") && !canSubAdminPerform("economy")) return alert("Permission Denied: Master Cam has not granted you player coin gifting powers.");
     const role = (typeof getSubAdminRole === "function") ? getSubAdminRole(currentUser) : subAdminRoles[currentUser];
     if(!role || !role.active || !role.canGiftSkins){
       return alert("Permission Denied: Your sub-admin role is not authorized to gift skins.");
@@ -1102,12 +1177,14 @@ document.getElementById("adminSaveLuckBtn").onclick = ()=>{
 };
 
 document.getElementById("adminPostLeakBtn").onclick = ()=>{
+  if(!isMasterAdmin() && !canSubAdminPerform("broadcast")) return alert("You do not have permission to post broadcasts or leaks.");
   const txt = document.getElementById("adminLeakInput").value.trim();
   localStorage.setItem("cardCollectorLeak", txt);
   checkLeaksDisplay();
   alert("Broadcast transmitted.");
 };
 document.getElementById("adminClearLeakBtn").onclick = ()=>{
+  if(!isMasterAdmin() && !canSubAdminPerform("broadcast")) return alert("You do not have permission to delete broadcasts or leaks.");
   localStorage.removeItem("cardCollectorLeak");
   document.getElementById("adminLeakInput").value = "";
   checkLeaksDisplay();
@@ -1956,57 +2033,57 @@ function renderCardManager(){
   const container = document.getElementById("cardManagerList");
   if(!container) return;
 
+  const allCards = getAllCardsForManager();
+  const totalCountEl = document.getElementById("cardManagerTotalCount");
+  if(totalCountEl) totalCountEl.textContent = allCards.length;
+
   const searchInput = document.getElementById("cardManagerSearchInput");
   const raritySelect = document.getElementById("cardManagerRarityFilter");
   const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
   const filterRarity = (raritySelect && raritySelect.value) ? raritySelect.value : "all";
 
-  const allItems = getAllCardsForManager();
-
-  const filtered = allItems.filter(item => {
+  const filtered = allCards.filter(item => {
     const c = item.card;
-    if(filterRarity !== "all"){
-      if(filterRarity === "studio" && item.source !== "studio") return false;
-      if(filterRarity === "vault" && item.source !== "vault") return false;
-      if(filterRarity !== "studio" && filterRarity !== "vault" && c.rarity !== filterRarity) return false;
+    if(!c) return false;
+
+    // Filter by rarity / source
+    if(filterRarity === "studio" && !c.isStudio && !c.isCustom) return false;
+    if(filterRarity === "vault" && item.source !== "vault") return false;
+    if(filterRarity !== "all" && filterRarity !== "studio" && filterRarity !== "vault"){
+      if(c.rarity.toLowerCase() !== filterRarity.toLowerCase()) return false;
     }
+
+    // Filter by query (name or attacks)
     if(query){
-      const nameMatch = c.name && c.name.toLowerCase().includes(query);
-      const descMatch = c.desc && c.desc.toLowerCase().includes(query);
-      const attackMatch = Array.isArray(c.attacks) && c.attacks.some(a => a.name && a.name.toLowerCase().includes(query));
-      if(!nameMatch && !descMatch && !attackMatch) return false;
+      const nameMatch = (c.name || "").toLowerCase().includes(query);
+      const descMatch = (c.desc || "").toLowerCase().includes(query);
+      const atkMatch = Array.isArray(c.attacks) && c.attacks.some(a => (a.name || "").toLowerCase().includes(query));
+      if(!nameMatch && !descMatch && !atkMatch) return false;
     }
+
     return true;
   });
 
-  const totalCountEl = document.getElementById("cardManagerTotalCount");
-  if(totalCountEl) totalCountEl.textContent = filtered.length;
-
   if(filtered.length === 0){
-    container.innerHTML = `<div style="text-align:center;padding:30px;color:#94a3b8;background:rgba(15,23,42,0.5);border-radius:8px">
-      No cards match your current search and filter criteria.
-    </div>`;
+    container.innerHTML = `
+      <div style="text-align:center;padding:36px;color:#94a3b8;background:rgba(15,23,42,0.4);border-radius:12px;border:1px dashed rgba(255,255,255,0.1)">
+        <div style="font-size:32px;margin-bottom:8px">🔍</div>
+        <b style="color:#f1f5f9;font-size:14px">No cards found matching your search.</b>
+        <p style="font-size:12px;margin:4px 0 0 0">Try clearing the search or changing the rarity filter.</p>
+      </div>
+    `;
     return;
   }
-
-  const rarityColors = {
-    common: { bg: "rgba(100,116,139,0.2)", border: "#64748b", text: "#94a3b8" },
-    rare: { bg: "rgba(59,130,246,0.2)", border: "#3b82f6", text: "#60a5fa" },
-    epic: { bg: "rgba(168,85,247,0.2)", border: "#a855f7", text: "#c084fc" },
-    legendary: { bg: "rgba(245,158,11,0.2)", border: "#f59e0b", text: "#fbbf24" },
-    mythic: { bg: "rgba(236,72,153,0.2)", border: "#ec4899", text: "#f472b6" },
-    divine: { bg: "rgba(56,189,248,0.2)", border: "#38bdf8", text: "#38bdf8" }
-  };
 
   let html = "";
   filtered.forEach(item => {
     const c = item.card;
     const cardId = item.id;
-    const rTheme = rarityColors[c.rarity] || rarityColors.common;
     const attacks = Array.isArray(c.attacks) ? c.attacks : [];
+    const rTheme = getRarityTheme(c.rarity);
 
     let typeBadge = "";
-    if(item.source === "studio"){
+    if(c.isStudio || c.isCustom){
       typeBadge = `<span style="font-size:10px;font-weight:900;background:rgba(168,85,247,0.25);color:#d8b4fe;border:1px solid rgba(168,85,247,0.4);padding:2px 7px;border-radius:4px">🎨 STUDIO</span>`;
     } else if(item.source === "vault"){
       typeBadge = `<span style="font-size:10px;font-weight:900;background:rgba(244,63,94,0.25);color:#fda4af;border:1px solid rgba(244,63,94,0.4);padding:2px 7px;border-radius:4px">🔒 VAULT</span>`;
@@ -2028,22 +2105,31 @@ function renderCardManager(){
       attacksListHtml = `<div style="font-size:11px;color:#94a3b8;font-style:italic;padding:4px 0">No attacks configured for this card. Use the form below to add one!</div>`;
     } else {
       attacks.forEach((atk, aIdx) => {
+        const isAtkInf = (typeof isInfiniteValue === "function" && isInfiniteValue(atk.dmg)) || atk.dmg === "Infinity";
         attacksListHtml += `
-          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.06)">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;gap:6px">
             <div style="display:flex;align-items:center;gap:8px">
               <span style="color:#f59e0b">⚔️</span>
               <b style="font-size:12px;color:#f1f5f9">${atk.name || "Unnamed Attack"}</b>
-              <span style="font-size:11px;font-weight:900;color:#ef4444;background:rgba(239,68,68,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(239,68,68,0.3)">
-                ${atk.dmg || 20} DMG
-              </span>
+              ${isAtkInf
+                ? `<span style="font-size:11px;font-weight:900;color:#f43f5e;background:rgba(244,63,94,0.25);padding:2px 8px;border-radius:4px;border:1px solid #f43f5e;box-shadow:0 0 10px rgba(244,63,94,0.6)">⚡ ∞ INFINITE DMG</span>`
+                : `<span style="font-size:11px;font-weight:900;color:#ef4444;background:rgba(239,68,68,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(239,68,68,0.3)">${atk.dmg || 20} DMG</span>`
+              }
             </div>
-            <button class="accountBtn mgr-del-atk-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:#7f1d1d;color:#fca5a5;padding:2px 8px;font-size:10px;font-weight:700">
-              🗑️ Delete Attack
-            </button>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button class="accountBtn mgr-set-atk-inf-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:linear-gradient(135deg,#be123c,#e11d48);color:#fff;padding:2px 8px;font-size:10px;font-weight:800;box-shadow:0 0 6px rgba(225,29,72,0.4)" title="Make this attack deal infinite damage (Instant KO)">
+                ⚡ Set ∞ DMG
+              </button>
+              <button class="accountBtn mgr-del-atk-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:#7f1d1d;color:#fca5a5;padding:2px 8px;font-size:10px;font-weight:700">
+                🗑️ Delete Attack
+              </button>
+            </div>
           </div>
         `;
       });
     }
+
+    const isCardInfHp = (typeof isInfiniteValue === "function" && isInfiniteValue(c.hp)) || c.hp === "Infinity";
 
     html += `
       <div class="adminCard" style="border:1px solid rgba(255,255,255,0.1);background:rgba(30,41,59,0.7);padding:14px;border-radius:10px;margin-bottom:0">
@@ -2061,7 +2147,10 @@ function renderCardManager(){
                 <span style="font-size:10px;font-weight:900;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:${rTheme.bg};color:${rTheme.text};border:1px solid ${rTheme.border}">
                   ${c.rarity}
                 </span>
-                <span style="font-size:11px;color:#94a3b8;font-weight:700">❤️ ${c.hp || 80} HP</span>
+                ${isCardInfHp
+                  ? `<span style="font-size:11px;font-weight:900;color:#38bdf8;background:rgba(56,189,248,0.25);border:1px solid #38bdf8;padding:2px 8px;border-radius:4px;box-shadow:0 0 8px rgba(56,189,248,0.5)">❤️ ∞ INFINITE HP</span>`
+                  : `<span style="font-size:11px;color:#94a3b8;font-weight:700">❤️ ${c.hp || 80} HP</span>`
+                }
               </div>
               <div style="display:flex;align-items:center;gap:6px">
                 ${typeBadge}
@@ -2072,6 +2161,20 @@ function renderCardManager(){
             </div>
 
             <p style="font-size:11px;color:#94a3b8;margin:2px 0 8px 0;line-height:1.3">${c.desc || "No description provided."}</p>
+
+            <!-- Health Editor Section -->
+            <div style="display:flex;align-items:center;gap:6px;margin:8px 0;background:rgba(15,23,42,0.65);border:1px solid rgba(255,255,255,0.08);padding:6px 10px;border-radius:6px;flex-wrap:wrap">
+              <span style="font-size:11px;font-weight:800;color:#fca5a5;display:flex;align-items:center;gap:4px">
+                ❤️ Edit Health:
+              </span>
+              <input type="text" class="adminInput mgr-hp-input" data-card-id="${cardId}" value="${isCardInfHp ? 'Infinity' : (c.hp || 80)}" placeholder="HP or Infinity" style="width:90px;margin:0;padding:4px 8px;font-size:12px">
+              <button class="accountBtn mgr-save-hp-btn" data-card-id="${cardId}" style="background:#059669;color:#fff;padding:4px 10px;font-size:11px;font-weight:800">
+                💾 Save HP
+              </button>
+              <button class="accountBtn mgr-infinite-hp-btn" data-card-id="${cardId}" style="background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;padding:4px 10px;font-size:11px;font-weight:800;box-shadow:0 0 8px rgba(56,189,248,0.4)">
+                ♾️ Set Infinite HP
+              </button>
+            </div>
 
             <!-- Attacks Manager Section -->
             <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px">
@@ -2087,8 +2190,11 @@ function renderCardManager(){
 
               <!-- Add Attack Form -->
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:rgba(0,0,0,0.3);padding:6px 8px;border-radius:6px;border:1px dashed rgba(56,189,248,0.35)">
-                <input type="text" class="adminInput mgr-new-atk-name" placeholder="Attack Name (e.g. Inferno Blitz)" style="flex:2;min-width:130px;margin:0;padding:5px 8px;font-size:12px">
-                <input type="number" class="adminInput mgr-new-atk-dmg" placeholder="DMG" min="1" max="999" value="25" style="width:70px;margin:0;padding:5px 8px;font-size:12px">
+                <input type="text" class="adminInput mgr-new-atk-name" placeholder="Attack Name (e.g. Oblivion Strike)" style="flex:2;min-width:130px;margin:0;padding:5px 8px;font-size:12px">
+                <input type="text" class="adminInput mgr-new-atk-dmg" placeholder="DMG or Infinity" value="25" style="width:85px;margin:0;padding:5px 8px;font-size:12px">
+                <button class="accountBtn mgr-quick-inf-dmg-btn" type="button" style="background:rgba(244,63,94,0.2);color:#fca5a5;border:1px solid rgba(244,63,94,0.5);padding:5px 8px;font-size:11px;font-weight:800" title="Quickly set damage to Infinity">
+                  ♾️ Infinite
+                </button>
                 <button class="accountBtn mgr-add-atk-btn" data-card-id="${cardId}" style="background:#0284c7;color:#fff;padding:5px 12px;font-size:11px;font-weight:800;white-space:nowrap">
                   ➕ Add Attack
                 </button>
@@ -2102,12 +2208,49 @@ function renderCardManager(){
 
   container.innerHTML = html;
 
+  // Wire Save HP Buttons
+  container.querySelectorAll(".mgr-save-hp-btn").forEach(btn => {
+    btn.onclick = ()=>{
+      const cardId = btn.getAttribute("data-card-id");
+      const parentRow = btn.parentElement;
+      const hpInput = parentRow ? parentRow.querySelector(".mgr-hp-input") : null;
+      const hpVal = hpInput ? hpInput.value.trim() : "";
+      handleCardManagerSaveHp(cardId, hpVal);
+    };
+  });
+
+  // Wire Set Infinite HP Buttons
+  container.querySelectorAll(".mgr-infinite-hp-btn").forEach(btn => {
+    btn.onclick = ()=>{
+      const cardId = btn.getAttribute("data-card-id");
+      handleCardManagerSetInfiniteHp(cardId);
+    };
+  });
+
+  // Wire Set Attack Infinite DMG Buttons
+  container.querySelectorAll(".mgr-set-atk-inf-btn").forEach(btn => {
+    btn.onclick = ()=>{
+      const cardId = btn.getAttribute("data-card-id");
+      const atkIdx = parseInt(btn.getAttribute("data-atk-idx"), 10);
+      handleCardManagerSetAttackInfiniteDmg(cardId, atkIdx);
+    };
+  });
+
   // Wire Delete Attack Buttons
   container.querySelectorAll(".mgr-del-atk-btn").forEach(btn => {
     btn.onclick = ()=>{
       const cardId = btn.getAttribute("data-card-id");
       const atkIdx = parseInt(btn.getAttribute("data-atk-idx"), 10);
       handleCardManagerDeleteAttack(cardId, atkIdx);
+    };
+  });
+
+  // Wire Quick Infinite DMG Buttons in Add Attack Form
+  container.querySelectorAll(".mgr-quick-inf-dmg-btn").forEach(btn => {
+    btn.onclick = ()=>{
+      const parentForm = btn.parentElement;
+      const dmgInput = parentForm ? parentForm.querySelector(".mgr-new-atk-dmg") : null;
+      if(dmgInput) dmgInput.value = "Infinity";
     };
   });
 
@@ -2119,7 +2262,7 @@ function renderCardManager(){
       const nameInput = parentForm.querySelector(".mgr-new-atk-name");
       const dmgInput = parentForm.querySelector(".mgr-new-atk-dmg");
       const attackName = nameInput ? nameInput.value.trim() : "";
-      const dmgVal = dmgInput ? parseInt(dmgInput.value, 10) : 25;
+      const dmgVal = dmgInput ? dmgInput.value.trim() : "25";
       handleCardManagerAddAttack(cardId, attackName, dmgVal);
     };
   });
@@ -2146,8 +2289,103 @@ function findCardByIdInManager(cardId){
   return null;
 }
 
+function handleCardManagerSaveHp(cardId, hpValRaw){
+  if(!isMasterAdmin() && !canSubAdminPerform("cardManager")) return alert("You do not have permission to modify card stats.");
+  const found = findCardByIdInManager(cardId);
+  if(!found) return alert("Card not found.");
+
+  const card = found.card;
+  let newHp;
+  const rawStr = String(hpValRaw || "").trim().toLowerCase();
+  if(rawStr === "infinity" || rawStr === "infinite" || rawStr === "∞"){
+    newHp = "Infinity";
+  } else {
+    const num = parseInt(hpValRaw, 10);
+    if(isNaN(num) || num <= 0){
+      return alert("Please enter a valid positive number for HP, or 'Infinity'.");
+    }
+    newHp = num;
+  }
+
+  card.hp = newHp;
+
+  // Persist HP in overrides
+  if(typeof getCardOverridesFromStorage === "function" && typeof saveCardOverridesToStorage === "function"){
+    const overrides = getCardOverridesFromStorage();
+    const idKey = card.id || ("card_" + card.name.toLowerCase().replace(/\s+/g, "_"));
+    overrides[idKey] = overrides[idKey] || {};
+    overrides[idKey].hp = newHp;
+    saveCardOverridesToStorage(overrides);
+  }
+
+  if(card.isStudio || card.isCustom){
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+  }
+  if(found.source === "vault"){
+    try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+  }
+
+  if(typeof broadcastCardHpUpdated === "function"){
+    broadcastCardHpUpdated(card.id || card.name, newHp);
+  }
+
+  renderCardManager();
+  if(typeof render === "function") render();
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`❤️ Set HP of "${card.name}" to ${newHp === "Infinity" ? "∞ INFINITE" : newHp}!`, true);
+  }
+}
+if(typeof window !== "undefined") window.handleCardManagerSaveHp = handleCardManagerSaveHp;
+
+function handleCardManagerSetInfiniteHp(cardId){
+  handleCardManagerSaveHp(cardId, "Infinity");
+}
+if(typeof window !== "undefined") window.handleCardManagerSetInfiniteHp = handleCardManagerSetInfiniteHp;
+
+function handleCardManagerSetAttackInfiniteDmg(cardId, atkIdx){
+  if(!isMasterAdmin() && !canSubAdminPerform("cardManager")) return alert("You do not have permission to modify card attacks.");
+  const found = findCardByIdInManager(cardId);
+  if(!found) return alert("Card not found.");
+
+  const card = found.card;
+  if(!Array.isArray(card.attacks) || atkIdx < 0 || atkIdx >= card.attacks.length){
+    return alert("Invalid attack index.");
+  }
+
+  card.attacks[atkIdx].dmg = "Infinity";
+
+  // Persist attack changes
+  if(typeof getCardOverridesFromStorage === "function" && typeof saveCardOverridesToStorage === "function"){
+    const overrides = getCardOverridesFromStorage();
+    const idKey = card.id || ("card_" + card.name.toLowerCase().replace(/\s+/g, "_"));
+    overrides[idKey] = overrides[idKey] || {};
+    overrides[idKey].attacks = card.attacks;
+    saveCardOverridesToStorage(overrides);
+  }
+
+  if(card.isStudio || card.isCustom){
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+  }
+  if(found.source === "vault"){
+    try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+  }
+
+  if(typeof broadcastCardAttacksUpdated === "function"){
+    broadcastCardAttacksUpdated(card.id || card.name, card.attacks);
+  }
+
+  renderCardManager();
+  if(typeof render === "function") render();
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`⚡ Attack "${card.attacks[atkIdx].name}" on ${card.name} now deals ∞ INFINITE DAMAGE!`, true);
+  }
+}
+if(typeof window !== "undefined") window.handleCardManagerSetAttackInfiniteDmg = handleCardManagerSetAttackInfiniteDmg;
+
 function handleCardManagerDeleteAttack(cardId, atkIdx){
-  if(!isMasterAdmin()) return alert("Only Master Admin Cam can modify card attacks.");
+  if(!isMasterAdmin() && !canSubAdminPerform("cardManager")) return alert("You do not have permission to modify card attacks.");
   const found = findCardByIdInManager(cardId);
   if(!found) return alert("Card not found.");
 
@@ -2187,13 +2425,21 @@ function handleCardManagerDeleteAttack(cardId, atkIdx){
 }
 if(typeof window !== "undefined") window.handleCardManagerDeleteAttack = handleCardManagerDeleteAttack;
 
-function handleCardManagerAddAttack(cardId, attackName, dmgVal){
-  if(!isMasterAdmin()) return alert("Only Master Admin Cam can modify card attacks.");
+function handleCardManagerAddAttack(cardId, attackName, dmgValRaw){
+  if(!isMasterAdmin() && !canSubAdminPerform("cardManager")) return alert("You do not have permission to add card attacks.");
   if(!attackName){
     return alert("Please enter a valid attack name.");
   }
-  if(isNaN(dmgVal) || dmgVal <= 0){
-    return alert("Please enter a valid damage value (minimum 1).");
+  let dmgVal;
+  const rawStr = String(dmgValRaw || "").trim().toLowerCase();
+  if(rawStr === "infinity" || rawStr === "infinite" || rawStr === "∞"){
+    dmgVal = "Infinity";
+  } else {
+    const num = parseInt(dmgValRaw, 10);
+    if(isNaN(num) || num <= 0){
+      return alert("Please enter a valid damage value (minimum 1), or 'Infinity'.");
+    }
+    dmgVal = num;
   }
 
   const found = findCardByIdInManager(cardId);
@@ -2235,7 +2481,7 @@ function handleCardManagerAddAttack(cardId, attackName, dmgVal){
 if(typeof window !== "undefined") window.handleCardManagerAddAttack = handleCardManagerAddAttack;
 
 function handleCardManagerDeleteCard(cardId){
-  if(!isMasterAdmin()) return alert("Only Master Admin Cam can delete cards.");
+  if(!isMasterAdmin() && !canSubAdminPerform("cardManager")) return alert("You do not have permission to delete cards.");
   const found = findCardByIdInManager(cardId);
   if(!found) return alert("Card not found.");
 

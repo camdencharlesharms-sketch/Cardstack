@@ -102,6 +102,21 @@ function saveCardOverridesToStorage(overrides){
 }
 if(typeof window !== "undefined") window.saveCardOverridesToStorage = saveCardOverridesToStorage;
 
+function isInfiniteValue(val){
+  return val === Infinity || val === "Infinity" || val === "infinite" || val === "∞" || val === 999999999 || val === "999999999";
+}
+if(typeof window !== "undefined") window.isInfiniteValue = isInfiniteValue;
+
+function formatHp(val){
+  return isInfiniteValue(val) ? "∞ HP" : (val !== undefined && val !== null ? val + " HP" : "80 HP");
+}
+if(typeof window !== "undefined") window.formatHp = formatHp;
+
+function formatDmg(val){
+  return isInfiniteValue(val) ? "∞ DMG" : (val !== undefined && val !== null ? val + " DMG" : "20 DMG");
+}
+if(typeof window !== "undefined") window.formatDmg = formatDmg;
+
 function normalizeCards(cardList){
   if(!Array.isArray(cardList)) return [];
   const deleted = getDeletedCardsFromStorage();
@@ -121,7 +136,7 @@ function normalizeCards(cardList){
       const ov = overrides[id] || overrides[c.name.toLowerCase()];
       if(ov){
         if(Array.isArray(ov.attacks)) c.attacks = JSON.parse(JSON.stringify(ov.attacks));
-        if(ov.hp) c.hp = ov.hp;
+        if(ov.hp !== undefined) c.hp = ov.hp;
         if(ov.desc) c.desc = ov.desc;
         if(ov.name) c.name = ov.name;
       }
@@ -196,6 +211,7 @@ Object.keys(accounts).forEach(u => {
 });
 
 let subAdminRoles = {};
+if(typeof window !== "undefined") window.subAdminRoles = subAdminRoles;
 try {
   subAdminRoles = JSON.parse(localStorage.getItem("cardCollectorSubAdmins")) || {};
 } catch(e) {
@@ -258,14 +274,50 @@ function getSubAdminRole(username){
 if(typeof window !== "undefined") window.getSubAdminRole = getSubAdminRole;
 
 function isMasterAdmin(){
-  return currentUser && currentUser.toLowerCase().trim() === ADMIN_USERNAME.toLowerCase().trim();
+  const user = (typeof window !== "undefined" && window.currentUser !== undefined) ? window.currentUser : (typeof currentUser !== "undefined" ? currentUser : null);
+  return !!(user && user.toLowerCase().trim() === ADMIN_USERNAME.toLowerCase().trim());
 }
 if(typeof window !== "undefined") window.isMasterAdmin = isMasterAdmin;
 
+function getSubAdminPermissions(role){
+  if(!role) return { players: false, studio: false, cardManager: false, economy: false, events: false, broadcast: false };
+  if(role.permissions && typeof role.permissions === "object"){
+    return {
+      players: role.permissions.players !== false,
+      studio: !!role.permissions.studio,
+      cardManager: !!role.permissions.cardManager,
+      economy: !!role.permissions.economy,
+      events: !!role.permissions.events,
+      broadcast: !!role.permissions.broadcast
+    };
+  }
+  return {
+    players: true,
+    studio: false,
+    cardManager: false,
+    economy: false,
+    events: false,
+    broadcast: false
+  };
+}
+if(typeof window !== "undefined") window.getSubAdminPermissions = getSubAdminPermissions;
+
+function canSubAdminPerform(feature){
+  if(isMasterAdmin()) return true;
+  if(!isSubAdmin()) return false;
+  const user = (typeof window !== "undefined" && window.currentUser !== undefined) ? window.currentUser : (typeof currentUser !== "undefined" ? currentUser : null);
+  const role = getSubAdminRole(user);
+  if(!role || !role.active) return false;
+  const perms = getSubAdminPermissions(role);
+  return !!perms[feature];
+}
+if(typeof window !== "undefined") window.canSubAdminPerform = canSubAdminPerform;
+
 function isSubAdmin(){
-  if(!currentUser) return false;
+  const user = (typeof window !== "undefined" && window.currentUser !== undefined) ? window.currentUser : (typeof currentUser !== "undefined" ? currentUser : null);
+  if(!user) return false;
   if(isMasterAdmin()) return false;
-  const role = getSubAdminRole(currentUser);
+  const role = getSubAdminRole(user);
   return !!(role && role.active);
 }
 if(typeof window !== "undefined") window.isSubAdmin = isSubAdmin;

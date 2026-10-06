@@ -121,10 +121,11 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 
 ### Master Card Manager Architecture
 - **Complete Game Card Inspection**: A dedicated "🃏 Card Manager" tab in Admin Hub displays all cards across default cards, Card Studio cards, and Vault prototype cards with real-time text search and rarity/source filtering.
-- **Custom Attack Editing**: For every card in the game, administrators can inspect all active combat attacks, delete existing attacks with a single click, and append new custom attacks with customized damage numbers.
-- **Persistent Attack & Stat Overrides**: Attack additions and deletions are recorded in `cardCollectorCardOverrides`, persisting across browser reloads, and immediately applying to packs, binder inspect dialogs, and combat arenas.
+- **Card Health & Infinite HP Editing**: Administrators can edit the health (HP) of any card to customized numerical values or set it to **Infinite HP** (`"Infinity"`). Cards with Infinite HP display a glowing radiant cyan badge `❤️ ∞ INFINITE HP` in Card Manager and Binders. In the Combat Arena, infinite HP champions render `∞ / ∞ HP` at 100% capacity and absorb normal attacks without taking damage.
+- **Attack Damage & Infinite Damage Editing**: Administrators can delete existing attacks, add new attacks with custom damage numbers, or set any attack to deal **Infinite Damage** (`⚡ ∞ INFINITE DMG`). In the Combat Arena, infinite attacks deal `⚡ ∞ INFINITE DAMAGE` and inflict an Instant Knockout (Instant KO) in solo and multiplayer battles.
+- **Safe JSON Serialization for Infinite Values**: String representation (`"Infinity"`) is used in `cardCollectorCardOverrides` and network dispatch payloads to prevent native JS `JSON.stringify(Infinity)` nullification, supported by `isInfiniteValue()`, `formatHp()`, and `formatDmg()` across all views.
 - **Permanent Card Deletion with Index Sanitization**: Deleting a card permanently purges it from `cards`, `unreleasedCards`, and `customCards`, records the ID in `cardCollectorDeletedCards`, and sanitizes `owned` card indices across all player accounts (shifting higher indices down and preventing orphan index drift).
-- **Instant Peer & Tab Synchronization**: Card attack changes and card deletions broadcast via PeerJS and `BroadcastChannel` (`sync_card_attacks` and `sync_card_deleted`), keeping all connected multiplayer tabs and opponents synchronized in real-time.
+- **Instant Peer & Tab Synchronization**: Card attack changes, HP updates, and card deletions broadcast via PeerJS and `BroadcastChannel` (`sync_card_attacks`, `sync_card_hp`, and `sync_card_deleted`), keeping all connected multiplayer tabs and opponents synchronized in real-time.
 
 ### Combat Arena Accessibility & Network Resilience
 - **Starter Champion Auto-Provisioning**: Every new player, guest, or account starts with Card 0 ("Blaze") in `owned: [0]`, ensuring immediate access to the arena without lockouts.
@@ -134,11 +135,20 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 - **Match Life-Cycle & Error Handling**: Explicit connection timeouts, clear lobby status indicators, graceful disconnect/forfeit banners, and rematch negotiation in multiplayer.
 
 ### Sub-Admin Role System & Distributed Authority
-- **Universal Case-Insensitive Role Resolution**: `getSubAdminRole(username)` resolves sub-admin permissions case-insensitively with automatic `localStorage` hydration. This prevents role lookups from failing due to capitalization differences between Master Cam's input and player login credentials.
+- **Dynamic Header Button (`🛡️ Sub Admin`)**: When a user with Sub-Admin status logs in, the navigation button where Cam has Admin dynamically displays `🛡️ Sub Admin` accompanied by the live presence badge (`<span id="homeOnlineBadge">`) with custom oceanic cyan styling (`linear-gradient(135deg, #0284c7, #0369a1)`). Regular players and guests see no admin button (`display: none`).
+- **Granular Powers & Features Configurator**: In `tabPermissions`, Master Cam can appoint sub-admins and selectively toggle exactly what features they are permitted to use:
+  - `👥 Player Manager`: Daily coin gifting (enforced daily cap) and card/skin gifting (allowed skins whitelist).
+  - `🎨 Card Studio`: Create new custom cards or update existing card art.
+  - `🃏 Card Manager`: Delete cards, add/delete attacks, modify card health, and configure Infinite HP/DMG.
+  - `🪙 Economy & RNG`: Adjust pack luck multipliers and pack pricing.
+  - `🌪️ World Events`: Server Lockdown mode and event multipliers.
+  - `📢 Broadcast & Leaks`: Send global announcements and secret game leaks.
+- **Console Feature Enforcement & Tab Scoping**: Tabs that Master Cam has not granted to a sub-admin are hidden from the console navigation. If the console is opened, it automatically selects their first authorized tab. Actions on unpermitted features are strictly guarded by `canSubAdminPerform(feature)`. Master-only tabs (`tabPermissions`, `tabUnreleased`) remain 100% private to Cam.
+- **Sub-Admin Console Status Banner**: A dedicated top banner inside the Sub-Admin Console displays their remaining daily coin budget and explicitly highlights their active granted powers.
+- **Sub-Admin Role Editing**: Master Cam can click `✏️ Edit` on any appointed sub-admin in the Active Appointed Admins list to reload their configuration, modify their coin caps, skin permissions, and console powers, and re-save with instant network synchronization.
+- **Universal Case-Insensitive Role Resolution**: `getSubAdminRole(username)` resolves sub-admin permissions case-insensitively with automatic `localStorage` hydration.
 - **P2P Role Synchronization & Broadcast**: When Master Cam assigns or revokes a sub-admin, the updated role definitions are broadcasted in real-time across `BroadcastChannel` (local tabs) and all active PeerJS connections (`broadcastToAllPresencePeers`). Connected clients automatically store the updated permissions and trigger `updateAccountUI()`.
-- **Sub-Admin Action Relay Protocol**: When a Sub-Admin gifts coins or an allowed skin, the action is dispatched via `subadmin_action_relay` through `presenceConnToCam` to Master Cam. The host validates the sub-admin's permissions and daily limit, applies the change to master records in `accounts`, triggers live toasts on Cam's screen, and forwards the action dispatch to the recipient player.
-- **Header Badge Preservation**: `updateAccountUI()` safely updates the button text to `"🛡️ Sub-Admin Hub"` without destroying or removing the live presence count badge (`<span id="homeOnlineBadge">`).
-- **Scoped Console UI & Daily Cap Guardrails**: Sub-Admins have restricted access within the Admin Hub. Master-only tabs (`tabPermissions`, `tabUnreleased`) and destructive controls (Delete account, Master Treasury Deposit, Wipe) are hidden from sub-admins. An interactive status banner shows sub-admins their remaining daily coin allowance and skin gifting status.
+- **Sub-Admin Action Relay Protocol**: When a Sub-Admin performs an action, the action is dispatched via `subadmin_action_relay` through `presenceConnToCam` to Master Cam. The host validates permissions, applies master records, and forwards dispatches to players.
 
 ### Studio Card Public Visibility & Instant Multi-Peer Distribution
 - **Instant Automatic Page Showcase**: When a card is spawned in the Card Studio ("Spawn Brand New Card with Art"), the Admin Hub closes automatically, switches the filter to "Full Binder", executes a fresh render, and smoothly scrolls to the newly created card with a radiant glow animation (`boxShadow: 0 0 35px #a855f7`).
