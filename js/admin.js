@@ -1996,44 +1996,94 @@ function sanitizeAllPlayerOwned(deletedIdx){
 }
 if(typeof window !== "undefined") window.sanitizeAllPlayerOwned = sanitizeAllPlayerOwned;
 
+
 function getAllCardsForManager(){
   const list = [];
-  const seen = new Set();
+  const seenIds = new Set();
+  const seenNames = new Set();
+  const deleted = (typeof getDeletedCardsFromStorage === "function") ? getDeletedCardsFromStorage() : [];
+  const overrides = (typeof getCardOverridesFromStorage === "function") ? getCardOverridesFromStorage() : {};
 
+  function addCard(rawCard, defaultSource){
+    if(!rawCard || !rawCard.name) return;
+    const nameKey = rawCard.name.toLowerCase().trim();
+    const idKey = rawCard.id || ((rawCard.isUnreleased ? "vault_" : "card_") + nameKey.replace(/\s+/g, "_"));
+    rawCard.id = idKey;
+
+    const uniqueLookup = (rawCard.isUnreleased ? "vault:" : "card:") + (rawCard.id || nameKey);
+    if(seenIds.has(uniqueLookup)) return;
+    seenIds.add(uniqueLookup);
+
+    let src = defaultSource;
+    if(rawCard.isUnreleased) src = "vault";
+    else if(rawCard.isStudio || rawCard.isCustom) src = "studio";
+
+    // Apply any stored overrides for attacks or hp
+    const ov = overrides[idKey] || overrides[nameKey];
+    if(ov){
+      if(ov.hp !== undefined) rawCard.hp = ov.hp;
+      if(Array.isArray(ov.attacks)) rawCard.attacks = ov.attacks;
+    }
+
+    // Ensure valid attacks array
+    if(!Array.isArray(rawCard.attacks) || rawCard.attacks.length === 0){
+      rawCard.attacks = [
+        { name: rawCard.attack || "Strike", dmg: rawCard.dmg || 20 },
+        { name: "Power Burst", dmg: Math.floor((rawCard.dmg || 20) * 1.5) }
+      ];
+    }
+
+    // Ensure valid hp
+    if(rawCard.hp === undefined || rawCard.hp === null || rawCard.hp === ""){
+      rawCard.hp = 80;
+    }
+
+    const isMarkedDeleted = deleted.includes(idKey) || deleted.includes(nameKey);
+
+    list.push({
+      card: rawCard,
+      id: idKey,
+      source: src,
+      isDeleted: isMarkedDeleted
+    });
+  }
+
+  // 1. Active cards in memory
   if(Array.isArray(cards)){
-    cards.forEach((c, idx) => {
-      const id = c.id || ("card_" + c.name.toLowerCase().replace(/\s+/g, "_"));
-      c.id = id;
-      if(!seen.has(id)){
-        seen.add(id);
-        list.push({
-          card: c,
-          id: id,
-          source: (c.isStudio || c.isCustom) ? "studio" : "default",
-          index: idx
-        });
-      }
-    });
+    cards.forEach(c => addCard(c, (c.isStudio || c.isCustom) ? "studio" : "default"));
   }
 
-  if(typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
-    unreleasedCards.forEach((c, idx) => {
-      const id = c.id || ("vault_" + c.name.toLowerCase().replace(/\s+/g, "_"));
-      c.id = id;
-      if(!seen.has(id)){
-        seen.add(id);
-        list.push({
-          card: c,
-          id: id,
-          source: "vault",
-          index: idx
-        });
-      }
-    });
+  // 2. All default cards catalog (ensures ALL 37 base cards are always present!)
+  const defPool = (typeof defaultCards !== "undefined" && Array.isArray(defaultCards))
+    ? defaultCards
+    : ((typeof window !== "undefined" && Array.isArray(window.defaultCards)) ? window.defaultCards : []);
+  defPool.forEach(c => addCard(c, "default"));
+
+  // 3. Custom Studio cards from storage
+  if(typeof getCustomCardsFromStorage === "function"){
+    const storedCustom = getCustomCardsFromStorage();
+    if(Array.isArray(storedCustom)){
+      storedCustom.forEach(c => addCard(c, "studio"));
+    }
   }
+
+  // 4. Vault / Unreleased prototype cards
+  let vaultPool = [];
+  if(typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
+    vaultPool = unreleasedCards;
+  } else if(typeof window !== "undefined" && Array.isArray(window.unreleasedCards)){
+    vaultPool = window.unreleasedCards;
+  } else {
+    try {
+      const stored = JSON.parse(localStorage.getItem("cardCollectorUnreleasedCards"));
+      if(Array.isArray(stored)) vaultPool = stored;
+    } catch(e){}
+  }
+  vaultPool.forEach(c => addCard(c, "vault"));
 
   return list;
 }
+if(typeof window !== "undefined") window.getAllCardsForManager = getAllCardsForManager;
 
 function renderCardManager(){
   const container = document.getElementById("cardManagerList");
@@ -2052,41 +2102,47 @@ function renderCardManager(){
     const c = item.card;
     if(!c) return false;
 
-    // Filter by rarity / source
+    // Filter by rarity / special source
     if(filterRarity === "studio" && !c.isStudio && !c.isCustom) return false;
     if(filterRarity === "vault" && item.source !== "vault") return false;
-    if(filterRarity !== "all" && filterRarity !== "studio" && filterRarity !== "vault"){
+    if(filterRarity === "infinite_hp" && !isInfiniteValue(c.hp)) return false;
+    if(filterRarity === "infinite_dmg" && !(Array.isArray(c.attacks) && c.attacks.some(a => isInfiniteValue(a.dmg)))) return false;
+    if(filterRarity !== "all" && filterRarity !== "studio" && filterRarity !== "vault" && filterRarity !== "infinite_hp" && filterRarity !== "infinite_dmg"){
       if(c.rarity.toLowerCase() !== filterRarity.toLowerCase()) return false;
     }
 
-    // Filter by query (name or attacks)
+    // Filter by query (name, attacks, desc, rarity)
     if(query){
       const nameMatch = (c.name || "").toLowerCase().includes(query);
       const descMatch = (c.desc || "").toLowerCase().includes(query);
-      const atkMatch = Array.isArray(c.attacks) && c.attacks.some(a => (a.name || "").toLowerCase().includes(query));
-      if(!nameMatch && !descMatch && !atkMatch) return false;
+      const rarityMatch = (c.rarity || "").toLowerCase().includes(query);
+      const atkMatch = Array.isArray(c.attacks) && c.attacks.some(a => (a.name || "").toLowerCase().includes(query) || String(a.dmg).toLowerCase().includes(query));
+      if(!nameMatch && !descMatch && !rarityMatch && !atkMatch) return false;
     }
 
     return true;
   });
+
+  const showingCountEl = document.getElementById("cardManagerShowingCount");
+  if(showingCountEl) showingCountEl.textContent = filtered.length;
 
   if(filtered.length === 0){
     container.innerHTML = `
       <div style="text-align:center;padding:36px;color:#94a3b8;background:rgba(15,23,42,0.4);border-radius:12px;border:1px dashed rgba(255,255,255,0.1)">
         <div style="font-size:32px;margin-bottom:8px">🔍</div>
         <b style="color:#f1f5f9;font-size:14px">No cards found matching your search.</b>
-        <p style="font-size:12px;margin:4px 0 0 0">Try clearing the search or changing the rarity filter.</p>
+        <p style="font-size:12px;margin:4px 0 0 0">Try clearing the search or changing the filter to "All Rarities & Types".</p>
       </div>
     `;
     return;
   }
 
   let html = "";
-  filtered.forEach(item => {
+  filtered.forEach((item, cardOrder) => {
     const c = item.card;
     const cardId = item.id;
     const attacks = Array.isArray(c.attacks) ? c.attacks : [];
-    const rTheme = getRarityTheme(c.rarity);
+    const rTheme = (typeof getRarityTheme === "function") ? getRarityTheme(c.rarity) : { bg: "rgba(148,163,184,0.15)", text: "#cbd5e1", border: "#64748b" };
 
     let typeBadge = "";
     if(c.isStudio || c.isCustom){
@@ -2095,6 +2151,11 @@ function renderCardManager(){
       typeBadge = `<span style="font-size:10px;font-weight:900;background:rgba(244,63,94,0.25);color:#fda4af;border:1px solid rgba(244,63,94,0.4);padding:2px 7px;border-radius:4px">🔒 VAULT</span>`;
     } else {
       typeBadge = `<span style="font-size:10px;font-weight:900;background:rgba(100,116,139,0.2);color:#cbd5e1;border:1px solid rgba(100,116,139,0.3);padding:2px 7px;border-radius:4px">DEFAULT</span>`;
+    }
+
+    let deletedNotice = "";
+    if(item.isDeleted){
+      deletedNotice = `<span style="font-size:10px;font-weight:900;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid #ef4444;padding:2px 7px;border-radius:4px">⚠️ REMOVED FROM PACKS</span>`;
     }
 
     let imgHtml = "";
@@ -2117,20 +2178,30 @@ function renderCardManager(){
             <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:240px;flex-wrap:wrap">
               <span style="color:#f59e0b;font-size:14px">⚔️</span>
               <input type="text" class="adminInput mgr-edit-atk-name" data-card-id="${cardId}" data-atk-idx="${aIdx}" value="${atk.name || ''}" placeholder="Attack Name" style="width:130px;min-width:110px;margin:0;padding:4px 7px;font-size:12px;flex:1">
-              <input type="text" class="adminInput mgr-edit-atk-dmg" data-card-id="${cardId}" data-atk-idx="${aIdx}" value="${isAtkInf ? 'Infinity' : (atk.dmg || 20)}" placeholder="DMG or Infinity" style="width:85px;margin:0;padding:4px 7px;font-size:12px">
+              <input type="text" class="adminInput mgr-edit-atk-dmg" data-card-id="${cardId}" data-atk-idx="${aIdx}" value="${isAtkInf ? 'Infinity' : (atk.dmg || 20)}" placeholder="DMG (e.g. 35 or Infinity)" style="width:90px;margin:0;padding:4px 7px;font-size:12px;font-weight:700">
+              
               ${isAtkInf
-                ? `<span style="font-size:10px;font-weight:900;color:#f43f5e;background:rgba(244,63,94,0.25);padding:3px 7px;border-radius:4px;border:1px solid #f43f5e;box-shadow:0 0 8px rgba(244,63,94,0.5)">⚡ ∞ INFINITE</span>`
+                ? `<span style="font-size:10px;font-weight:900;color:#f43f5e;background:rgba(244,63,94,0.25);padding:3px 7px;border-radius:4px;border:1px solid #f43f5e;box-shadow:0 0 8px rgba(244,63,94,0.5)">⚡ ∞ INFINITE DMG</span>`
                 : `<span style="font-size:10px;font-weight:900;color:#ef4444;background:rgba(239,68,68,0.15);padding:3px 6px;border-radius:4px;border:1px solid rgba(239,68,68,0.3)">${atk.dmg || 20} DMG</span>`
               }
+
+              <!-- Quick Damage Presets -->
+              <div style="display:flex;align-items:center;gap:3px">
+                <button type="button" class="accountBtn mgr-dmg-chip" data-card-id="${cardId}" data-atk-idx="${aIdx}" data-val="25" style="background:rgba(255,255,255,0.06);color:#cbd5e1;padding:2px 5px;font-size:9px;font-weight:700">25</button>
+                <button type="button" class="accountBtn mgr-dmg-chip" data-card-id="${cardId}" data-atk-idx="${aIdx}" data-val="50" style="background:rgba(255,255,255,0.06);color:#cbd5e1;padding:2px 5px;font-size:9px;font-weight:700">50</button>
+                <button type="button" class="accountBtn mgr-dmg-chip" data-card-id="${cardId}" data-atk-idx="${aIdx}" data-val="100" style="background:rgba(255,255,255,0.06);color:#cbd5e1;padding:2px 5px;font-size:9px;font-weight:700">100</button>
+                <button type="button" class="accountBtn mgr-dmg-chip" data-card-id="${cardId}" data-atk-idx="${aIdx}" data-val="Infinity" style="background:rgba(244,63,94,0.2);color:#fca5a5;border:1px solid rgba(244,63,94,0.4);padding:2px 5px;font-size:9px;font-weight:800">∞ Inf</button>
+              </div>
             </div>
+
             <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-              <button class="accountBtn mgr-save-atk-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:#059669;color:#fff;padding:3px 9px;font-size:11px;font-weight:800" title="Save updated name or damage">
-                💾 Save
+              <button class="accountBtn mgr-save-atk-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:#059669;color:#fff;padding:4px 10px;font-size:11px;font-weight:800" title="Save updated attack name or damage number">
+                💾 Save DMG
               </button>
-              <button class="accountBtn mgr-set-atk-inf-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:linear-gradient(135deg,#be123c,#e11d48);color:#fff;padding:3px 9px;font-size:11px;font-weight:900;border:1px solid #f43f5e;box-shadow:0 0 8px rgba(225,29,72,0.4)" title="Make this attack deal infinite damage (Instant KO)">
+              <button class="accountBtn mgr-set-atk-inf-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:linear-gradient(135deg,#be123c,#e11d48);color:#fff;padding:4px 10px;font-size:11px;font-weight:900;border:1px solid #f43f5e;box-shadow:0 0 8px rgba(225,29,72,0.4)" title="Make this attack deal infinite damage (Instant KO)">
                 ⚡ Set ∞ DMG
               </button>
-              <button class="accountBtn mgr-del-atk-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:#7f1d1d;color:#fca5a5;padding:3px 8px;font-size:11px;font-weight:700" title="Delete this attack">
+              <button class="accountBtn mgr-del-atk-btn" data-card-id="${cardId}" data-atk-idx="${aIdx}" style="background:#7f1d1d;color:#fca5a5;padding:4px 8px;font-size:11px;font-weight:700" title="Delete this attack">
                 🗑️
               </button>
             </div>
@@ -2145,57 +2216,75 @@ function renderCardManager(){
       <div class="adminCard" style="border:1px solid rgba(255,255,255,0.1);background:rgba(30,41,59,0.7);padding:14px;border-radius:10px;margin-bottom:0">
         <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
           <!-- Thumbnail preview -->
-          <div style="width:70px;height:95px;flex-shrink:0;border-radius:8px;overflow:hidden;border:2px solid ${rTheme.border};background:#0f172a;display:flex;align-items:center;justify-content:center">
+          <div style="width:70px;height:95px;flex-shrink:0;border-radius:8px;overflow:hidden;border:2px solid ${rTheme.border};background:#0f172a;display:flex;align-items:center;justify-content:center;position:relative">
             ${imgHtml}
+            <div style="position:absolute;top:2px;left:2px;background:rgba(0,0,0,0.7);color:#94a3b8;font-size:9px;font-weight:900;padding:1px 4px;border-radius:3px">
+              #${cardOrder + 1}
+            </div>
           </div>
 
           <!-- Card Details & Actions -->
-          <div style="flex:1;min-width:220px">
+          <div style="flex:1;min-width:240px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-              <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <b style="font-size:15px;color:#fff">${c.name}</b>
                 <span style="font-size:10px;font-weight:900;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:${rTheme.bg};color:${rTheme.text};border:1px solid ${rTheme.border}">
                   ${c.rarity}
                 </span>
                 ${isCardInfHp
                   ? `<span style="font-size:11px;font-weight:900;color:#38bdf8;background:rgba(56,189,248,0.25);border:1px solid #38bdf8;padding:2px 8px;border-radius:4px;box-shadow:0 0 8px rgba(56,189,248,0.5)">❤️ ∞ INFINITE HP</span>`
-                  : `<span style="font-size:11px;color:#94a3b8;font-weight:700">❤️ ${c.hp || 80} HP</span>`
+                  : `<span style="font-size:11px;color:#fca5a5;font-weight:800;background:rgba(239,68,68,0.12);padding:2px 7px;border-radius:4px;border:1px solid rgba(239,68,68,0.25)">❤️ ${c.hp || 80} HP</span>`
                 }
+                ${typeBadge}
+                ${deletedNotice}
               </div>
               <div style="display:flex;align-items:center;gap:6px">
-                ${typeBadge}
-                <button class="accountBtn mgr-del-card-btn" data-card-id="${cardId}" style="background:#dc2626;color:#fff;padding:4px 10px;font-size:11px;font-weight:800;border:1px solid rgba(239,68,68,0.5)">
-                  🗑️ Delete Card
-                </button>
+                ${item.isDeleted
+                  ? `<button class="accountBtn mgr-restore-card-btn" data-card-id="${cardId}" style="background:#059669;color:#fff;padding:4px 10px;font-size:11px;font-weight:800">🔄 Restore to Packs</button>`
+                  : `<button class="accountBtn mgr-del-card-btn" data-card-id="${cardId}" style="background:#dc2626;color:#fff;padding:4px 10px;font-size:11px;font-weight:800;border:1px solid rgba(239,68,68,0.5)">🗑️ Delete Card</button>`
+                }
               </div>
             </div>
 
             <p style="font-size:11px;color:#94a3b8;margin:2px 0 8px 0;line-height:1.3">${c.desc || "No description provided."}</p>
 
-            <!-- Health Editor Section -->
-            <div style="display:flex;align-items:center;gap:6px;margin:8px 0;background:rgba(15,23,42,0.65);border:1px solid rgba(255,255,255,0.08);padding:6px 10px;border-radius:6px;flex-wrap:wrap">
-              <span style="font-size:11px;font-weight:800;color:#fca5a5;display:flex;align-items:center;gap:4px">
+            <!-- Health Editor Section: Any Number OR Infinite HP -->
+            <div style="display:flex;align-items:center;gap:8px;margin:8px 0;background:rgba(15,23,42,0.65);border:1px solid rgba(255,255,255,0.08);padding:8px 12px;border-radius:6px;flex-wrap:wrap">
+              <span style="font-size:12px;font-weight:800;color:#fca5a5;display:flex;align-items:center;gap:4px">
                 ❤️ Edit Health:
               </span>
-              <input type="text" class="adminInput mgr-hp-input" data-card-id="${cardId}" value="${isCardInfHp ? 'Infinity' : (c.hp || 80)}" placeholder="HP or Infinity" style="width:90px;margin:0;padding:4px 8px;font-size:12px">
-              <button class="accountBtn mgr-save-hp-btn" data-card-id="${cardId}" style="background:#059669;color:#fff;padding:4px 10px;font-size:11px;font-weight:800">
+              <input type="text" class="adminInput mgr-hp-input" data-card-id="${cardId}" value="${isCardInfHp ? 'Infinity' : (c.hp || 80)}" placeholder="HP (e.g. 100 or Infinity)" style="width:110px;margin:0;padding:5px 8px;font-size:12px;font-weight:700">
+              
+              <button class="accountBtn mgr-save-hp-btn" data-card-id="${cardId}" style="background:#059669;color:#fff;padding:5px 12px;font-size:11px;font-weight:800" title="Save this number or Infinity as card health">
                 💾 Save HP
               </button>
-              <button class="accountBtn mgr-infinite-hp-btn" data-card-id="${cardId}" style="background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;padding:4px 10px;font-size:11px;font-weight:800;box-shadow:0 0 8px rgba(56,189,248,0.4)">
+              <button class="accountBtn mgr-infinite-hp-btn" data-card-id="${cardId}" style="background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;padding:5px 12px;font-size:11px;font-weight:900;border:1px solid #38bdf8;box-shadow:0 0 10px rgba(56,189,248,0.5)" title="One-click make this card have Infinite Health">
                 ♾️ Set Infinite HP
               </button>
+
+              <!-- Quick HP Chips -->
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="font-size:10px;color:#64748b">Presets:</span>
+                <button type="button" class="accountBtn mgr-hp-chip" data-card-id="${cardId}" data-val="80" style="background:rgba(255,255,255,0.06);color:#cbd5e1;padding:2px 6px;font-size:10px;font-weight:700">80</button>
+                <button type="button" class="accountBtn mgr-hp-chip" data-card-id="${cardId}" data-val="150" style="background:rgba(255,255,255,0.06);color:#cbd5e1;padding:2px 6px;font-size:10px;font-weight:700">150</button>
+                <button type="button" class="accountBtn mgr-hp-chip" data-card-id="${cardId}" data-val="250" style="background:rgba(255,255,255,0.06);color:#cbd5e1;padding:2px 6px;font-size:10px;font-weight:700">250</button>
+                <button type="button" class="accountBtn mgr-hp-chip" data-card-id="${cardId}" data-val="500" style="background:rgba(255,255,255,0.06);color:#cbd5e1;padding:2px 6px;font-size:10px;font-weight:700">500</button>
+                <button type="button" class="accountBtn mgr-hp-chip" data-card-id="${cardId}" data-val="Infinity" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.4);padding:2px 6px;font-size:10px;font-weight:800">∞ Inf</button>
+              </div>
             </div>
 
-            <!-- Attacks Manager Section -->
+            <!-- Attacks Manager Section: Any Number OR Infinite Damage -->
             <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
                 <div style="display:flex;align-items:center;gap:8px">
                   <span style="font-size:12px;font-weight:800;color:#38bdf8">⚔️ Combat Attacks (${attacks.length})</span>
                   <span style="font-size:10px;color:#64748b">Instant combat & pack sync</span>
                 </div>
-                <button class="accountBtn mgr-all-inf-dmg-btn" data-card-id="${cardId}" style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;padding:3px 10px;font-size:11px;font-weight:900;border:1px solid #f43f5e;box-shadow:0 0 8px rgba(244,63,94,0.4)" title="Set all attacks on this card to deal Infinite Damage (Instant KO)">
-                  ⚡ All Attacks ∞ DMG
-                </button>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <button class="accountBtn mgr-all-inf-dmg-btn" data-card-id="${cardId}" style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;padding:3px 10px;font-size:11px;font-weight:900;border:1px solid #f43f5e;box-shadow:0 0 8px rgba(244,63,94,0.4)" title="Set all attacks on this card to deal Infinite Damage (Instant KO)">
+                    ⚡ All Attacks ∞ DMG
+                  </button>
+                </div>
               </div>
 
               <!-- List of attacks -->
@@ -2205,8 +2294,8 @@ function renderCardManager(){
 
               <!-- Add Attack Form -->
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:rgba(0,0,0,0.3);padding:6px 8px;border-radius:6px;border:1px dashed rgba(56,189,248,0.35)">
-                <input type="text" class="adminInput mgr-new-atk-name" placeholder="Attack Name (e.g. Oblivion Strike)" style="flex:2;min-width:130px;margin:0;padding:5px 8px;font-size:12px">
-                <input type="text" class="adminInput mgr-new-atk-dmg" placeholder="DMG or Infinity" value="25" style="width:85px;margin:0;padding:5px 8px;font-size:12px">
+                <input type="text" class="adminInput mgr-new-atk-name" placeholder="New Attack Name (e.g. Oblivion Strike)" style="flex:2;min-width:130px;margin:0;padding:5px 8px;font-size:12px">
+                <input type="text" class="adminInput mgr-new-atk-dmg" placeholder="DMG or Infinity" value="25" style="width:95px;margin:0;padding:5px 8px;font-size:12px;font-weight:700">
                 <button class="accountBtn mgr-quick-inf-dmg-btn" type="button" style="background:rgba(244,63,94,0.2);color:#fca5a5;border:1px solid rgba(244,63,94,0.5);padding:5px 8px;font-size:11px;font-weight:800" title="Quickly set damage to Infinity">
                   ♾️ Infinite
                 </button>
@@ -2234,6 +2323,26 @@ function renderCardManager(){
     };
   });
 
+  // Wire HP Input Enter Key
+  container.querySelectorAll(".mgr-hp-input").forEach(inp => {
+    inp.onkeydown = (e)=>{
+      if(e.key === "Enter"){
+        e.preventDefault();
+        const cardId = inp.getAttribute("data-card-id");
+        handleCardManagerSaveHp(cardId, inp.value.trim());
+      }
+    };
+  });
+
+  // Wire HP Preset Chips
+  container.querySelectorAll(".mgr-hp-chip").forEach(chip => {
+    chip.onclick = ()=>{
+      const cardId = chip.getAttribute("data-card-id");
+      const val = chip.getAttribute("data-val");
+      handleCardManagerSaveHp(cardId, val);
+    };
+  });
+
   // Wire Set Infinite HP Buttons
   container.querySelectorAll(".mgr-infinite-hp-btn").forEach(btn => {
     btn.onclick = ()=>{
@@ -2253,6 +2362,36 @@ function renderCardManager(){
       const newName = nameInput ? nameInput.value.trim() : "";
       const newDmg = dmgInput ? dmgInput.value.trim() : "";
       handleCardManagerSaveAttack(cardId, atkIdx, newName, newDmg);
+    };
+  });
+
+  // Wire Attack Input Enter Key
+  container.querySelectorAll(".mgr-edit-atk-dmg, .mgr-edit-atk-name").forEach(inp => {
+    inp.onkeydown = (e)=>{
+      if(e.key === "Enter"){
+        e.preventDefault();
+        const cardId = inp.getAttribute("data-card-id");
+        const atkIdx = parseInt(inp.getAttribute("data-atk-idx"), 10);
+        const row = inp.closest(".mgr-atk-row");
+        const nameInput = row ? row.querySelector(".mgr-edit-atk-name") : null;
+        const dmgInput = row ? row.querySelector(".mgr-edit-atk-dmg") : null;
+        const newName = nameInput ? nameInput.value.trim() : "";
+        const newDmg = dmgInput ? dmgInput.value.trim() : "";
+        handleCardManagerSaveAttack(cardId, atkIdx, newName, newDmg);
+      }
+    };
+  });
+
+  // Wire Damage Preset Chips
+  container.querySelectorAll(".mgr-dmg-chip").forEach(chip => {
+    chip.onclick = ()=>{
+      const cardId = chip.getAttribute("data-card-id");
+      const atkIdx = parseInt(chip.getAttribute("data-atk-idx"), 10);
+      const val = chip.getAttribute("data-val");
+      const row = chip.closest(".mgr-atk-row");
+      const nameInput = row ? row.querySelector(".mgr-edit-atk-name") : null;
+      const currentName = nameInput ? nameInput.value.trim() : "";
+      handleCardManagerSaveAttack(cardId, atkIdx, currentName, val);
     };
   });
 
@@ -2311,20 +2450,63 @@ function renderCardManager(){
       handleCardManagerDeleteCard(cardId);
     };
   });
+
+  // Wire Restore Card Buttons
+  container.querySelectorAll(".mgr-restore-card-btn").forEach(btn => {
+    btn.onclick = ()=>{
+      const cardId = btn.getAttribute("data-card-id");
+      handleCardManagerRestoreCard(cardId);
+    };
+  });
 }
 if(typeof window !== "undefined") window.renderCardManager = renderCardManager;
 
 function findCardByIdInManager(cardId){
+  if(!cardId) return null;
+  const allCards = getAllCardsForManager();
+  const lowerId = String(cardId).toLowerCase().trim();
+  const match = allCards.find(item => {
+    if(item.id && item.id.toLowerCase() === lowerId) return true;
+    if(item.card && item.card.id && item.card.id.toLowerCase() === lowerId) return true;
+    if(item.card && item.card.name && item.card.name.toLowerCase() === lowerId) return true;
+    return false;
+  });
+  if(match) return match;
+
   if(Array.isArray(cards)){
-    const c = cards.find(item => (item.id || "card_" + item.name.toLowerCase().replace(/\s+/g, "_")) === cardId || item.name.toLowerCase() === cardId.toLowerCase());
-    if(c) return { card: c, source: "active" };
-  }
-  if(typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)){
-    const c = unreleasedCards.find(item => (item.id || "vault_" + item.name.toLowerCase().replace(/\s+/g, "_")) === cardId || item.name.toLowerCase() === cardId.toLowerCase());
-    if(c) return { card: c, source: "vault" };
+    const c = cards.find(item => (item.id && item.id.toLowerCase() === lowerId) || (item.name && item.name.toLowerCase() === lowerId));
+    if(c) return { card: c, id: c.id || lowerId, source: (c.isStudio || c.isCustom) ? "studio" : "default" };
   }
   return null;
 }
+
+function handleCardManagerRestoreCard(cardId){
+  if(!isMasterAdmin() && !canSubAdminPerform("cardManager")) return alert("You do not have permission to restore cards.");
+  const found = findCardByIdInManager(cardId);
+  if(!found) return alert("Card not found.");
+
+  const card = found.card;
+  const idKey = card.id || ("card_" + card.name.toLowerCase().replace(/\s+/g, "_"));
+
+  if(typeof getDeletedCardsFromStorage === "function" && typeof saveDeletedCardsToStorage === "function"){
+    const deleted = getDeletedCardsFromStorage();
+    const filtered = deleted.filter(d => d !== idKey && d !== card.name.toLowerCase());
+    saveDeletedCardsToStorage(filtered);
+  }
+
+  if(!card.isUnreleased && Array.isArray(cards) && !cards.some(c => c.name.toLowerCase() === card.name.toLowerCase())){
+    cards.push(card);
+  }
+
+  renderCardManager();
+  if(typeof render === "function") render();
+  if(typeof initCardSelect === "function") initCardSelect();
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🔄 Restored card "${card.name}" to active booster packs!`, true);
+  }
+}
+if(typeof window !== "undefined") window.handleCardManagerRestoreCard = handleCardManagerRestoreCard;
 
 function handleCardManagerSaveHp(cardId, hpValRaw){
   if(!isMasterAdmin() && !canSubAdminPerform("cardManager")) return alert("You do not have permission to modify card stats.");
@@ -2334,12 +2516,12 @@ function handleCardManagerSaveHp(cardId, hpValRaw){
   const card = found.card;
   let newHp;
   const rawStr = String(hpValRaw || "").trim().toLowerCase();
-  if(rawStr === "infinity" || rawStr === "infinite" || rawStr === "∞"){
+  if(rawStr === "infinity" || rawStr === "infinite" || rawStr === "∞" || rawStr === "999999999" || hpValRaw === Infinity){
     newHp = "Infinity";
   } else {
     const num = parseInt(hpValRaw, 10);
     if(isNaN(num) || num <= 0){
-      return alert("Please enter a valid positive number for HP, or 'Infinity'.");
+      return alert("Please enter a valid positive number for HP (e.g. 100, 250), or 'Infinity'.");
     }
     newHp = num;
   }
@@ -2352,7 +2534,16 @@ function handleCardManagerSaveHp(cardId, hpValRaw){
     const idKey = card.id || ("card_" + card.name.toLowerCase().replace(/\s+/g, "_"));
     overrides[idKey] = overrides[idKey] || {};
     overrides[idKey].hp = newHp;
+    if(card.name) overrides[card.name.toLowerCase()] = overrides[idKey];
     saveCardOverridesToStorage(overrides);
+  }
+
+  // Sync in active cards array
+  if(Array.isArray(cards)){
+    const activeMatch = cards.find(c => (c.id && c.id === card.id) || (c.name && c.name.toLowerCase() === card.name.toLowerCase()));
+    if(activeMatch){
+      activeMatch.hp = newHp;
+    }
   }
 
   if(card.isStudio || card.isCustom){
@@ -2360,6 +2551,14 @@ function handleCardManagerSaveHp(cardId, hpValRaw){
   }
   if(found.source === "vault"){
     try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
+  }
+
+  // Restore to active if it was deleted
+  if(typeof getDeletedCardsFromStorage === "function" && typeof saveDeletedCardsToStorage === "function"){
+    const deleted = getDeletedCardsFromStorage();
+    const idKey = card.id || ("card_" + card.name.toLowerCase().replace(/\s+/g, "_"));
+    const filtered = deleted.filter(d => d !== idKey && d !== card.name.toLowerCase());
+    if(filtered.length !== deleted.length) saveDeletedCardsToStorage(filtered);
   }
 
   if(typeof broadcastCardHpUpdated === "function"){
@@ -2380,7 +2579,6 @@ function handleCardManagerSetInfiniteHp(cardId){
 }
 if(typeof window !== "undefined") window.handleCardManagerSetInfiniteHp = handleCardManagerSetInfiniteHp;
 
-
 function handleCardManagerSaveAttack(cardId, atkIdx, newName, newDmgRaw){
   if(!isMasterAdmin() && !canSubAdminPerform("cardManager")) return alert("You do not have permission to modify card attacks.");
   const found = findCardByIdInManager(cardId);
@@ -2398,7 +2596,7 @@ function handleCardManagerSaveAttack(cardId, atkIdx, newName, newDmgRaw){
   } else {
     const num = parseInt(newDmgRaw, 10);
     if(isNaN(num) || num <= 0){
-      return alert("Please enter a valid damage value (minimum 1), or 'Infinity'.");
+      return alert("Please enter a valid damage value (e.g. 25, 50, 100), or 'Infinity'.");
     }
     dmgVal = num;
   }
@@ -2414,6 +2612,14 @@ function handleCardManagerSaveAttack(cardId, atkIdx, newName, newDmgRaw){
     overrides[idKey].attacks = card.attacks;
     if(card.name) overrides[card.name.toLowerCase()] = overrides[idKey];
     saveCardOverridesToStorage(overrides);
+  }
+
+  // Sync in active cards array
+  if(Array.isArray(cards)){
+    const activeMatch = cards.find(c => (c.id && c.id === card.id) || (c.name && c.name.toLowerCase() === card.name.toLowerCase()));
+    if(activeMatch){
+      activeMatch.attacks = card.attacks;
+    }
   }
 
   if(card.isStudio || card.isCustom){
@@ -2458,6 +2664,13 @@ function handleCardManagerSetAllAttacksInfiniteDmg(cardId){
     saveCardOverridesToStorage(overrides);
   }
 
+  if(Array.isArray(cards)){
+    const activeMatch = cards.find(c => (c.id && c.id === card.id) || (c.name && c.name.toLowerCase() === card.name.toLowerCase()));
+    if(activeMatch){
+      activeMatch.attacks = card.attacks;
+    }
+  }
+
   if(card.isStudio || card.isCustom){
     if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
   }
@@ -2479,43 +2692,7 @@ function handleCardManagerSetAllAttacksInfiniteDmg(cardId){
 if(typeof window !== "undefined") window.handleCardManagerSetAllAttacksInfiniteDmg = handleCardManagerSetAllAttacksInfiniteDmg;
 
 function handleCardManagerSetAttackInfiniteDmg(cardId, atkIdx){
-  if(!isMasterAdmin() && !canSubAdminPerform("cardManager")) return alert("You do not have permission to modify card attacks.");
-  const found = findCardByIdInManager(cardId);
-  if(!found) return alert("Card not found.");
-
-  const card = found.card;
-  if(!Array.isArray(card.attacks) || atkIdx < 0 || atkIdx >= card.attacks.length){
-    return alert("Invalid attack index.");
-  }
-
-  card.attacks[atkIdx].dmg = "Infinity";
-
-  // Persist attack changes
-  if(typeof getCardOverridesFromStorage === "function" && typeof saveCardOverridesToStorage === "function"){
-    const overrides = getCardOverridesFromStorage();
-    const idKey = card.id || ("card_" + card.name.toLowerCase().replace(/\s+/g, "_"));
-    overrides[idKey] = overrides[idKey] || {};
-    overrides[idKey].attacks = card.attacks;
-    saveCardOverridesToStorage(overrides);
-  }
-
-  if(card.isStudio || card.isCustom){
-    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
-  }
-  if(found.source === "vault"){
-    try { localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(unreleasedCards)); } catch(e){}
-  }
-
-  if(typeof broadcastCardAttacksUpdated === "function"){
-    broadcastCardAttacksUpdated(card.id || card.name, card.attacks);
-  }
-
-  renderCardManager();
-  if(typeof render === "function") render();
-
-  if(typeof showLiveToast === "function"){
-    showLiveToast(`⚡ Attack "${card.attacks[atkIdx].name}" on ${card.name} now deals ∞ INFINITE DAMAGE!`, true);
-  }
+  handleCardManagerSaveAttack(cardId, atkIdx, "", "Infinity");
 }
 if(typeof window !== "undefined") window.handleCardManagerSetAttackInfiniteDmg = handleCardManagerSetAttackInfiniteDmg;
 

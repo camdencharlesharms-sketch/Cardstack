@@ -536,3 +536,10 @@ function isVaultCardOwnedByUser(vCard, unreleasedOwnedList){
   });
 }
 if(typeof window !== "undefined") window.isVaultCardOwnedByUser = isVaultCardOwnedByUser;
+
+if(typeof window !== "undefined"){
+  window.cards = cards;
+  window.defaultCards = defaultCards;
+  window.customCards = customCards;
+  window.unreleasedCards = unreleasedCards;
+}
