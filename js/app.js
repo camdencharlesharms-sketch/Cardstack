@@ -842,7 +842,7 @@ document.getElementById("accountSubmit").onclick = () => {
                         !storedPass;
 
     if(!isPassValid){
-      err.textContent = "Invalid passcode. (Hint: enter your password or admin123)";
+      err.textContent = "Invalid passcode.";
       return;
     }
 
@@ -879,7 +879,7 @@ document.getElementById("accountSubmit").onclick = () => {
     accounts[actualUser].password = pass;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   } else if(accounts[actualUser].password !== pass && accounts[actualUser].password.toLowerCase() !== pass.toLowerCase()){
-    err.textContent = `Invalid password for ${actualUser}.`;
+    err.textContent = "Invalid passcode.";
     return;
   }
 
