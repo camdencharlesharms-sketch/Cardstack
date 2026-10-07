@@ -253,11 +253,11 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - **High-Roller Lucky Wheel Sync (`casino_spin`)**: Broadcasts lucky reel winning prizes and celebratory fanfare across the entire realm.
 
 ### Account Authentication & Password Management
-- **Universal Sign-In & Master Cam Access**:
-  - Cam can now sign into the Master Cam account from any existing player account, guest session, or separate device/browser.
-  - Supports authentication using the user's custom set password or universal master recovery keys (`admin123`, `admin`, `password`, `cam`, `cam123`, `cardstack`, `owner`, `camden`).
-  - **1-Click Quick Switch**: Added a dedicated `👑 Switch to Cam` shortcut button inside the Account Modal for immediate 1-click access to the owner account from anywhere.
-  - **Fresh Device Initialization**: When signing into Cam on a new browser/device, automatically populates full card ownership, unreleased cards, and infinite coin balance without locking out the user.
+- **Explicit Sign-In & Password Verification for Cam**:
+  - Removed shortcut bypass buttons; signing into the Master Cam account requires manually typing username `Cam` and Cam's secret password.
+  - Rejects unauthorized sign-in attempts with `Invalid password for Cam.` if the passcode does not match.
+  - Protects owner privileges so other players on the network cannot access Cam's account without knowing Cam's actual password.
+  - Fresh Device Initialization: When Cam legitimately authenticates with their password on a new browser/device, the system unlocks full card ownership, unreleased cards, and infinite coins.
 - **Change Password Feature**:
   - **Player Account Modal**: Added an active profile card with a dedicated `🔑 Change Your Password` form. Users can enter and confirm their new password, which is immediately saved to localStorage and applied to their account.
   - **Sign Out Control**: Added a `🚪 Sign Out` button allowing players to switch back to a Guest session cleanly.

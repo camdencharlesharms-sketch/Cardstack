@@ -787,19 +787,7 @@ if(changePassBtn){
   };
 }
 
-// 3. Quick Switch to Cam Shortcut
-const quickCamBtn = document.getElementById("quickSignInCamBtn");
-if(quickCamBtn){
-  quickCamBtn.onclick = () => {
-    document.getElementById("usernameInput").value = "Cam";
-    const camPass = (accounts && accounts["Cam"] && accounts["Cam"].password) ? accounts["Cam"].password : "admin123";
-    document.getElementById("passwordInput").value = camPass;
-    document.getElementById("accountError").textContent = "";
-    document.getElementById("accountSubmit").click();
-  };
-}
-
-// 4. Sign In / Switch Account Submission
+// 3. Sign In / Switch Account Submission
 document.getElementById("accountSubmit").onclick = () => {
   const user = document.getElementById("usernameInput").value.trim();
   const pass = document.getElementById("passwordInput").value;
@@ -825,11 +813,9 @@ document.getElementById("accountSubmit").onclick = () => {
   const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === user.toLowerCase());
   const actualUser = matchKey || (isCamUser ? "Cam" : user);
 
-  // Master passcodes that will ALWAYS authenticate Cam across any session/device
-  const MASTER_PASSWORDS = ["admin123", "admin", "password", "cam", "cam123", "cardstack", "owner", "camden"];
-
   if(isCamUser){
     if(!accounts["Cam"]){
+      // Initialize Cam account with typed password on a new device/browser
       accounts["Cam"] = {
         password: pass,
         owned: (cards || []).map((_, i) => i),
@@ -839,17 +825,21 @@ document.getElementById("accountSubmit").onclick = () => {
         unreleasedOwned: (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards.map(c => c.id || c.name) : []
       };
       localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      localStorage.setItem("cardCollectorCamPass", pass);
     } else {
       const storedPass = accounts["Cam"].password;
-      const isPassValid = (storedPass && storedPass === pass) || MASTER_PASSWORDS.includes(pass.toLowerCase());
-      if(!isPassValid && storedPass){
-        err.textContent = "Invalid passcode. Hint: Use your Cam password or master key (admin123).";
+      const customCamPass = localStorage.getItem("cardCollectorCamPass");
+      // Check typed password against Cam's password
+      const isPassValid = (storedPass && pass === storedPass) ||
+                          (customCamPass && pass === customCamPass) ||
+                          (!storedPass && pass === "admin123") ||
+                          (storedPass === "admin123" && (pass === "admin123" || pass === "admin"));
+      if(!isPassValid){
+        err.textContent = "Invalid password for Cam.";
         return;
       }
-      // If logging in with master password or Cam has no password set, preserve or update
-      if(!storedPass || MASTER_PASSWORDS.includes(pass.toLowerCase())){
-        accounts["Cam"].password = pass;
-      }
+      accounts["Cam"].password = pass;
+      localStorage.setItem("cardCollectorCamPass", pass);
       // Ensure Cam always has full privileges and unreleased cards
       if(!Array.isArray(accounts["Cam"].unreleasedOwned)){
         accounts["Cam"].unreleasedOwned = (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards.map(c => c.id || c.name) : [];
