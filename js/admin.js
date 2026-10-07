@@ -310,7 +310,7 @@ function refreshAdminPlayerData(){
       <td style="padding:8px 6px"><b>${name}</b></td>
       <td><span style="color:${isMaster ? '#f43f5e' : (isSub ? '#38bdf8' : '#64748b')}">${roleText}</span></td>
       <td>${statusBadge}</td>
-      <td>🪙 ${(data.coins || 0).toLocaleString()}</td>
+      <td>🪙 ${(typeof formatCoins === "function") ? formatCoins(data.coins) : (isInfiniteValue(data.coins) ? "∞" : (data.coins || 0).toLocaleString())}</td>
       <td>${(data.owned || []).length} / ${cards.length}</td>
       <td>
         <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#059669;color:#fff;margin-right:4px" onclick="quickGiftPlayerCardPrompt('${name}')">🎁 Gift</button>
@@ -1111,12 +1111,58 @@ document.getElementById("adminWipePlayerBtn").onclick = ()=>{
   }
 };
 
-// Target-Specific Coin Gifting
+// Target-Specific Coin Gifting & Infinite Money Operations
+function giftInfiniteCoinsToTarget(target){
+  if(!target) return alert("Please type or select a target player username.");
+  if(!accounts[target]){
+    accounts[target] = { password: "", owned: [0], coins: "Infinity", hasPlayed: true, lastActive: Date.now() };
+  } else {
+    accounts[target].coins = "Infinity";
+  }
+
+  if(target.toLowerCase() === currentUser.toLowerCase()){
+    coins = Infinity;
+  }
+
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(target, { type: "gift_coins", amount: "Infinity" });
+  }
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  if(typeof confetti === "function") confetti({ particleCount: 90, spread: 75 });
+  refreshAdminPlayerData();
+  render();
+  if(typeof showLiveToast === "function") showLiveToast(`⚡ Gifted ∞ INFINITE COINS to ${target}!`, true);
+  alert(`⚡ SUCCESS! Gifted ∞ INFINITE COINS to ${target}! They now have unlimited money forever.`);
+}
+
+const quickInfBtn = document.getElementById("adminQuickInfiniteCoinInputBtn");
+if(quickInfBtn){
+  quickInfBtn.onclick = ()=>{
+    const inp = document.getElementById("adminPlayerCoinsAmount");
+    if(inp) inp.value = "Infinity";
+  };
+}
+
+const giftInfCoinsBtn = document.getElementById("adminGiftInfiniteCoinsBtn");
+if(giftInfCoinsBtn){
+  giftInfCoinsBtn.onclick = ()=>{
+    const target = getTargetPlayer("economyPlayerInput", "economyPlayerSelect");
+    giftInfiniteCoinsToTarget(target);
+  };
+}
+
 document.getElementById("adminAddPlayerCoinsBtn").onclick = ()=>{
   const target = getTargetPlayer("economyPlayerInput", "economyPlayerSelect");
-  const amt = parseInt(document.getElementById("adminPlayerCoinsAmount").value, 10);
+  const rawInput = (document.getElementById("adminPlayerCoinsAmount").value || "").trim();
   if(!target) return alert("Please type or select a target player username.");
-  if(isNaN(amt) || amt <= 0) return alert("Enter a valid positive number.");
+
+  if((typeof isInfiniteValue === "function" && isInfiniteValue(rawInput)) || rawInput.toLowerCase() === "infinity" || rawInput === "∞"){
+    return giftInfiniteCoinsToTarget(target);
+  }
+
+  const amt = parseInt(rawInput, 10);
+  if(isNaN(amt) || amt <= 0) return alert("Enter a valid positive number or type 'Infinity' / '∞'.");
 
   if(isSubAdmin() && !isMasterAdmin()){
     const role = (typeof getSubAdminRole === "function") ? getSubAdminRole(currentUser) : subAdminRoles[currentUser];
@@ -1140,12 +1186,18 @@ document.getElementById("adminAddPlayerCoinsBtn").onclick = ()=>{
     if(typeof updateAccountUI === "function") updateAccountUI();
   }
 
+  if(isInfiniteValue(accounts[target].coins)){
+    alert(`${target} already has ∞ Infinite Coins!`);
+    return;
+  }
+
   accounts[target].coins = (accounts[target].coins || 0) + amt;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = accounts[target].coins;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   if(typeof broadcastAdminActionToTarget === "function"){
     broadcastAdminActionToTarget(target, { type: "gift_coins", amount: amt });
   }
+  if(typeof playChaosSfx === "function") playChaosSfx("coins");
   refreshAdminPlayerData();
   render();
   alert(`Added ${amt.toLocaleString()} coins to ${target}.`);
@@ -1154,9 +1206,15 @@ document.getElementById("adminAddPlayerCoinsBtn").onclick = ()=>{
 document.getElementById("adminSetPlayerCoinsBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only master admin Cam can set exact treasury balances.");
   const target = getTargetPlayer("economyPlayerInput", "economyPlayerSelect");
-  const amt = parseInt(document.getElementById("adminPlayerCoinsAmount").value, 10);
+  const rawInput = (document.getElementById("adminPlayerCoinsAmount").value || "").trim();
   if(!target) return alert("Please type or select a target player username.");
-  if(isNaN(amt) || amt < 0) return alert("Enter a valid non-negative number.");
+
+  if((typeof isInfiniteValue === "function" && isInfiniteValue(rawInput)) || rawInput.toLowerCase() === "infinity" || rawInput === "∞"){
+    return giftInfiniteCoinsToTarget(target);
+  }
+
+  const amt = parseInt(rawInput, 10);
+  if(isNaN(amt) || amt < 0) return alert("Enter a valid non-negative number or 'Infinity' / '∞'.");
   accounts[target].coins = amt;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = accounts[target].coins;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
@@ -1184,11 +1242,28 @@ document.getElementById("adminDrainPlayerCoinsBtn").onclick = ()=>{
 };
 
 document.getElementById("adminAddSelfCoinsBtn").onclick = ()=>{
-  coins += 10000;
+  if(!isInfiniteValue(coins)) coins += 10000;
   save();
   render();
   refreshAdminPlayerData();
+  if(typeof playChaosSfx === "function") playChaosSfx("coins");
   alert("Deposited 10,000 coins to Cam.");
+};
+
+const selfInfCoinsBtn = document.getElementById("adminAddSelfInfiniteCoinsBtn");
+if(selfInfCoinsBtn){
+  selfInfCoinsBtn.onclick = ()=>{
+    coins = Infinity;
+    if(accounts[currentUser]) accounts[currentUser].coins = "Infinity";
+    if(accounts[ADMIN_USERNAME]) accounts[ADMIN_USERNAME].coins = "Infinity";
+    save();
+    render();
+    refreshAdminPlayerData();
+    if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+    if(typeof confetti === "function") confetti({ particleCount: 100, spread: 80 });
+    if(typeof showLiveToast === "function") showLiveToast("⚡ Granted Master Cam ∞ INFINITE COINS!", true);
+    alert("⚡ SUCCESS! Master Cam now has ∞ INFINITE COINS! You have unlimited money forever.");
+  };
 };
 
 document.getElementById("adminSaveLuckBtn").onclick = ()=>{
@@ -2931,12 +3006,67 @@ if(cardMgrTabBtn){
 // ⚡ TAB: CHAOS LAB & GOD TOOLS MODULE
 // ==========================================
 
+// ==========================================
+// ⚡ STUDIO HIGH-FIDELITY WEB AUDIO ENGINE
+// ==========================================
+
 let chaosAudioCtx = null;
+let masterCompressor = null;
+let masterWarmthFilter = null;
+let masterLimiterGain = null;
+let reverbConvolver = null;
+let reverbSendGain = null;
+
 function getChaosAudioCtx(){
   if(!chaosAudioCtx){
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if(AudioCtx) chaosAudioCtx = new AudioCtx();
+    if(!AudioCtx) return null;
+    chaosAudioCtx = new AudioCtx();
+
+    // 1. Studio Master Dynamics Compressor (smooths transients, punches bass, prevents digital distortion)
+    masterCompressor = chaosAudioCtx.createDynamicsCompressor();
+    masterCompressor.threshold.setValueAtTime(-18, chaosAudioCtx.currentTime);
+    masterCompressor.knee.setValueAtTime(14, chaosAudioCtx.currentTime);
+    masterCompressor.ratio.setValueAtTime(5, chaosAudioCtx.currentTime);
+    masterCompressor.attack.setValueAtTime(0.003, chaosAudioCtx.currentTime);
+    masterCompressor.release.setValueAtTime(0.22, chaosAudioCtx.currentTime);
+
+    // 2. Master Warmth Filter (cuts abrasive 13.5kHz+ digital noise)
+    masterWarmthFilter = chaosAudioCtx.createBiquadFilter();
+    masterWarmthFilter.type = "lowpass";
+    masterWarmthFilter.frequency.setValueAtTime(13500, chaosAudioCtx.currentTime);
+    masterWarmthFilter.Q.setValueAtTime(0.707, chaosAudioCtx.currentTime);
+
+    // 3. Master Limiter Output
+    masterLimiterGain = chaosAudioCtx.createGain();
+    masterLimiterGain.gain.setValueAtTime(0.85, chaosAudioCtx.currentTime);
+
+    masterCompressor.connect(masterWarmthFilter);
+    masterWarmthFilter.connect(masterLimiterGain);
+    masterLimiterGain.connect(chaosAudioCtx.destination);
+
+    // 4. Algorithmic Spatial Stereo Reverb Convolver
+    try {
+      const sampleRate = chaosAudioCtx.sampleRate;
+      const length = Math.floor(sampleRate * 1.4);
+      const impulse = chaosAudioCtx.createBuffer(2, length, sampleRate);
+      const left = impulse.getChannelData(0);
+      const right = impulse.getChannelData(1);
+      for(let i = 0; i < length; i++){
+        const decay = Math.pow((length - i) / length, 2.5);
+        left[i] = (Math.random() * 2 - 1) * decay;
+        right[i] = (Math.random() * 2 - 1) * decay;
+      }
+      reverbConvolver = chaosAudioCtx.createConvolver();
+      reverbConvolver.buffer = impulse;
+
+      reverbSendGain = chaosAudioCtx.createGain();
+      reverbSendGain.gain.setValueAtTime(0.35, chaosAudioCtx.currentTime);
+      reverbSendGain.connect(reverbConvolver);
+      reverbConvolver.connect(masterCompressor);
+    } catch(e){}
   }
+
   if(chaosAudioCtx && chaosAudioCtx.state === "suspended"){
     chaosAudioCtx.resume();
   }
@@ -2945,7 +3075,7 @@ function getChaosAudioCtx(){
 
 function getChaosVolume(){
   const slider = document.getElementById("chaosSfxVolume");
-  return slider ? (parseInt(slider.value, 10) / 100) * 0.35 : 0.25;
+  return slider ? (parseInt(slider.value, 10) / 100) * 0.38 : 0.28;
 }
 
 function playChaosSfx(type){
@@ -2954,118 +3084,463 @@ function playChaosSfx(type){
   const now = ctx.currentTime;
   const vol = getChaosVolume();
 
+  const soundBus = ctx.createGain();
+  soundBus.gain.setValueAtTime(vol, now);
+  soundBus.connect(masterCompressor);
+
+  function sendReverb(node, amount = 0.35){
+    if(!reverbSendGain) return;
+    const send = ctx.createGain();
+    send.gain.setValueAtTime(amount, now);
+    node.connect(send);
+    send.connect(reverbSendGain);
+  }
+
+  // 1. TRIUMPH: Cinematic Heroic Brass Fanfare & Stardust Resolution
   if(type === "triumph"){
-    const notes = [523.25, 659.25, 783.99, 1046.50];
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, now + idx * 0.11);
-      gain.gain.setValueAtTime(vol, now + idx * 0.11);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.11 + 0.38);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + idx * 0.11);
-      osc.stop(now + idx * 0.11 + 0.4);
+    const arpeggio = [
+      { f: 261.63, t: 0 },
+      { f: 329.63, t: 0.08 },
+      { f: 392.00, t: 0.16 },
+      { f: 523.25, t: 0.25 },
+      { f: 659.25, t: 0.36 }
+    ];
+    arpeggio.forEach(n => {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const filt = ctx.createBiquadFilter();
+      const noteGain = ctx.createGain();
+
+      osc1.type = "sawtooth";
+      osc1.frequency.setValueAtTime(n.f, now + n.t);
+
+      osc2.type = "triangle";
+      osc2.frequency.setValueAtTime(n.f * 1.004, now + n.t);
+
+      filt.type = "lowpass";
+      filt.frequency.setValueAtTime(500, now + n.t);
+      filt.frequency.exponentialRampToValueAtTime(3200, now + n.t + 0.04);
+      filt.frequency.exponentialRampToValueAtTime(1400, now + n.t + 0.2);
+
+      noteGain.gain.setValueAtTime(0.5, now + n.t);
+      noteGain.gain.exponentialRampToValueAtTime(0.001, now + n.t + 0.28);
+
+      osc1.connect(filt);
+      osc2.connect(filt);
+      filt.connect(noteGain);
+      noteGain.connect(soundBus);
+      sendReverb(noteGain, 0.3);
+
+      osc1.start(now + n.t);
+      osc2.start(now + n.t);
+      osc1.stop(now + n.t + 0.3);
+      osc2.stop(now + n.t + 0.3);
     });
-  } else if(type === "packTear"){
-    const bufferSize = Math.floor(ctx.sampleRate * 0.25);
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
+
+    const chordTime = now + 0.48;
+    const chordFreqs = [392.00, 523.25, 659.25, 783.99, 1046.50];
+    chordFreqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const oscSub = ctx.createOscillator();
+      const filt = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, chordTime);
+
+      oscSub.type = "triangle";
+      oscSub.frequency.setValueAtTime(freq * 0.997, chordTime);
+
+      filt.type = "lowpass";
+      filt.frequency.setValueAtTime(800, chordTime);
+      filt.frequency.exponentialRampToValueAtTime(4500, chordTime + 0.08);
+      filt.frequency.exponentialRampToValueAtTime(1800, chordTime + 0.85);
+
+      const noteVol = (idx === chordFreqs.length - 1) ? 0.35 : 0.25;
+      gain.gain.setValueAtTime(noteVol, chordTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, chordTime + 1.1);
+
+      osc.connect(filt);
+      oscSub.connect(filt);
+      filt.connect(gain);
+      gain.connect(soundBus);
+      sendReverb(gain, 0.55);
+
+      osc.start(chordTime);
+      oscSub.start(chordTime);
+      osc.stop(chordTime + 1.15);
+      oscSub.stop(chordTime + 1.15);
+    });
+
+    [2093.00, 2637.02, 3135.96].forEach((f, i) => {
+      const chimeOsc = ctx.createOscillator();
+      const chimeGain = ctx.createGain();
+      chimeOsc.type = "sine";
+      chimeOsc.frequency.setValueAtTime(f, chordTime + 0.1 + i * 0.06);
+      chimeGain.gain.setValueAtTime(0.12, chordTime + 0.1 + i * 0.06);
+      chimeGain.gain.exponentialRampToValueAtTime(0.0001, chordTime + 0.75 + i * 0.06);
+
+      chimeOsc.connect(chimeGain);
+      chimeGain.connect(soundBus);
+      sendReverb(chimeGain, 0.6);
+
+      chimeOsc.start(chordTime + 0.1 + i * 0.06);
+      chimeOsc.stop(chordTime + 0.8 + i * 0.06);
+    });
+  }
+
+  // 2. PACK TEAR: Realistic Tactile Foil Rip & Tension Pop
+  else if(type === "packTear"){
+    const popOsc = ctx.createOscillator();
+    const popGain = ctx.createGain();
+    popOsc.type = "triangle";
+    popOsc.frequency.setValueAtTime(170, now);
+    popOsc.frequency.exponentialRampToValueAtTime(42, now + 0.045);
+    popGain.gain.setValueAtTime(0.8, now);
+    popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    popOsc.connect(popGain);
+    popGain.connect(soundBus);
+    popOsc.start(now);
+    popOsc.stop(now + 0.055);
+
+    const bufferSize = Math.floor(ctx.sampleRate * 0.32);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const outData = noiseBuffer.getChannelData(0);
+    for(let i = 0; i < bufferSize; i++){
+      const spike = Math.random() < 0.03 ? (Math.random() * 2 - 1) * 2.2 : (Math.random() * 2 - 1);
+      outData[i] = spike * Math.pow(1 - (i / bufferSize), 0.75);
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const bandFilter = ctx.createBiquadFilter();
+    bandFilter.type = "bandpass";
+    bandFilter.Q.setValueAtTime(2.6, now);
+    bandFilter.frequency.setValueAtTime(2800, now);
+    bandFilter.frequency.exponentialRampToValueAtTime(580, now + 0.28);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(1.1, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+    noiseSource.connect(bandFilter);
+    bandFilter.connect(noiseGain);
+    noiseGain.connect(soundBus);
+    noiseSource.start(now);
+
+    const sheenFilter = ctx.createBiquadFilter();
+    sheenFilter.type = "highpass";
+    sheenFilter.frequency.setValueAtTime(4600, now);
+
+    const sheenGain = ctx.createGain();
+    sheenGain.gain.setValueAtTime(0.4, now);
+    sheenGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+    const noiseSource2 = ctx.createBufferSource();
+    noiseSource2.buffer = noiseBuffer;
+    noiseSource2.connect(sheenFilter);
+    sheenFilter.connect(sheenGain);
+    sheenGain.connect(soundBus);
+    noiseSource2.start(now);
+  }
+
+  // 3. LASER: Cyber Heavyweight Impact Blast
+  else if(type === "laser"){
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = "sine";
+    subOsc.frequency.setValueAtTime(140, now);
+    subOsc.frequency.exponentialRampToValueAtTime(32, now + 0.07);
+    subGain.gain.setValueAtTime(0.9, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+    subOsc.connect(subGain);
+    subGain.connect(soundBus);
+    subOsc.start(now);
+    subOsc.stop(now + 0.08);
+
+    const modOsc = ctx.createOscillator();
+    const modGain = ctx.createGain();
+    modOsc.type = "sine";
+    modOsc.frequency.setValueAtTime(380, now);
+    modGain.gain.setValueAtTime(420, now);
+    modGain.gain.exponentialRampToValueAtTime(20, now + 0.2);
+
+    const carrierOsc = ctx.createOscillator();
+    carrierOsc.type = "sawtooth";
+    carrierOsc.frequency.setValueAtTime(1750, now);
+    carrierOsc.frequency.exponentialRampToValueAtTime(110, now + 0.22);
+    modOsc.connect(modGain);
+    modGain.connect(carrierOsc.frequency);
+
     const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.Q.setValueAtTime(3.8, now);
+    filter.frequency.setValueAtTime(4500, now);
+    filter.frequency.exponentialRampToValueAtTime(220, now + 0.22);
+
+    const laserGain = ctx.createGain();
+    laserGain.gain.setValueAtTime(0.85, now);
+    laserGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+
+    carrierOsc.connect(filter);
+    filter.connect(laserGain);
+    laserGain.connect(soundBus);
+    sendReverb(laserGain, 0.25);
+
+    modOsc.start(now);
+    carrierOsc.start(now);
+    modOsc.stop(now + 0.24);
+    carrierOsc.stop(now + 0.24);
+  }
+
+  // 4. WARP: Deep Cinematic Wormhole Hyperspace Rift
+  else if(type === "warp"){
+    [48, 52].forEach(f => {
+      const drone = ctx.createOscillator();
+      const dGain = ctx.createGain();
+      drone.type = "sine";
+      drone.frequency.setValueAtTime(f, now);
+      dGain.gain.setValueAtTime(0.6, now);
+      dGain.gain.linearRampToValueAtTime(0.8, now + 0.25);
+      dGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+      drone.connect(dGain);
+      dGain.connect(soundBus);
+      drone.start(now);
+      drone.stop(now + 0.72);
+    });
+
+    const saw = ctx.createOscillator();
+    saw.type = "sawtooth";
+    saw.frequency.setValueAtTime(120, now);
+    saw.frequency.linearRampToValueAtTime(320, now + 0.3);
+    saw.frequency.exponentialRampToValueAtTime(60, now + 0.65);
+
+    const band = ctx.createBiquadFilter();
+    band.type = "bandpass";
+    band.Q.setValueAtTime(4.2, now);
+    band.frequency.setValueAtTime(180, now);
+    band.frequency.linearRampToValueAtTime(1600, now + 0.28);
+    band.frequency.exponentialRampToValueAtTime(95, now + 0.68);
+
+    const sawGain = ctx.createGain();
+    sawGain.gain.setValueAtTime(0.65, now);
+    sawGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+    saw.connect(band);
+    band.connect(sawGain);
+    sawGain.connect(soundBus);
+    sendReverb(sawGain, 0.45);
+
+    saw.start(now);
+    saw.stop(now + 0.72);
+
+    const crystal = ctx.createOscillator();
+    const crystalGain = ctx.createGain();
+    crystal.type = "sine";
+    crystal.frequency.setValueAtTime(987.77, now);
+    crystal.frequency.exponentialRampToValueAtTime(440, now + 0.55);
+    crystalGain.gain.setValueAtTime(0.2, now);
+    crystalGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+    crystal.connect(crystalGain);
+    crystalGain.connect(soundBus);
+    sendReverb(crystalGain, 0.5);
+    crystal.start(now);
+    crystal.stop(now + 0.68);
+  }
+
+  // 5. COINS: Authentic Metallic Gold Coin Shower & Velvet Clinks
+  else if(type === "coins"){
+    const coinPitches = [1980, 2240, 1850, 2460, 2100, 2350];
+    const coinDelays = [0, 0.045, 0.092, 0.148, 0.21, 0.275];
+    const pans = [-0.35, 0.35, -0.2, 0.25, -0.1, 0.3];
+
+    coinDelays.forEach((delay, idx) => {
+      const coinTime = now + delay;
+      const carrierFreq = coinPitches[idx];
+      const modFreq = carrierFreq * 2.76;
+
+      const modOsc = ctx.createOscillator();
+      const modGain = ctx.createGain();
+      modOsc.type = "sine";
+      modOsc.frequency.setValueAtTime(modFreq, coinTime);
+      modGain.gain.setValueAtTime(carrierFreq * 1.5, coinTime);
+      modGain.gain.exponentialRampToValueAtTime(1, coinTime + 0.08);
+
+      const carrierOsc = ctx.createOscillator();
+      carrierOsc.type = "sine";
+      carrierOsc.frequency.setValueAtTime(carrierFreq, coinTime);
+
+      modOsc.connect(modGain);
+      modGain.connect(carrierOsc.frequency);
+
+      const coinGain = ctx.createGain();
+      coinGain.gain.setValueAtTime(0.45, coinTime);
+      coinGain.gain.exponentialRampToValueAtTime(0.0001, coinTime + 0.28);
+
+      if(ctx.createStereoPanner){
+        try {
+          const panner = ctx.createStereoPanner();
+          panner.pan.setValueAtTime(pans[idx], coinTime);
+          carrierOsc.connect(coinGain);
+          coinGain.connect(panner);
+          panner.connect(soundBus);
+        } catch(e){
+          carrierOsc.connect(coinGain);
+          coinGain.connect(soundBus);
+        }
+      } else {
+        carrierOsc.connect(coinGain);
+        coinGain.connect(soundBus);
+      }
+      sendReverb(coinGain, 0.25);
+
+      modOsc.start(coinTime);
+      carrierOsc.start(coinTime);
+      modOsc.stop(coinTime + 0.3);
+      carrierOsc.stop(coinTime + 0.3);
+    });
+  }
+
+  // 6. SIREN: Tactical Emergency Alert Klaxon
+  else if(type === "siren"){
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const hornGain = ctx.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(580, now);
+    osc.frequency.linearRampToValueAtTime(760, now + 0.16);
+    osc.frequency.linearRampToValueAtTime(580, now + 0.32);
+    osc.frequency.linearRampToValueAtTime(760, now + 0.48);
+    osc.frequency.linearRampToValueAtTime(580, now + 0.64);
+
     filter.type = "bandpass";
+    filter.Q.setValueAtTime(1.5, now);
+    filter.frequency.setValueAtTime(750, now);
+
+    hornGain.gain.setValueAtTime(0.65, now);
+    hornGain.gain.exponentialRampToValueAtTime(0.001, now + 0.72);
+
+    osc.connect(filter);
+    filter.connect(hornGain);
+    hornGain.connect(soundBus);
+    sendReverb(hornGain, 0.3);
+
+    osc.start(now);
+    osc.stop(now + 0.74);
+
+    const sub = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    sub.type = "sine";
+    sub.frequency.setValueAtTime(68, now);
+    subGain.gain.setValueAtTime(0.5, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.72);
+    sub.connect(subGain);
+    subGain.connect(soundBus);
+    sub.start(now);
+    sub.stop(now + 0.74);
+  }
+
+  // 7. ASCENSION: Pristine Celestial Crystal Harp Glissando
+  else if(type === "ascension"){
+    const scale = [523.25, 659.25, 783.99, 987.77, 1174.66, 1318.51, 1567.98];
+    scale.forEach((freq, idx) => {
+      const noteTime = now + idx * 0.054;
+      const modFreq = freq * 2.005;
+
+      const mod = ctx.createOscillator();
+      const modGain = ctx.createGain();
+      mod.type = "sine";
+      mod.frequency.setValueAtTime(modFreq, noteTime);
+      modGain.gain.setValueAtTime(freq * 0.8, noteTime);
+      modGain.gain.exponentialRampToValueAtTime(1, noteTime + 0.4);
+
+      const carrier = ctx.createOscillator();
+      carrier.type = "sine";
+      carrier.frequency.setValueAtTime(freq, noteTime);
+
+      mod.connect(modGain);
+      modGain.connect(carrier.frequency);
+
+      const noteGain = ctx.createGain();
+      noteGain.gain.setValueAtTime(0.35, noteTime);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.95);
+
+      carrier.connect(noteGain);
+      noteGain.connect(soundBus);
+      sendReverb(noteGain, 0.55);
+
+      mod.start(noteTime);
+      carrier.start(noteTime);
+      mod.stop(noteTime + 1.0);
+      carrier.stop(noteTime + 1.0);
+    });
+  }
+
+  // 8. DETONATION: Blockbuster Seismic Shockwave & EMP Rumble
+  else if(type === "detonation"){
+    const sub = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    sub.type = "sine";
+    sub.frequency.setValueAtTime(85, now);
+    sub.frequency.exponentialRampToValueAtTime(20, now + 0.7);
+    subGain.gain.setValueAtTime(1.1, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+    sub.connect(subGain);
+    subGain.connect(soundBus);
+    sub.start(now);
+    sub.stop(now + 0.78);
+
+    const bufferSize = Math.floor(ctx.sampleRate * 0.85);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for(let i = 0; i < bufferSize; i++){
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - (i / bufferSize), 1.2);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.Q.setValueAtTime(2.2, now);
     filter.frequency.setValueAtTime(1400, now);
-    filter.frequency.exponentialRampToValueAtTime(320, now + 0.22);
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(vol * 1.5, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+    filter.frequency.exponentialRampToValueAtTime(55, now + 0.8);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(1.0, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.82);
+
     noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
+    filter.connect(noiseGain);
+    noiseGain.connect(soundBus);
+    sendReverb(noiseGain, 0.4);
     noise.start(now);
-  } else if(type === "laser"){
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(950, now);
-    osc.frequency.exponentialRampToValueAtTime(90, now + 0.2);
-    gain.gain.setValueAtTime(vol, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.22);
-  } else if(type === "warp"){
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(80, now);
-    osc.frequency.linearRampToValueAtTime(380, now + 0.25);
-    osc.frequency.exponentialRampToValueAtTime(45, now + 0.55);
-    gain.gain.setValueAtTime(vol * 1.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.62);
-  } else if(type === "coins"){
-    [987.77, 1318.51, 1567.98].forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
-      gain.gain.setValueAtTime(vol, now + idx * 0.07);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.22);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + idx * 0.07);
-      osc.stop(now + idx * 0.07 + 0.24);
-    });
-  } else if(type === "siren"){
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(650, now);
-    osc.frequency.linearRampToValueAtTime(880, now + 0.18);
-    osc.frequency.linearRampToValueAtTime(650, now + 0.36);
-    osc.frequency.linearRampToValueAtTime(880, now + 0.54);
-    gain.gain.setValueAtTime(vol * 0.8, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.72);
-  } else if(type === "ascension"){
-    [523.25, 659.25, 783.99, 987.77, 1174.66].forEach((f, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(f, now + i * 0.05);
-      gain.gain.setValueAtTime(vol * 0.65, now + i * 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.05 + 0.75);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + i * 0.05);
-      osc.stop(now + i * 0.05 + 0.8);
-    });
-  } else if(type === "detonation"){
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(140, now);
-    osc.frequency.exponentialRampToValueAtTime(25, now + 0.5);
-    gain.gain.setValueAtTime(vol * 1.5, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.58);
+
+    const sizzle = ctx.createOscillator();
+    const sizzleFilter = ctx.createBiquadFilter();
+    const sizzleGain = ctx.createGain();
+    sizzle.type = "sawtooth";
+    sizzle.frequency.setValueAtTime(120, now);
+    sizzle.frequency.linearRampToValueAtTime(45, now + 0.35);
+
+    sizzleFilter.type = "bandpass";
+    sizzleFilter.Q.setValueAtTime(4.0, now);
+    sizzleFilter.frequency.setValueAtTime(3200, now);
+    sizzleFilter.frequency.exponentialRampToValueAtTime(400, now + 0.35);
+
+    sizzleGain.gain.setValueAtTime(0.35, now);
+    sizzleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    sizzle.connect(sizzleFilter);
+    sizzleFilter.connect(sizzleGain);
+    sizzleGain.connect(soundBus);
+    sizzle.start(now);
+    sizzle.stop(now + 0.38);
   }
 }
 window.playChaosSfx = playChaosSfx;
+window.playSound = playChaosSfx;
+window.playAudioFx = playChaosSfx;
 
 // 1. SCREEN FX: Card Rain
 function triggerCardRain(durationSec = 6){

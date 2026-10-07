@@ -37,9 +37,11 @@ if(typeof window !== "undefined") window.isVaultCardOwnedByUser = isVaultCardOwn
 function save(){
   let targetAcc = getUserAccount(currentUser);
   const activeOwned = (typeof owned !== "undefined" && Array.isArray(owned)) ? owned : (window.owned || []);
+  const isCoinsInfinite = (typeof isInfiniteValue === "function" && isInfiniteValue(coins)) || coins === Infinity;
+  const persistCoins = isCoinsInfinite ? "Infinity" : coins;
   if(targetAcc){
     targetAcc.owned = activeOwned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
-    targetAcc.coins = coins;
+    targetAcc.coins = persistCoins;
     if(Array.isArray(targetAcc.unreleasedOwned)){
       targetAcc.unreleasedOwned = Array.from(new Set(targetAcc.unreleasedOwned));
     }
@@ -49,7 +51,7 @@ function save(){
     accounts[currentUser] = {
       password: "",
       owned: activeOwned.map(x => parseInt(x, 10)).filter(n => !isNaN(n)),
-      coins: coins,
+      coins: persistCoins,
       unreleasedOwned: [],
       hasPlayed: true,
       lastActive: Date.now()
@@ -59,7 +61,7 @@ function save(){
   } else {
     try {
       localStorage.setItem("cardCollectorGuestOwned", JSON.stringify(owned));
-      localStorage.setItem("cardCollectorGuestCoins", coins.toString());
+      localStorage.setItem("cardCollectorGuestCoins", isCoinsInfinite ? "Infinity" : coins.toString());
     } catch(e){}
   }
 }
@@ -101,7 +103,11 @@ function loadAccount(username){
   if(userAcc){
     owned = (Array.isArray(userAcc.owned) ? userAcc.owned : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
     if(owned.length === 0) owned = [0];
-    coins = Number.isFinite(userAcc.coins) ? userAcc.coins : 100;
+    if(typeof isInfiniteValue === "function" && isInfiniteValue(userAcc.coins)){
+      coins = Infinity;
+    } else {
+      coins = Number.isFinite(userAcc.coins) ? userAcc.coins : 100;
+    }
   } else {
     owned = [0];
     coins = 100;
@@ -339,13 +345,17 @@ function startPackOpening(tierKey){
   }
 
   const actualCost = getActualPackCost(pack.baseCost);
+  const isUserCoinsInf = (typeof isInfiniteValue === "function" && isInfiniteValue(coins)) || coins === Infinity;
 
-  if(coins < actualCost){
-    document.getElementById("message").textContent = `Insufficient coins: You need ${actualCost} 🪙 to open this pack! (You have: ${coins.toLocaleString()} 🪙)`;
+  if(!isUserCoinsInf && coins < actualCost){
+    const currentCoinsStr = (typeof formatCoins === "function") ? formatCoins(coins) : coins.toLocaleString();
+    document.getElementById("message").textContent = `Insufficient coins: You need ${actualCost} 🪙 to open this pack! (You have: ${currentCoinsStr} 🪙)`;
     return;
   }
 
-  coins -= actualCost;
+  if(!isUserCoinsInf){
+    coins -= actualCost;
+  }
   save();
   render();
 
@@ -368,6 +378,7 @@ function startPackOpening(tierKey){
   results.style.display = "none";
   overlay.classList.add("show");
   status.textContent = "Unsealing Pack Foil...";
+  if(typeof playChaosSfx === "function") playChaosSfx("packTear");
 
   setTimeout(()=>{
     model.classList.add("shaking");
@@ -383,6 +394,10 @@ function startPackOpening(tierKey){
       results.style.display = "flex";
 
       container.innerHTML = "";
+      if(typeof playChaosSfx === "function"){
+        const hasApex = resultsCards.some(c => ["divine", "mythic", "legendary"].includes(c.rarity));
+        playChaosSfx(hasApex ? "triumph" : "ascension");
+      }
       let newCards = 0;
 
       for(let i = 0; i < pack.count; i++){
@@ -462,7 +477,7 @@ document.getElementById("packCollectBtn").onclick = ()=>{
 };
 
 function render(){
-  document.getElementById("coins").textContent = coins.toLocaleString();
+  document.getElementById("coins").textContent = (typeof formatCoins === "function") ? formatCoins(coins) : ((typeof isInfiniteValue === "function" && isInfiniteValue(coins)) ? "∞" : coins.toLocaleString());
   const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
   const showUnreleasedInBinder = isCam && ((typeof shouldShowUnreleasedInBinder === "function") && shouldShowUnreleasedInBinder());
 
@@ -712,7 +727,8 @@ if(currentUser && accounts[currentUser]){
     if(Array.isArray(savedGuestOwned) && savedGuestOwned.length > 0) owned = savedGuestOwned;
     else owned = [0];
     const savedGuestCoins = parseInt(localStorage.getItem("cardCollectorGuestCoins"), 10);
-    if(!isNaN(savedGuestCoins)) coins = savedGuestCoins;
+    if(typeof isInfiniteValue === "function" && isInfiniteValue(savedGuestCoins)) coins = Infinity;
+    else if(!isNaN(savedGuestCoins)) coins = savedGuestCoins;
   } catch(e){
     owned = [0];
   }

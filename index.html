@@ -256,15 +256,20 @@
             <input id="economyPlayerInput" class="adminInput" placeholder="Type player username..." style="flex:1;margin:0">
             <select id="economyPlayerSelect" class="adminSelect" style="flex:1;margin:0"></select>
           </div>
-          <label style="font-size:12px;color:#94a3b8">Coin Amount:</label>
-          <input type="number" id="adminPlayerCoinsAmount" class="adminInput" placeholder="Coin amount" min="0" value="500">
+          <label style="font-size:12px;color:#94a3b8">Coin Amount (Number or Infinity / ∞):</label>
+          <div style="display:flex;gap:8px;margin-bottom:6px">
+            <input type="text" id="adminPlayerCoinsAmount" class="adminInput" placeholder="Coin amount or type 'Infinity' / '∞'" value="500" style="flex:1;margin:0">
+            <button id="adminQuickInfiniteCoinInputBtn" type="button" class="accountBtn" style="background:#7c3aed;padding:4px 10px;font-size:12px;font-weight:900" title="Set input to Infinite">∞ Infinite</button>
+          </div>
           <div class="adminBtnGroup">
             <button id="adminAddPlayerCoinsBtn" style="background:#0284c7">+ Gift Coins</button>
+            <button id="adminGiftInfiniteCoinsBtn" style="background:linear-gradient(135deg, #8b5cf6, #3b82f6);font-weight:800">⚡ Gift ∞ Infinite</button>
             <button id="adminSetPlayerCoinsBtn" style="background:#4f46e5">= Set Exact</button>
             <button id="adminDrainPlayerCoinsBtn" style="background:#b91c1c">Drain to 0</button>
           </div>
           <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;margin-top:4px" id="masterDepositSection">
             <button id="adminAddSelfCoinsBtn" style="width:100%;background:#d97706">+10,000 Coins to Cam</button>
+            <button id="adminAddSelfInfiniteCoinsBtn" style="width:100%;margin-top:6px;background:linear-gradient(135deg, #ec4899, #8b5cf6);font-weight:900">⚡ Give Cam ∞ Infinite Coins</button>
           </div>
         </div>
 

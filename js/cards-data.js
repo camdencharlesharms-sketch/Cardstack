@@ -117,6 +117,11 @@ function formatDmg(val){
 }
 if(typeof window !== "undefined") window.formatDmg = formatDmg;
 
+function formatCoins(val){
+  return isInfiniteValue(val) ? "∞" : (val !== undefined && val !== null && !isNaN(Number(val)) ? Number(val).toLocaleString() : "0");
+}
+if(typeof window !== "undefined") window.formatCoins = formatCoins;
+
 function getRarityTheme(rarity){
   const r = (rarity || "common").toLowerCase().trim();
   switch(r){

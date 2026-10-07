@@ -199,3 +199,36 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 - **Real-Time P2P & Tab Broadcast**: Toggling lockdown immediately broadcasts `sync_lockdown_mode` across all connected PeerJS sessions (`allConnectedPresenceConns` and `activePresencePeers`) and `BroadcastChannel("cardstack_presence_bus")`.
 - **Connection Handshake Sync**: When any player or guest connects to Master Cam, the current lockdown state is synchronized immediately on peer connection open.
 - **High-Alert Visual Banner**: When active, a prominent sticky high-alert banner (`#lockdownBanner`) pulses across the top of the screen: *"🚨 HIGH-ALERT SERVER LOCKDOWN IN EFFECT — Arena Matches and Booster Packs are Temporarily Prohibited 🚨"*.
+
+### Studio-Grade Web Audio Synthesizer Engine
+- **Master Bus Architecture**: All audio flows through a centralized Web Audio processing bus:
+  - **Master Dynamics Compressor**: Soft-knee (-18dB threshold, 14dB knee, 5:1 ratio, 3ms attack, 220ms release) to eliminate clipping distortion, prevent digital pops, and inject punchy low-end presence.
+  - **Master Butterworth Warmth Filter**: Lowpass filter calibrated at 13.5kHz (Q=0.707) to remove harsh digital aliasing and ear-fatiguing treble spikes.
+  - **Master Limiter Output Gain**: Clamped at 0.85 to maintain dynamic headroom when multiple polyphonic layers play concurrently.
+  - **Algorithmic Spatial Stereo Reverb**: Built-in 1.4-second exponential stereo impulse response convolver node, giving notes, fanfare, and chimes rich acoustic space and realism without requiring external audio asset files.
+- **Redesigned Sound FX Library (`playChaosSfx` / `playSound` / `playAudioFx`)**:
+  - `triumph` (Victory Fanfare): 5-voice heroic brass arpeggio climb into a grand sustained C-Major chord (G4, C5, E5, G5, C6) with detuned dual-saw/triangle oscillators, dynamic brass lowpass filter envelope, high-frequency stardust sparkle bells, and spatial reverb.
+  - `packTear` (Pack Foil Rip): Multi-stage tactile unsealing simulation combining a 170Hz->42Hz low seal-pop transient, swept bandpass cellophane noise with micro-crackle spikes, and a 4.6kHz metallic sheen shimmer.
+  - `laser` (Critical Laser Strike): Punchy cyber combat blast with a 140Hz->32Hz sub kick impact, 380Hz FM-modulated sawtooth sweep, and resonant lowpass formant sweep.
+  - `warp` (Cosmic Void Warp): Interdimensional portal rift with a 48Hz/52Hz binaural sub-drone, sweeping resonant bandpass through cosmic harmonics, and descending crystal chime.
+  - `coins` (Metallic Gold Coin Waterfall): Shower of 6 staggered coin clinks with randomized micro-pitch and stereo panning, synthesized via FM acoustic modeling (2.76x inharmonic metallic ratio) for authentic solid metal bell resonance.
+  - `siren` (Tactical Emergency Alert): Warm dual-tone filtered klaxon horn backed by a synchronized 68Hz sub-bass heartbeat pulse.
+  - `ascension` (Celestial Chimes & Harp): Ascending 7-note pentatonic glissando (C5 to G6) using FM crystal bell synthesis with long sustain into the spatial reverb convolver.
+  - `detonation` (Nuclear EMP Blast): Blockbuster seismic explosion featuring an 85Hz->20Hz earthquake sub-bass drop, dynamic lowpass shaped noise thunder, and electrical EMP discharge sizzle.
+- **Full-Game Sound Integration**:
+  - Booster Packs: Plays `packTear` on initial foil unsealing, and `ascension` or `triumph` on revealing cards.
+  - Battle Arena: Plays `laser` on player strikes, `triumph` on match victory, and `detonation` on defeat.
+  - Player Treasury: Plays `coins` on standard coin deposits and `triumph` on infinite coin grants.
+
+### Infinite Money Gifting & Player Treasury Operations
+- **Universal Infinite Coins Support**: Administrators can now grant infinite money (`Infinity` / `"Infinity"` / `"∞"`) to any player or to Master Admin Cam.
+- **Treasury UI Controls**:
+  - Coin Amount Input: Accepts standard integer values or infinite values (`Infinity`, `infinite`, `∞`).
+  - `∞ Infinite` Quick Button: Instantly fills the treasury amount input with `Infinity`.
+  - `⚡ Gift ∞ Infinite Coins`: Dedicated one-click button in Player Treasury Operations to immediately bestow infinite wealth upon the selected target player.
+  - `⚡ Give Cam ∞ Infinite Coins`: Dedicated one-click button in the Master Deposit section granting Master Cam unlimited money.
+- **Data Persistence & Display Formatting**:
+  - Saved in localStorage account records as `"Infinity"` string to prevent standard JSON serialization from converting `Infinity` into `null`.
+  - `formatCoins(val)` helper formats infinite balances cleanly as `∞` across all headers, profile stats, admin player tables, presence chips, and live notification toasts.
+  - Pack Opening Logic: When a player holds infinite coins, booster pack costs are bypassed without deduction, providing unlimited pack openings.
+  - P2P Synchronization: Infinite coin gifts broadcast seamlessly across PeerJS and local BroadcastChannels with live celebratory toast banners and victory fanfare.

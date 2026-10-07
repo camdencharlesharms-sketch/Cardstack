@@ -643,18 +643,41 @@ function handleIncomingAdminDispatch(actionData){
     return;
   }
   if(actionData.type === "gift_coins"){
-    const amt = actionData.amount || 0;
-    coins += amt;
-    if(accounts[currentUser]) accounts[currentUser].coins = coins;
-    save();
-    render();
-    showLiveToast(`🎁 Master Admin Cam gifted you <b>+${amt.toLocaleString()} Coins</b>! 🪙`, true);
+    const isInf = (typeof isInfiniteValue === "function" && isInfiniteValue(actionData.amount)) || actionData.amount === "Infinity";
+    if(isInf){
+      coins = Infinity;
+      if(accounts[currentUser]) accounts[currentUser].coins = "Infinity";
+      save();
+      render();
+      if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+      showLiveToast(`⚡ Master Admin Cam gifted you <b>∞ INFINITE COINS</b>! 🪙`, true);
+    } else {
+      const amt = parseInt(actionData.amount, 10) || 0;
+      if(!isInfiniteValue(coins)){
+        coins += amt;
+      }
+      if(accounts[currentUser]) accounts[currentUser].coins = (coins === Infinity) ? "Infinity" : coins;
+      save();
+      render();
+      if(typeof playChaosSfx === "function") playChaosSfx("coins");
+      showLiveToast(`🎁 Master Admin Cam gifted you <b>+${amt.toLocaleString()} Coins</b>! 🪙`, true);
+    }
   } else if(actionData.type === "set_coins"){
-    coins = actionData.amount || 0;
-    if(accounts[currentUser]) accounts[currentUser].coins = coins;
-    save();
-    render();
-    showLiveToast(`🪙 Master Admin Cam updated your treasury to <b>${coins.toLocaleString()} Coins</b>!`, true);
+    const isInf = (typeof isInfiniteValue === "function" && isInfiniteValue(actionData.amount)) || actionData.amount === "Infinity";
+    if(isInf){
+      coins = Infinity;
+      if(accounts[currentUser]) accounts[currentUser].coins = "Infinity";
+      save();
+      render();
+      if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+      showLiveToast(`⚡ Master Admin Cam updated your treasury to <b>∞ INFINITE COINS</b>!`, true);
+    } else {
+      coins = parseInt(actionData.amount, 10) || 0;
+      if(accounts[currentUser]) accounts[currentUser].coins = coins;
+      save();
+      render();
+      showLiveToast(`🪙 Master Admin Cam updated your treasury to <b>${(typeof formatCoins === "function") ? formatCoins(coins) : coins.toLocaleString()} Coins</b>!`, true);
+    }
   } else if(actionData.type === "gift_card"){
     const cIdx = actionData.cardIndex;
     const cardObj = actionData.card || (typeof cards !== "undefined" ? cards[cIdx] : null);
@@ -780,7 +803,7 @@ function updateLivePresenceDisplay(){
     chip.innerHTML = `
       <span style="width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981"></span>
       <b style="color:${isMaster ? '#fb7185' : '#f1f5f9'}">${name}${isCurrent ? ' (You)' : ''}</b>
-      <span style="color:#fbbf24">🪙 ${(data.coins || 0).toLocaleString()}</span>
+      <span style="color:#fbbf24">🪙 ${(typeof formatCoins === "function") ? formatCoins(data.coins) : (data.coins || 0).toLocaleString()}</span>
     `;
     chip.onmouseenter = ()=>{ chip.style.transform = "scale(1.05)"; };
     chip.onmouseleave = ()=>{ chip.style.transform = "scale(1)"; };

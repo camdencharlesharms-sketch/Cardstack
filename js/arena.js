@@ -720,9 +720,10 @@ function triggerBattleAnimation(attacker, defender){
 function triggerVictory(){
   const baseReward = 25;
   const reward = baseReward * eventCoinMultiplier;
-  coins += reward;
+  if(!isInfiniteValue(coins)) coins += reward;
   save();
   render();
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
 
   const victoryBanner = document.getElementById("victoryBanner");
   if(victoryBanner){
@@ -746,6 +747,7 @@ function triggerVictory(){
 }
 
 function triggerDefeat(){
+  if(typeof playChaosSfx === "function") playChaosSfx("detonation");
   const victoryBanner = document.getElementById("victoryBanner");
   if(victoryBanner){
     victoryBanner.classList.remove("outcome-win");
@@ -771,6 +773,7 @@ function performPlayerAttack(attackObj){
   if(!isPlayerTurn || battlePlayerHp <= 0 || battleOppHp <= 0) return;
 
   triggerBattleAnimation("player", "ai");
+  if(typeof playChaosSfx === "function") playChaosSfx("laser");
 
   const isAtkInf = (typeof isInfiniteValue === "function" && isInfiniteValue(attackObj.dmg)) || attackObj.dmg === "Infinity";
 
