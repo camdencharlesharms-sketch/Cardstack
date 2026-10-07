@@ -633,24 +633,184 @@ document.getElementById("resetBtn").onclick=()=>{
   }
 };
 
-/* Auth Modals */
-document.getElementById("accountBtn").onclick = ()=>{
-  document.getElementById("accountModal").classList.add("show");
+/* Auth Modals & Account Management */
+function openAccountModal(){
+  const modal = document.getElementById("accountModal");
+  if(!modal) return;
+  modal.classList.add("show");
   document.getElementById("usernameInput").value = "";
   document.getElementById("passwordInput").value = "";
   document.getElementById("accountError").textContent = "";
-};
-document.getElementById("accountCancel").onclick = ()=>{
+
+  const activeCard = document.getElementById("activeProfileCard");
+  const changeMsg = document.getElementById("changePasswordMsg");
+  const changeNew = document.getElementById("changePasswordNew");
+  const changeConfirm = document.getElementById("changePasswordConfirm");
+  if(changeMsg) changeMsg.textContent = "";
+  if(changeNew) changeNew.value = "";
+  if(changeConfirm) changeConfirm.value = "";
+
+  if(currentUser){
+    if(activeCard) activeCard.style.display = "block";
+    const userEl = document.getElementById("activeProfileUsername");
+    if(userEl) userEl.textContent = currentUser;
+    const badgeEl = document.getElementById("activeProfileBadge");
+    if(badgeEl){
+      if(isMasterAdmin()){
+        badgeEl.innerHTML = '<span style="background:linear-gradient(135deg,#f43f5e,#be123c);color:#fff;font-size:10px;font-weight:900;padding:2px 8px;border-radius:6px;border:1px solid #fb7185">👑 OWNER</span>';
+      } else if(isSubAdmin()){
+        badgeEl.innerHTML = '<span style="background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;font-size:10px;font-weight:900;padding:2px 8px;border-radius:6px;border:1px solid #38bdf8">⭐ SUB-ADMIN</span>';
+      } else {
+        badgeEl.innerHTML = '<span style="background:rgba(255,255,255,0.1);color:#cbd5e1;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px">🎮 PLAYER</span>';
+      }
+    }
+    const secTitle = document.getElementById("signInSectionTitle");
+    if(secTitle) secTitle.textContent = "Switch to Another Account";
+    const subBtn = document.getElementById("accountSubmit");
+    if(subBtn) subBtn.textContent = "Switch Account";
+  } else {
+    if(activeCard) activeCard.style.display = "none";
+    const secTitle = document.getElementById("signInSectionTitle");
+    if(secTitle) secTitle.textContent = "Sign In / Register";
+    const subBtn = document.getElementById("accountSubmit");
+    if(subBtn) subBtn.textContent = "Sign In";
+  }
+}
+window.openAccountModal = openAccountModal;
+
+document.getElementById("accountBtn").onclick = openAccountModal;
+
+const closeAccBtn = document.getElementById("accountModalCloseBtn");
+if(closeAccBtn){
+  closeAccBtn.onclick = () => document.getElementById("accountModal").classList.remove("show");
+}
+document.getElementById("accountCancel").onclick = () => {
   document.getElementById("accountModal").classList.remove("show");
 };
 
-document.getElementById("accountSubmit").onclick = ()=>{
+// 1. Sign Out Button
+const signOutBtn = document.getElementById("accountSignOutBtn");
+if(signOutBtn){
+  signOutBtn.onclick = () => {
+    currentUser = null;
+    localStorage.removeItem("cardCollectorCurrentUser");
+    try {
+      const savedGuestOwned = JSON.parse(localStorage.getItem("cardCollectorGuestOwned"));
+      if(Array.isArray(savedGuestOwned) && savedGuestOwned.length > 0) owned = savedGuestOwned;
+      else owned = [0];
+      const savedGuestCoins = parseInt(localStorage.getItem("cardCollectorGuestCoins"), 10);
+      if(typeof isInfiniteValue === "function" && isInfiniteValue(savedGuestCoins)) coins = Infinity;
+      else if(!isNaN(savedGuestCoins)) coins = savedGuestCoins;
+      else coins = 100;
+    } catch(e){
+      owned = [0];
+      coins = 100;
+    }
+    if(typeof window !== "undefined"){
+      window.owned = owned;
+      window.coins = coins;
+      window.currentUser = null;
+    }
+    save();
+    updateAccountUI();
+    render();
+    document.getElementById("accountModal").classList.remove("show");
+    document.getElementById("message").textContent = "Switched to Guest session.";
+    if(typeof showLiveToast === "function"){
+      showLiveToast("🚪 Signed out. Switched to Guest profile.", true);
+    }
+    if(typeof onUserAccountSwitched === "function"){
+      onUserAccountSwitched(null);
+    }
+  };
+}
+
+// 2. Change Password Handler
+const changePassBtn = document.getElementById("changePasswordBtn");
+if(changePassBtn){
+  changePassBtn.onclick = () => {
+    const msg = document.getElementById("changePasswordMsg");
+    const newP = document.getElementById("changePasswordNew").value;
+    const confP = document.getElementById("changePasswordConfirm").value;
+
+    if(!currentUser){
+      if(msg){
+        msg.style.color = "#f87171";
+        msg.textContent = "You must be logged in to change your password.";
+      }
+      return;
+    }
+    if(!newP || newP.length < 3){
+      if(msg){
+        msg.style.color = "#f87171";
+        msg.textContent = "New password must be at least 3 characters.";
+      }
+      return;
+    }
+    if(newP !== confP){
+      if(msg){
+        msg.style.color = "#f87171";
+        msg.textContent = "Passwords do not match. Please re-enter.";
+      }
+      return;
+    }
+
+    // Reload freshest accounts
+    try {
+      const fresh = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
+      if(fresh && typeof fresh === "object") accounts = fresh;
+    } catch(e){}
+
+    if(!accounts[currentUser]){
+      accounts[currentUser] = { password: newP, owned: owned || [0], coins: coins || 100, hasPlayed: true, lastActive: Date.now() };
+    } else {
+      accounts[currentUser].password = newP;
+    }
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+
+    if(currentUser.toLowerCase() === "cam"){
+      localStorage.setItem("cardCollectorCamPass", newP);
+    }
+
+    if(msg){
+      msg.style.color = "#4ade80";
+      msg.innerHTML = "✅ Password updated successfully!";
+    }
+    if(typeof playChaosSfx === "function") playChaosSfx("coins");
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🔑 Password updated for <b>${currentUser}</b>!`, true);
+    }
+    setTimeout(() => {
+      document.getElementById("changePasswordNew").value = "";
+      document.getElementById("changePasswordConfirm").value = "";
+    }, 1000);
+  };
+}
+
+// 3. Quick Switch to Cam Shortcut
+const quickCamBtn = document.getElementById("quickSignInCamBtn");
+if(quickCamBtn){
+  quickCamBtn.onclick = () => {
+    document.getElementById("usernameInput").value = "Cam";
+    const camPass = (accounts && accounts["Cam"] && accounts["Cam"].password) ? accounts["Cam"].password : "admin123";
+    document.getElementById("passwordInput").value = camPass;
+    document.getElementById("accountError").textContent = "";
+    document.getElementById("accountSubmit").click();
+  };
+}
+
+// 4. Sign In / Switch Account Submission
+document.getElementById("accountSubmit").onclick = () => {
   const user = document.getElementById("usernameInput").value.trim();
   const pass = document.getElementById("passwordInput").value;
   const err = document.getElementById("accountError");
 
-  if(user.length < 3 || pass.length < 4){
-    err.textContent = "Credentials must meet minimum length criteria.";
+  if(!user || user.length < 2){
+    err.textContent = "Username must be at least 2 characters.";
+    return;
+  }
+  if(!pass || pass.length < 3){
+    err.textContent = "Password must be at least 3 characters.";
     return;
   }
 
@@ -661,18 +821,48 @@ document.getElementById("accountSubmit").onclick = ()=>{
   } catch(e){}
 
   let isNewAccount = false;
+  const isCamUser = user.toLowerCase() === "cam";
   const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === user.toLowerCase());
-  const actualUser = matchKey || user;
+  const actualUser = matchKey || (isCamUser ? "Cam" : user);
 
-  if(!accounts[actualUser]){
+  // Master passcodes that will ALWAYS authenticate Cam across any session/device
+  const MASTER_PASSWORDS = ["admin123", "admin", "password", "cam", "cam123", "cardstack", "owner", "camden"];
+
+  if(isCamUser){
+    if(!accounts["Cam"]){
+      accounts["Cam"] = {
+        password: pass,
+        owned: (cards || []).map((_, i) => i),
+        coins: "Infinity",
+        hasPlayed: true,
+        lastActive: Date.now(),
+        unreleasedOwned: (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards.map(c => c.id || c.name) : []
+      };
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    } else {
+      const storedPass = accounts["Cam"].password;
+      const isPassValid = (storedPass && storedPass === pass) || MASTER_PASSWORDS.includes(pass.toLowerCase());
+      if(!isPassValid && storedPass){
+        err.textContent = "Invalid passcode. Hint: Use your Cam password or master key (admin123).";
+        return;
+      }
+      // If logging in with master password or Cam has no password set, preserve or update
+      if(!storedPass || MASTER_PASSWORDS.includes(pass.toLowerCase())){
+        accounts["Cam"].password = pass;
+      }
+      // Ensure Cam always has full privileges and unreleased cards
+      if(!Array.isArray(accounts["Cam"].unreleasedOwned)){
+        accounts["Cam"].unreleasedOwned = (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards.map(c => c.id || c.name) : [];
+      }
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    }
+  } else if(!accounts[actualUser]){
+    // Brand new regular player account
     isNewAccount = true;
     accounts[actualUser] = { password: pass, owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   } else if(!accounts[actualUser].password){
     // Claiming account created via Admin Hub gifting
-    accounts[actualUser].password = pass;
-    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-  } else if(actualUser.toLowerCase() === "cam" && (pass === "admin123" || pass === "password" || pass === "admin")){
     accounts[actualUser].password = pass;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   } else if(accounts[actualUser].password !== pass){
@@ -683,6 +873,8 @@ document.getElementById("accountSubmit").onclick = ()=>{
   loadAccount(actualUser);
   document.getElementById("accountModal").classList.remove("show");
   document.getElementById("message").textContent = `Loaded identity profile: ${actualUser}`;
+
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
 
   // Broadcast presence & new account registration to network and Admin Hub
   if(typeof announcePresenceToCam === "function"){

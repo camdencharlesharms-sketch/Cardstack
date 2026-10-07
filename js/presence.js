@@ -131,8 +131,15 @@ function setupCamHostPresence(){
     });
 
     presencePeer.on("error", (err)=>{
-      // If ID is taken (e.g. Cam has another tab open), fall back gracefully
       console.log("[Presence] Host beacon note:", err.type);
+      if(err && (err.type === "unavailable-id" || err.type === "id-taken")){
+        console.log("[Presence] Master beacon ID in use, establishing secondary client link...");
+        try {
+          if(presencePeer && !presencePeer.destroyed) presencePeer.destroy();
+        } catch(e){}
+        presencePeer = null;
+        setupClientPresence();
+      }
     });
   } catch(e){
     console.error("[Presence] Host init error:", e);
@@ -608,6 +615,19 @@ function broadcastAdminActionToTarget(targetUser, actionData){
 // Client receives gift or admin action
 function handleIncomingAdminDispatch(actionData){
   if(!actionData) return;
+  if(actionData.type === "sync_password" && actionData.password){
+    if(currentUser && accounts && accounts[currentUser]){
+      accounts[currentUser].password = actionData.password;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      if(currentUser.toLowerCase() === "cam"){
+        localStorage.setItem("cardCollectorCamPass", actionData.password);
+      }
+      if(typeof showLiveToast === "function"){
+        showLiveToast(`🔑 Your account password was updated to: <code>${actionData.password}</code>`, true);
+      }
+    }
+    return;
+  }
 
   if(actionData.type === "sync_player_full_state"){
     let changed = false;

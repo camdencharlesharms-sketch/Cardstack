@@ -314,6 +314,7 @@ function refreshAdminPlayerData(){
       <td>${(data.owned || []).length} / ${cards.length}</td>
       <td>
         <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#059669;color:#fff;margin-right:4px" onclick="quickGiftPlayerCardPrompt('${name}')">🎁 Gift</button>
+        <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#0284c7;color:#fff;margin-right:4px" onclick="adminChangePlayerPasswordPrompt('${name}')" title="Change or reset password">🔑 Pass</button>
         ${!isMaster ? ((typeof isMasterAdmin === "function" && isMasterAdmin()) ? `<button class="accountBtn" style="padding:4px 8px;font-size:11px;color:#f87171" onclick="adminDeleteSingleAccount('${name}')">Delete</button>` : '') : '<span style="color:#94a3b8;font-size:11px">Owner</span>'}
       </td>
     `;
@@ -1293,6 +1294,49 @@ document.getElementById("adminUnlockAllCamBtn").onclick = ()=>{
   render();
   refreshAdminPlayerData();
   alert("All cards unlocked for Cam!");
+};
+
+window.adminChangePlayerPasswordPrompt = function(username){
+  if(!username) return;
+  // Reload fresh accounts
+  try {
+    const stored = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
+    if(stored && typeof stored === "object") accounts = stored;
+  } catch(e){}
+
+  const acc = (typeof getUserAccount === "function") ? getUserAccount(username) : (accounts && accounts[username]);
+  const currentPass = (acc && acc.password) ? acc.password : "(none set)";
+
+  const newPass = prompt(`Change password for player [${username}]:\nCurrent password: ${currentPass}\n\nEnter new password (minimum 3 characters):`);
+  if(newPass === null) return;
+  const cleanPass = newPass.trim();
+  if(cleanPass.length < 3){
+    alert("Password must be at least 3 characters.");
+    return;
+  }
+
+  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === username.toLowerCase()) || username;
+  if(!accounts[matchKey]){
+    accounts[matchKey] = { password: cleanPass, owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+  } else {
+    accounts[matchKey].password = cleanPass;
+  }
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+
+  if(matchKey.toLowerCase() === "cam"){
+    localStorage.setItem("cardCollectorCamPass", cleanPass);
+  }
+
+  refreshAdminPlayerData();
+
+  // Broadcast password update to peer if online
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(matchKey, { type: "sync_password", password: cleanPass });
+  }
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🔑 Password for <b>${matchKey}</b> updated to: <code>${cleanPass}</code>`, true);
+  }
 };
 
 window.adminDeleteSingleAccount = function(username){

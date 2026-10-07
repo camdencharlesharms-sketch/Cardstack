@@ -54,14 +54,65 @@
 </div>
 
 <div id="accountModal">
-  <div class="accountBox" style="width:min(420px,90vw)">
-    <h2 id="accountTitle" style="margin-top:0">Player Sign-In</h2>
-    <input id="usernameInput" class="adminInput" placeholder="Username" maxlength="20" style="margin-bottom:10px">
-    <input id="passwordInput" type="password" class="adminInput" placeholder="Password" maxlength="40">
-    <div id="accountError" style="color:#f87171;font-size:13px;min-height:20px;margin-top:8px"></div>
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button id="accountSubmit" style="flex:1">Sign In</button>
-      <button id="accountCancel" class="accountBtn" style="flex:1">Cancel</button>
+  <div class="accountBox" style="width:min(480px,94vw);max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;margin-bottom:16px">
+      <h2 id="accountTitle" style="margin:0;font-size:22px;display:flex;align-items:center;gap:8px">
+        <span>👤</span> <span>Account & Profile</span>
+      </h2>
+      <button id="accountModalCloseBtn" class="accountBtn" style="padding:4px 10px;font-size:14px">✕</button>
+    </div>
+
+    <!-- Active Profile Card (shown when logged in) -->
+    <div id="activeProfileCard" style="display:none;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:14px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;font-weight:700">Currently Logged In</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+            <span id="activeProfileUsername" style="font-size:18px;font-weight:900;color:#fff">Cam</span>
+            <span id="activeProfileBadge"></span>
+          </div>
+        </div>
+        <button id="accountSignOutBtn" class="accountBtn" style="background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5;padding:6px 12px;font-size:12px;font-weight:800">
+          🚪 Sign Out
+        </button>
+      </div>
+
+      <!-- Change Password Section inside active profile -->
+      <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:13px;font-weight:800;color:#e2e8f0;display:flex;align-items:center;gap:6px">
+            🔑 Change Your Password
+          </span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input id="changePasswordNew" type="password" class="adminInput" placeholder="New Password (min 3 chars)" maxlength="40" style="margin:0">
+          <input id="changePasswordConfirm" type="password" class="adminInput" placeholder="Confirm New Password" maxlength="40" style="margin:0">
+          <div id="changePasswordMsg" style="font-size:12px;min-height:16px"></div>
+          <button id="changePasswordBtn" style="background:linear-gradient(135deg, #10b981, #059669);color:#fff;font-weight:800;font-size:13px;padding:9px;margin:0">
+            💾 Save New Password
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sign In / Switch Account Form -->
+    <div id="signInSection" style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h4 id="signInSectionTitle" style="margin:0;font-size:14px;color:#cbd5e1">Sign In / Switch Account</h4>
+        <!-- Quick Switch to Cam Shortcut -->
+        <button id="quickSignInCamBtn" type="button" class="accountBtn" style="background:linear-gradient(135deg,#f43f5e,#be123c);border:1px solid #fb7185;color:#fff;padding:4px 10px;font-size:11px;font-weight:900" title="Quickly switch to Master Cam account">
+          👑 Switch to Cam
+        </button>
+      </div>
+
+      <input id="usernameInput" class="adminInput" placeholder="Username" maxlength="20" style="margin-bottom:10px">
+      <input id="passwordInput" type="password" class="adminInput" placeholder="Password" maxlength="40" style="margin-bottom:6px">
+      <div id="accountError" style="color:#f87171;font-size:12px;min-height:18px"></div>
+      
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button id="accountSubmit" style="flex:1;background:linear-gradient(135deg, #3b82f6, #1d4ed8);font-weight:800">Sign In</button>
+        <button id="accountCancel" class="accountBtn" style="flex:1">Close</button>
+      </div>
     </div>
   </div>
 </div>
