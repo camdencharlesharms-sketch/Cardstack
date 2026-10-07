@@ -93,16 +93,57 @@
           </button>
         </div>
       </div>
+
+      <!-- Cross-Device Sign In & Device Link Section -->
+      <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:800;color:#38bdf8;display:flex;align-items:center;gap:6px">
+            📲 Sign In on Another Device
+          </span>
+        </div>
+        <p style="font-size:11px;color:#94a3b8;margin:0 0 10px 0;line-height:1.4">
+          Want to play with this account on your phone, tablet, or another computer? Copy a direct sign-in link or your device sync code below:
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="copyDeviceSyncLinkBtn" class="accountBtn" style="flex:1;background:linear-gradient(135deg,#0284c7,#0369a1);border:1px solid #38bdf8;color:#fff;font-size:11px;font-weight:800;padding:8px" type="button">
+            🔗 Copy Direct Sign-In Link
+          </button>
+          <button id="copyDeviceSyncCodeBtn" class="accountBtn" style="flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#e2e8f0;font-size:11px;font-weight:800;padding:8px" type="button">
+            📋 Copy Sync Code
+          </button>
+        </div>
+        <div id="deviceSyncCopiedMsg" style="color:#4ade80;font-size:12px;min-height:16px;margin-top:6px;font-weight:700"></div>
+      </div>
     </div>
 
     <!-- Sign In / Switch Account Form -->
     <div id="signInSection" style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px">
-      <div style="margin-bottom:12px">
+      <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
         <h4 id="signInSectionTitle" style="margin:0;font-size:14px;color:#cbd5e1">Sign In / Switch Account</h4>
+        <!-- Toggle button to switch between Username/Password and Device Sync Code -->
+        <button id="toggleSyncCodeViewBtn" type="button" class="accountBtn" style="font-size:11px;padding:3px 8px;color:#38bdf8;border:1px solid #0284c7;background:rgba(2,132,199,0.15)">
+          📲 Use Device Code
+        </button>
       </div>
 
-      <input id="usernameInput" class="adminInput" placeholder="Username" maxlength="20" style="margin-bottom:10px">
-      <input id="passwordInput" type="password" class="adminInput" placeholder="Password" maxlength="40" style="margin-bottom:6px">
+      <!-- Quick Account Switcher for accounts existing on this device -->
+      <div id="quickAccountSwitcherContainer" style="display:none;margin-bottom:12px;background:rgba(255,255,255,0.03);padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06)">
+        <div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Accounts on this Device:</div>
+        <div id="quickAccountList" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- Standard Username & Password Inputs -->
+      <div id="standardSignInFields">
+        <input id="usernameInput" class="adminInput" placeholder="Username" maxlength="20" style="margin-bottom:10px">
+        <input id="passwordInput" type="password" class="adminInput" placeholder="Password" maxlength="40" style="margin-bottom:6px">
+      </div>
+
+      <!-- Device Sync Code Input Form (Alternative cross-device method) -->
+      <div id="deviceSyncCodeFields" style="display:none;margin-bottom:6px">
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:6px">Paste your Device Sync Code from your other device:</div>
+        <textarea id="deviceSyncCodeInput" class="adminTextarea" placeholder="Paste your Device Sync Code here..." style="min-height:54px;font-family:monospace;font-size:11px;resize:vertical"></textarea>
+      </div>
+
       <div id="accountError" style="color:#f87171;font-size:12px;min-height:18px"></div>
       
       <div style="display:flex;gap:10px;margin-top:12px">
@@ -534,6 +575,7 @@
           <label style="font-size:12px;color:#94a3b8">Target Beneficiary:</label>
           <div style="display:flex;gap:8px">
             <select id="chaosCasinoTargetSelect" class="adminSelect" style="flex:1;margin:0"></select>
+            <input id="chaosCasinoTargetInput" class="adminInput" placeholder="Or type username..." style="flex:1;margin:0">
           </div>
           <div id="chaosCasinoDisplay" style="background:radial-gradient(circle, #1e1b4b, #0f172a);border:2px solid #f59e0b;border-radius:12px;padding:14px;text-align:center;box-shadow:0 0 15px rgba(245,158,11,0.25)">
             <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#fde68a;letter-spacing:1px">Lucky Wheel Prize Reel</div>

@@ -642,6 +642,72 @@ document.getElementById("resetBtn").onclick=()=>{
 };
 
 /* Auth Modals & Account Management */
+// Cross-Device Sync Helpers
+function generateAccountSyncPayload(username){
+  if(!username) return null;
+  const acc = (typeof getUserAccount === "function" ? getUserAccount(username) : null) || (accounts && accounts[username]);
+  if(!acc) return null;
+  const payload = {
+    u: username,
+    p: acc.password || "",
+    o: Array.isArray(acc.owned) ? acc.owned : [0],
+    c: (typeof isInfiniteValue === "function" && isInfiniteValue(acc.coins)) || acc.coins === Infinity || acc.coins === "Infinity" ? "Infinity" : (acc.coins || 100),
+    uO: Array.isArray(acc.unreleasedOwned) ? acc.unreleasedOwned : [],
+    t: Date.now()
+  };
+  return btoa(encodeURIComponent(JSON.stringify(payload)));
+}
+
+function importAccountSyncPayload(syncStr){
+  try {
+    if(!syncStr || typeof syncStr !== "string") return { success: false, error: "Empty sync payload." };
+    const raw = decodeURIComponent(atob(syncStr.trim()));
+    const data = JSON.parse(raw);
+    if(!data || !data.u) return { success: false, error: "Invalid sync data structure." };
+
+    const username = data.u.trim();
+    if(!accounts || typeof accounts !== "object") accounts = {};
+
+    if(!accounts[username]){
+      accounts[username] = {
+        password: data.p || "",
+        owned: Array.isArray(data.o) ? data.o : [0],
+        coins: data.c === "Infinity" ? "Infinity" : (Number.isFinite(data.c) ? data.c : 100),
+        unreleasedOwned: Array.isArray(data.uO) ? data.uO : [],
+        hasPlayed: true,
+        lastActive: Date.now()
+      };
+    } else {
+      if(data.p) accounts[username].password = data.p;
+      accounts[username].hasPlayed = true;
+      accounts[username].lastActive = Date.now();
+      if(Array.isArray(data.o)){
+        const existing = Array.isArray(accounts[username].owned) ? accounts[username].owned : [];
+        accounts[username].owned = Array.from(new Set([...existing, ...data.o]));
+      }
+      if(data.c === "Infinity" || accounts[username].coins === "Infinity"){
+        accounts[username].coins = "Infinity";
+      } else if(Number.isFinite(data.c)){
+        accounts[username].coins = Math.max(accounts[username].coins || 0, data.c);
+      }
+      if(Array.isArray(data.uO)){
+        const existingU = Array.isArray(accounts[username].unreleasedOwned) ? accounts[username].unreleasedOwned : [];
+        accounts[username].unreleasedOwned = Array.from(new Set([...existingU, ...data.uO]));
+      }
+    }
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(username.toLowerCase() === "cam" && data.p){
+      localStorage.setItem("cardCollectorCamPass", data.p);
+    }
+    loadAccount(username);
+    return { success: true, username };
+  } catch(e){
+    return { success: false, error: "Could not decode sync data." };
+  }
+}
+window.generateAccountSyncPayload = generateAccountSyncPayload;
+window.importAccountSyncPayload = importAccountSyncPayload;
+
 function openAccountModal(){
   const modal = document.getElementById("accountModal");
   if(!modal) return;
@@ -683,6 +749,46 @@ function openAccountModal(){
     const subBtn = document.getElementById("accountSubmit");
     if(subBtn) subBtn.textContent = "Sign In";
   }
+
+  // Populate Accounts on this Device list
+  const switcherContainer = document.getElementById("quickAccountSwitcherContainer");
+  const quickList = document.getElementById("quickAccountList");
+  if(switcherContainer && quickList){
+    quickList.innerHTML = "";
+    const knownAccounts = Object.keys(accounts || {}).filter(k => k && k.trim());
+    if(knownAccounts.length > 0){
+      switcherContainer.style.display = "block";
+      knownAccounts.forEach(accName => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "accountBtn";
+        chip.style.padding = "3px 8px";
+        chip.style.fontSize = "11px";
+        chip.style.margin = "0";
+        const isCam = accName.toLowerCase() === "cam";
+        chip.textContent = isCam ? "Cam 👑" : accName;
+        chip.onclick = () => {
+          const userInp = document.getElementById("usernameInput");
+          const passInp = document.getElementById("passwordInput");
+          if(userInp){
+            userInp.value = accName;
+            if(passInp) passInp.focus();
+          }
+        };
+        quickList.appendChild(chip);
+      });
+    } else {
+      switcherContainer.style.display = "none";
+    }
+  }
+
+  // Reset sync view toggles
+  const stdFields = document.getElementById("standardSignInFields");
+  const syncFields = document.getElementById("deviceSyncCodeFields");
+  const toggleBtn = document.getElementById("toggleSyncCodeViewBtn");
+  if(stdFields) stdFields.style.display = "block";
+  if(syncFields) syncFields.style.display = "none";
+  if(toggleBtn) toggleBtn.textContent = "📲 Use Device Code";
 }
 window.openAccountModal = openAccountModal;
 
@@ -797,9 +903,27 @@ if(changePassBtn){
 
 // 3. Sign In / Switch Account Submission
 document.getElementById("accountSubmit").onclick = () => {
+  const err = document.getElementById("accountError");
+  const syncCodeInp = document.getElementById("deviceSyncCodeInput");
+  const syncFields = document.getElementById("deviceSyncCodeFields");
+
+  // If in sync code mode or sync code is entered, import via code
+  if(syncFields && syncFields.style.display !== "none" && syncCodeInp && syncCodeInp.value.trim()){
+    const syncRes = importAccountSyncPayload(syncCodeInp.value.trim());
+    if(!syncRes.success){
+      err.textContent = syncRes.error || "Invalid sync code.";
+      return;
+    }
+    document.getElementById("accountModal").classList.remove("show");
+    document.getElementById("message").textContent = `Synced and signed in: ${syncRes.username}`;
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`📲 Synced and signed in as <b>${syncRes.username}</b>!`, true);
+    }
+    return;
+  }
+
   const user = document.getElementById("usernameInput").value.trim();
   const pass = document.getElementById("passwordInput").value.trim();
-  const err = document.getElementById("accountError");
 
   if(!user || user.length < 1){
     err.textContent = "Please enter your username.";
@@ -903,6 +1027,94 @@ document.getElementById("accountSubmit").onclick = () => {
     refreshAdminPlayerData();
   }
 };
+
+// Toggle between standard username/password and device sync code
+const toggleSyncCodeBtn = document.getElementById("toggleSyncCodeViewBtn");
+if(toggleSyncCodeBtn){
+  toggleSyncCodeBtn.onclick = () => {
+    const stdFields = document.getElementById("standardSignInFields");
+    const syncFields = document.getElementById("deviceSyncCodeFields");
+    const isShowingSync = syncFields && syncFields.style.display !== "none";
+    if(isShowingSync){
+      if(stdFields) stdFields.style.display = "block";
+      if(syncFields) syncFields.style.display = "none";
+      toggleSyncCodeBtn.textContent = "📲 Use Device Code";
+      document.getElementById("accountSubmit").textContent = currentUser ? "Switch Account" : "Sign In";
+    } else {
+      if(stdFields) stdFields.style.display = "none";
+      if(syncFields) syncFields.style.display = "block";
+      toggleSyncCodeBtn.textContent = "👤 Use Password";
+      document.getElementById("accountSubmit").textContent = "📲 Sync & Log In";
+    }
+  };
+}
+
+// Copy Direct Sign-In Link
+const copyDeviceSyncLinkBtn = document.getElementById("copyDeviceSyncLinkBtn");
+if(copyDeviceSyncLinkBtn){
+  copyDeviceSyncLinkBtn.onclick = () => {
+    const user = currentUser || "Cam";
+    const payload = generateAccountSyncPayload(user);
+    if(!payload) return alert("Please sign into an account first.");
+    const url = window.location.origin + window.location.pathname + "?syncAccount=" + encodeURIComponent(payload);
+    navigator.clipboard.writeText(url).then(() => {
+      const msg = document.getElementById("deviceSyncCopiedMsg");
+      if(msg){
+        msg.textContent = "✅ Direct Sign-In Link copied! Send it to your other device.";
+        setTimeout(() => { if(msg) msg.textContent = ""; }, 4000);
+      }
+      if(typeof showLiveToast === "function"){
+        showLiveToast("🔗 Sign-in link copied to clipboard! Open it on your phone or other device.", true);
+      }
+    }).catch(() => {
+      prompt("Copy your direct sign-in link:", url);
+    });
+  };
+}
+
+// Copy Sync Code
+const copyDeviceSyncCodeBtn = document.getElementById("copyDeviceSyncCodeBtn");
+if(copyDeviceSyncCodeBtn){
+  copyDeviceSyncCodeBtn.onclick = () => {
+    const user = currentUser || "Cam";
+    const payload = generateAccountSyncPayload(user);
+    if(!payload) return alert("Please sign into an account first.");
+    navigator.clipboard.writeText(payload).then(() => {
+      const msg = document.getElementById("deviceSyncCopiedMsg");
+      if(msg){
+        msg.textContent = "✅ Device Sync Code copied! Paste it on your other device.";
+        setTimeout(() => { if(msg) msg.textContent = ""; }, 4000);
+      }
+      if(typeof showLiveToast === "function"){
+        showLiveToast("📋 Device sync code copied to clipboard!", true);
+      }
+    }).catch(() => {
+      prompt("Copy your Device Sync Code:", payload);
+    });
+  };
+}
+
+// Check URL parameters on page load for auto-import (?syncAccount=...)
+(function checkAutoSyncOnLoad(){
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const syncPayload = urlParams.get("syncAccount");
+    if(syncPayload){
+      const res = importAccountSyncPayload(syncPayload);
+      if(res.success){
+        // Clean URL without page reload
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(() => {
+          if(typeof showLiveToast === "function"){
+            showLiveToast(`📲 Successfully transferred & signed into <b>${res.username}</b>!`, true);
+          }
+          if(typeof updateAccountUI === "function") updateAccountUI();
+          if(typeof render === "function") render();
+        }, 500);
+      }
+    }
+  } catch(e){}
+})();
 
 // Enter key shortcuts for smooth keyboard sign-in and password changes
 const usernameInputEl = document.getElementById("usernameInput");

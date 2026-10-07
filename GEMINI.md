@@ -263,3 +263,14 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - **Player Account Modal**: Added an active profile card with a dedicated `🔑 Change Your Password` form. Users can enter and confirm their new password, which is immediately saved to localStorage and applied to their account.
   - **Sign Out Control**: Added a `🚪 Sign Out` button allowing players to switch back to a Guest session cleanly.
   - **Admin Hub Password Controls**: Added a `🔑 Pass` button to each row in the Admin Hub's `👥 Player Accounts` table, allowing Master Cam to view, reset, or update any player's passcode on the spot with instant P2P synchronization.
+
+### Lucky Wheel Player Selection & Cross-Device Account Sync
+- **High-Roller Lucky Wheel Target Selection**:
+  - Populated all active, online, and registered player accounts into the `Target Beneficiary` dropdown (`#chaosCasinoTargetSelect`).
+  - Added a dedicated direct username text input (`#chaosCasinoTargetInput`) next to the dropdown so administrators can either select a player or type any custom player username.
+  - Linked `selectPlayerInAllAdminDropdowns` so clicking any row in the Player Accounts table auto-selects that player for the Lucky Wheel.
+  - Enhanced `spinChaosCasino` to prioritize typed username > dropdown selection > current account, and auto-initializes players so the wheel can spin for anyone without error alerts.
+- **Cross-Device Account Sign-In & Sync**:
+  - **Direct Sign-In Link Generator**: Users can click `🔗 Copy Direct Sign-In Link` to get an instant sign-in URL (`?syncAccount=...`) to open on their phone, tablet, or another device.
+  - **Device Sync Code**: Users can copy an encoded sync token and paste it on any device via the `📲 Use Device Code` tab to instantly import and log into their account.
+  - **Quick Device Profile Switcher**: The Account Modal displays an `Accounts on this Device` chip list for instant switching between profiles on shared devices.

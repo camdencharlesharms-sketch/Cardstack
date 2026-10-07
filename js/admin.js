@@ -157,19 +157,23 @@ function selectPlayerInAllAdminDropdowns(name){
   const skinSel = document.getElementById("skinPlayerSelect");
   const ecoSel = document.getElementById("economyPlayerSelect");
   const subSel = document.getElementById("subAdminTargetSelect");
+  const casinoSel = document.getElementById("chaosCasinoTargetSelect");
   const skinInput = document.getElementById("skinPlayerInput");
   const ecoInput = document.getElementById("economyPlayerInput");
   const subInput = document.getElementById("subAdminCustomPlayerInput");
+  const casinoInput = document.getElementById("chaosCasinoTargetInput");
 
   if(skinSel) skinSel.value = name;
   if(ecoSel) ecoSel.value = name;
   if(subSel) subSel.value = name;
+  if(casinoSel) casinoSel.value = name;
   if(skinInput) skinInput.value = name;
   if(ecoInput) ecoInput.value = name;
   if(subInput) subInput.value = name;
+  if(casinoInput) casinoInput.value = name;
 
   // Flash highlight target inputs for visual confirmation
-  [skinInput, ecoInput, subInput].forEach(inp => {
+  [skinInput, ecoInput, subInput, casinoInput].forEach(inp => {
     if(inp){
       inp.style.borderColor = "#10b981";
       inp.style.boxShadow = "0 0 10px rgba(16,185,129,0.5)";
@@ -298,6 +302,14 @@ function refreshAdminPlayerData(){
       subAdminSelect.appendChild(opt2);
     }
 
+    // Lucky Wheel target selector
+    if(casinoSelect){
+      const casOpt = document.createElement("option");
+      casOpt.value = name;
+      casOpt.textContent = `${name} [${statusText}]${isCurrent ? " (You)" : ""}`;
+      casinoSelect.appendChild(casOpt);
+    }
+
     const tr = document.createElement("tr");
     tr.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
     tr.style.cursor = "pointer";
@@ -330,6 +342,17 @@ function refreshAdminPlayerData(){
   }
   if(prevSubPlayer && subAdminSelect && Array.from(subAdminSelect.options).some(o => o.value === prevSubPlayer)){
     subAdminSelect.value = prevSubPlayer;
+  }
+  if(prevCasinoPlayer && casinoSelect && Array.from(casinoSelect.options).some(o => o.value === prevCasinoPlayer)){
+    casinoSelect.value = prevCasinoPlayer;
+  }
+
+  const casinoInputEl = document.getElementById("chaosCasinoTargetInput");
+  if(casinoSelect && casinoInputEl && !casinoSelect._hasInputSync){
+    casinoSelect._hasInputSync = true;
+    casinoSelect.addEventListener("change", () => {
+      if(casinoSelect.value) casinoInputEl.value = casinoSelect.value;
+    });
   }
 
   const availListEl = document.getElementById("subAdminAvailablePlayersList");
@@ -3741,10 +3764,31 @@ let isCasinoSpinning = false;
 function spinChaosCasino(){
   if(isCasinoSpinning) return;
   const targetSel = document.getElementById("chaosCasinoTargetSelect");
-  const targetUser = (targetSel && targetSel.value) ? targetSel.value : currentUser;
+  const targetInp = document.getElementById("chaosCasinoTargetInput");
 
-  const targetAcc = (typeof getUserAccount === "function") ? getUserAccount(targetUser) : (accounts && accounts[targetUser]);
-  if(!targetAcc) return alert("Please select an active player account to receive the prize.");
+  // Priority: typed username > selected dropdown > current logged in user
+  let targetUser = (targetInp && targetInp.value.trim()) ? targetInp.value.trim() : ((targetSel && targetSel.value) ? targetSel.value : currentUser);
+  if(!targetUser) targetUser = ADMIN_USERNAME || "Cam";
+
+  // Reload freshest accounts
+  try {
+    const saved = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
+    if(saved && typeof saved === "object") accounts = saved;
+  } catch(e){}
+
+  let targetAcc = (typeof getUserAccount === "function") ? getUserAccount(targetUser) : (accounts && accounts[targetUser]);
+  if(!targetAcc){
+    accounts[targetUser] = {
+      password: "player123",
+      owned: [0],
+      coins: 100,
+      hasPlayed: true,
+      lastActive: Date.now()
+    };
+    targetAcc = accounts[targetUser];
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+  }
 
   isCasinoSpinning = true;
   const reel = document.getElementById("chaosCasinoReel");
