@@ -274,3 +274,14 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - **Direct Sign-In Link Generator**: Users can click `🔗 Copy Direct Sign-In Link` to get an instant sign-in URL (`?syncAccount=...`) to open on their phone, tablet, or another device.
   - **Device Sync Code**: Users can copy an encoded sync token and paste it on any device via the `📲 Use Device Code` tab to instantly import and log into their account.
   - **Quick Device Profile Switcher**: The Account Modal displays an `Accounts on this Device` chip list for instant switching between profiles on shared devices.
+
+### Arena Combat Attack Skill Meter (Timing Action Gauge)
+- **Skill-Based Attack Power Scaling**:
+  - Replaced automatic random attack damage with an interactive **Action Timing Skill Gauge** whenever choosing an attack in the Combat Arena.
+  - An oscillating precision needle sweeps back and forth across the gauge at 60 FPS.
+  - **Skill Tiers & Power Multipliers**:
+    - **🎯 Center Zone (42% – 58%)**: **FULL ATTACK POWER (100% / 1.0x)**! Triggers `🔥 PERFECT! FULL POWER (100%)`, celebratory triumph audio fanfare, and confetti bursts.
+    - **⚡ Mid Zone (25% – 75%)**: **3/4 ATTACK POWER (75% / 0.75x)**! Triggers `⚡ GREAT! 3/4 POWER (75%)` and laser audio.
+    - **🛡️ Outer Zone (<25% or >75%)**: **1/2 ATTACK POWER (50% / 0.50x)**! Triggers `🛡️ GLANCE! 1/2 POWER (50%)` and impact audio.
+  - **Controls**: Players can hit the animated `⚡ STRIKE!` button, click anywhere directly on the meter bar, or press **SPACEBAR** / **ENTER** on their keyboard to lock in their attack.
+  - **Dynamic Combat Feedback**: The battle log displays the exact skill tier achieved along with colored badges and damage delivered.

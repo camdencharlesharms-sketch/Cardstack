@@ -769,24 +769,153 @@ function triggerDefeat(){
   } catch(e){}
 }
 
+let isSkillMeterActive = false;
+let skillMeterAnimId = null;
+let currentSkillAttack = null;
+let skillNeedlePos = 0; // 0 to 100
+let skillNeedleDir = 1;
+
 function performPlayerAttack(attackObj){
   if(!isPlayerTurn || battlePlayerHp <= 0 || battleOppHp <= 0) return;
+  startAttackSkillMeter(attackObj);
+}
+
+function startAttackSkillMeter(attackObj){
+  const meterContainer = document.getElementById("attackSkillMeterContainer");
+  const meterName = document.getElementById("skillMeterAttackName");
+  const feedback = document.getElementById("skillMeterFeedback");
+  const strikeBtn = document.getElementById("skillMeterStrikeBtn");
+  const needle = document.getElementById("skillMeterNeedle");
+
+  if(!meterContainer){
+    performPlayerAttackWithMultiplier(attackObj, 1.0, "Full Power", "#10b981");
+    return;
+  }
+
+  isSkillMeterActive = true;
+  currentSkillAttack = attackObj;
+  setAttacksDisabled(true);
+
+  const isInf = (typeof isInfiniteValue === "function" && isInfiniteValue(attackObj.dmg)) || attackObj.dmg === "Infinity";
+  const dmgLabel = isInf ? "∞ DMG" : (typeof formatDmg === "function" ? formatDmg(attackObj.dmg) : `${attackObj.dmg} DMG`);
+
+  if(meterName) meterName.innerHTML = `⚔️ Timing Attack: <b>${attackObj.name}</b> (${dmgLabel})`;
+  if(feedback){
+    feedback.innerHTML = "🎯 Hit <b>[STRIKE]</b> or press <b>[SPACE]</b> when needle is in the CENTER!";
+    feedback.style.color = "#cbd5e1";
+  }
+  if(strikeBtn) strikeBtn.disabled = false;
+
+  meterContainer.style.display = "block";
+
+  skillNeedlePos = 0;
+  skillNeedleDir = 1;
+  const speed = 1.9;
+
+  function animLoop(){
+    if(!isSkillMeterActive) return;
+    skillNeedlePos += speed * skillNeedleDir;
+    if(skillNeedlePos >= 100){
+      skillNeedlePos = 100;
+      skillNeedleDir = -1;
+    } else if(skillNeedlePos <= 0){
+      skillNeedlePos = 0;
+      skillNeedleDir = 1;
+    }
+    if(needle){
+      needle.style.left = skillNeedlePos + "%";
+    }
+    skillMeterAnimId = requestAnimationFrame(animLoop);
+  }
+
+  if(skillMeterAnimId) cancelAnimationFrame(skillMeterAnimId);
+  skillMeterAnimId = requestAnimationFrame(animLoop);
+
+  // Auto-strike safety timeout after 6 seconds
+  if(window._skillMeterTimeout) clearTimeout(window._skillMeterTimeout);
+  window._skillMeterTimeout = setTimeout(() => {
+    if(isSkillMeterActive) resolveSkillMeterStrike();
+  }, 6000);
+}
+
+function resolveSkillMeterStrike(){
+  if(!isSkillMeterActive || !currentSkillAttack) return;
+  isSkillMeterActive = false;
+  if(skillMeterAnimId) cancelAnimationFrame(skillMeterAnimId);
+  if(window._skillMeterTimeout) clearTimeout(window._skillMeterTimeout);
+
+  const strikeBtn = document.getElementById("skillMeterStrikeBtn");
+  if(strikeBtn) strikeBtn.disabled = true;
+
+  const needle = document.getElementById("skillMeterNeedle");
+  if(needle) needle.style.left = skillNeedlePos + "%";
+
+  const feedback = document.getElementById("skillMeterFeedback");
+
+  // Determine Power based on player skill:
+  // Center: 42% to 58% => FULL ATTACK POWER (1.0x / 100%)
+  // Near Center: 25% to 75% => 3/4 ATTACK POWER (0.75x / 75%)
+  // Outer: < 25% or > 75% => 1/2 ATTACK POWER (0.50x / 50%)
+  let multiplier = 0.50;
+  let tierLabel = "1/2 Power";
+  let tierBadge = "🛡️ GLANCE! 1/2 POWER (50%)";
+  let tierColor = "#fb923c";
+
+  if(skillNeedlePos >= 42 && skillNeedlePos <= 58){
+    multiplier = 1.0;
+    tierLabel = "Full Power";
+    tierBadge = "🔥 PERFECT! FULL POWER (100%)";
+    tierColor = "#10b981";
+    if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+    if(typeof confetti === "function"){
+      confetti({ particleCount: 35, spread: 60, origin: { y: 0.6 } });
+    }
+  } else if(skillNeedlePos >= 25 && skillNeedlePos <= 75){
+    multiplier = 0.75;
+    tierLabel = "3/4 Power";
+    tierBadge = "⚡ GREAT! 3/4 POWER (75%)";
+    tierColor = "#fde047";
+    if(typeof playChaosSfx === "function") playChaosSfx("laser");
+  } else {
+    multiplier = 0.50;
+    tierLabel = "1/2 Power";
+    tierBadge = "🛡️ GLANCE! 1/2 POWER (50%)";
+    tierColor = "#fb923c";
+    if(typeof playChaosSfx === "function") playChaosSfx("hit");
+  }
+
+  if(feedback){
+    feedback.innerHTML = `<span style="color:${tierColor};font-size:13px;font-weight:900">${tierBadge}</span>`;
+  }
+
+  const atkToPerform = currentSkillAttack;
+  currentSkillAttack = null;
+
+  setTimeout(() => {
+    const meterContainer = document.getElementById("attackSkillMeterContainer");
+    if(meterContainer) meterContainer.style.display = "none";
+    performPlayerAttackWithMultiplier(atkToPerform, multiplier, tierLabel, tierColor);
+  }, 650);
+}
+
+function performPlayerAttackWithMultiplier(attackObj, multiplier, tierLabel, tierColor){
+  if(battlePlayerHp <= 0 || battleOppHp <= 0) return;
 
   triggerBattleAnimation("player", "ai");
-  if(typeof playChaosSfx === "function") playChaosSfx("laser");
+  if(typeof playChaosSfx === "function" && multiplier === 1.0) playChaosSfx("laser");
 
   const isAtkInf = (typeof isInfiniteValue === "function" && isInfiniteValue(attackObj.dmg)) || attackObj.dmg === "Infinity";
 
   if(isAtkInf){
     battleOppHp = 0;
     updateBattleHpBars();
-    appendBattleLog(`💥 <b>${battlePlayerCard.name}</b> executed <span style="color:#fca5a5">${attackObj.name}</span> dealing <b style="color:#ef4444">⚡ ∞ INFINITE DAMAGE (INSTANT KO)!</b>`);
+    appendBattleLog(`💥 <b>${battlePlayerCard.name}</b> executed <span style="color:#fca5a5">${attackObj.name}</span> with <b style="color:${tierColor}">[${tierLabel.toUpperCase()}]</b> dealing <b style="color:#ef4444">⚡ ∞ INFINITE DAMAGE (INSTANT KO)!</b>`);
 
     if(isMultiplayerMode){
       if(p2pConnection && p2pConnection.open){
-        p2pConnection.send({ type: "attack", attackName: attackObj.name, dmg: "Infinity" });
+        p2pConnection.send({ type: "attack", attackName: attackObj.name, dmg: "Infinity", tier: tierLabel });
       } else if(isLocalChannelMode && localArenaChannel){
-        localArenaChannel.postMessage({ type: "attack", room: myRoomCode, attackName: attackObj.name, dmg: "Infinity" });
+        localArenaChannel.postMessage({ type: "attack", room: myRoomCode, attackName: attackObj.name, dmg: "Infinity", tier: tierLabel });
       }
     }
 
@@ -796,21 +925,22 @@ function performPlayerAttack(attackObj){
   }
 
   const isOppHpInf = (typeof isInfiniteValue === "function" && isInfiniteValue(battleOppHp));
-  const playerDmg = Math.floor(attackObj.dmg * (0.85 + Math.random() * 0.3));
+  const rawBaseDmg = Number.isFinite(attackObj.dmg) ? attackObj.dmg : 20;
+  const playerDmg = Math.max(1, Math.round(rawBaseDmg * multiplier));
 
   if(isOppHpInf){
     appendBattleLog(`🛡️ <b>${battleOppCard.name}</b> has <b style="color:#38bdf8">∞ INFINITE HP</b> and absorbed ${attackObj.name} with 0 damage!`);
   } else {
     battleOppHp = Math.max(0, battleOppHp - playerDmg);
-    appendBattleLog(`💥 <b>${battlePlayerCard.name}</b> executed <span style="color:#fca5a5">${attackObj.name}</span> dealing <b>${playerDmg}</b> damage!`);
+    appendBattleLog(`💥 <b>${battlePlayerCard.name}</b> executed <span style="color:#fca5a5">${attackObj.name}</span> with <b style="color:${tierColor}">[${tierLabel.toUpperCase()}]</b> dealing <b>${playerDmg}</b> damage!`);
   }
   updateBattleHpBars();
 
   if(isMultiplayerMode){
     if(p2pConnection && p2pConnection.open){
-      p2pConnection.send({ type: "attack", attackName: attackObj.name, dmg: isOppHpInf ? 0 : playerDmg });
+      p2pConnection.send({ type: "attack", attackName: attackObj.name, dmg: isOppHpInf ? 0 : playerDmg, tier: tierLabel });
     } else if(isLocalChannelMode && localArenaChannel){
-      localArenaChannel.postMessage({ type: "attack", room: myRoomCode, attackName: attackObj.name, dmg: isOppHpInf ? 0 : playerDmg });
+      localArenaChannel.postMessage({ type: "attack", room: myRoomCode, attackName: attackObj.name, dmg: isOppHpInf ? 0 : playerDmg, tier: tierLabel });
     }
   }
 
@@ -959,3 +1089,16 @@ if(backToCardsBtn){
     }
   };
 }
+
+// Attack Skill Meter controls
+const skillStrikeBtnEl = document.getElementById("skillMeterStrikeBtn");
+const skillMeterBarEl = document.getElementById("skillMeterBar");
+if(skillStrikeBtnEl) skillStrikeBtnEl.onclick = resolveSkillMeterStrike;
+if(skillMeterBarEl) skillMeterBarEl.onclick = resolveSkillMeterStrike;
+
+window.addEventListener("keydown", (e) => {
+  if((e.code === "Space" || e.key === " " || e.key === "Enter") && isSkillMeterActive){
+    e.preventDefault();
+    resolveSkillMeterStrike();
+  }
+});
