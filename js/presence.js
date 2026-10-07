@@ -8,6 +8,9 @@ const presenceBroadcast = (typeof BroadcastChannel !== "undefined") ? new Broadc
 
 // Pool of active PeerJS connections (for Cam to send real-time gifts to online players)
 window.activePresencePeers = window.activePresencePeers || {};
+if(typeof window !== "undefined" && !window.myTabId){
+  window.myTabId = "tab_" + Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+}
 
 function broadcastToAllPresencePeers(payload){
   if(!payload) return;
@@ -85,6 +88,27 @@ function setupCamHostPresence(){
             deletedCards: (typeof getDeletedCardsFromStorage === "function") ? getDeletedCardsFromStorage() : [],
             cardOverrides: (typeof getCardOverridesFromStorage === "function") ? getCardOverridesFromStorage() : {}
           });
+        } catch(e){}
+        // Send active World Boss if present
+        try {
+          const activeBoss = localStorage.getItem("cardCollectorWorldBoss");
+          if(activeBoss){
+            conn.send({
+              type: "sync_chaos_fx",
+              sender: ADMIN_USERNAME,
+              fxData: { type: "summon_boss", boss: JSON.parse(activeBoss), isSilent: true }
+            });
+          }
+        } catch(e){}
+        // Send active Disco Mode if present
+        try {
+          if(document.body.classList.contains("disco-mode-active")){
+            conn.send({
+              type: "sync_chaos_fx",
+              sender: ADMIN_USERNAME,
+              fxData: { type: "disco_mode", active: true, isSilent: true }
+            });
+          }
         } catch(e){}
       });
 
@@ -178,6 +202,8 @@ function connectToCamBeacon(){
         handleIncomingCardHpSync(data.cardId, data.hp);
       } else if(data.type === "sync_card_deleted"){
         handleIncomingCardDeletedSync(data.cardId, data.cardName);
+      } else if(data.type === "sync_chaos_fx"){
+        handleIncomingChaosFx(data);
       }
     });
 
@@ -220,6 +246,18 @@ function announcePresenceToCam(isNew = false){
 // Master Cam processes incoming network message
 function handleCamReceivedPresenceData(conn, data){
   if(!data) return;
+  if(data.type === "sync_chaos_fx"){
+    handleIncomingChaosFx(data);
+    // Re-broadcast to all other connected peers
+    if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+      window.allConnectedPresenceConns.forEach(c => {
+        if(c !== conn && c && c.open){
+          try { c.send(data); } catch(e){}
+        }
+      });
+    }
+    return;
+  }
   if(data.type === "subadmin_action_relay"){
     handleSubAdminActionRelay(conn, data);
     return;
@@ -367,6 +405,8 @@ if(presenceBroadcast){
       handleIncomingCardHpSync(data.cardId, data.hp);
     } else if(data.type === "sync_card_deleted"){
       handleIncomingCardDeletedSync(data.cardId, data.cardName);
+    } else if(data.type === "sync_chaos_fx"){
+      handleIncomingChaosFx(data);
     }
   };
 }
@@ -420,7 +460,22 @@ function showLiveToast(msg, isSuccess = true){
 
 // Sub-Admin action relay handler executed on Master Cam
 function handleSubAdminActionRelay(conn, data){
-  if(!data || !data.from || !data.target || !data.action) return;
+  if(!data || !data.from || !data.action) return;
+  if(data.action.type === "sync_chaos_fx"){
+    handleIncomingChaosFx(data.action);
+    if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+      window.allConnectedPresenceConns.forEach(c => {
+        if(c !== conn && c && c.open){
+          try { c.send(data.action); } catch(e){}
+        }
+      });
+    }
+    if(presenceBroadcast){
+      try { presenceBroadcast.postMessage(data.action); } catch(e){}
+    }
+    return;
+  }
+  if(!data.target) return;
   const fromUser = data.from.trim();
   const targetUser = data.target.trim();
   const action = data.action;
@@ -946,6 +1001,71 @@ function broadcastLockdownMode(isLockdown){
   }
 }
 if(typeof window !== "undefined") window.broadcastLockdownMode = broadcastLockdownMode;
+
+// Universal Chaos FX Broadcast (transmits screen FX across all tabs & connected player screens)
+function broadcastChaosFx(fxData){
+  if(!fxData) return;
+  const payload = {
+    type: "sync_chaos_fx",
+    sender: (typeof currentUser !== "undefined" && currentUser) ? currentUser : ADMIN_USERNAME,
+    tabId: (typeof window !== "undefined" && window.myTabId) ? window.myTabId : null,
+    fxData: fxData,
+    timestamp: Date.now()
+  };
+
+  // 1. Same-device multi-tab broadcast via BroadcastChannel
+  if(presenceBroadcast){
+    try { presenceBroadcast.postMessage(payload); } catch(e){}
+  }
+
+  // 2. If sender is Sub-Admin and not Master, forward relay to Master Cam
+  const isMaster = (typeof isMasterAdmin === "function") ? isMasterAdmin() : (currentUser && currentUser.toLowerCase() === ADMIN_USERNAME.toLowerCase());
+  if(!isMaster){
+    const camConn = (presenceConnToCam && presenceConnToCam.open) ? presenceConnToCam : (window.presenceConnToCam && window.presenceConnToCam.open ? window.presenceConnToCam : null);
+    if(camConn){
+      try {
+        camConn.send({
+          type: "subadmin_action_relay",
+          from: currentUser,
+          action: payload
+        });
+      } catch(e){}
+    }
+    return;
+  }
+
+  // 3. Master Cam broadcasts to all connected PeerJS sessions (registered players & guests)
+  if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+    window.allConnectedPresenceConns.forEach(conn => {
+      try {
+        if(conn && conn.open) conn.send(payload);
+      } catch(e){}
+    });
+  }
+  if(window.activePresencePeers && typeof window.activePresencePeers === "object"){
+    Object.keys(window.activePresencePeers).forEach(peerUser => {
+      try {
+        const c = window.activePresencePeers[peerUser];
+        if(c && c.open) c.send(payload);
+      } catch(e){}
+    });
+  }
+}
+if(typeof window !== "undefined") window.broadcastChaosFx = broadcastChaosFx;
+
+function handleIncomingChaosFx(payload){
+  if(!payload || !payload.fxData) return;
+  const fxData = payload.fxData;
+  const sender = payload.sender || "Admin";
+
+  // Prevent self-tab playback if this tab triggered the action
+  if(payload.tabId && window.myTabId && payload.tabId === window.myTabId) return;
+
+  if(typeof window.executeIncomingChaosFx === "function"){
+    window.executeIncomingChaosFx(fxData, sender);
+  }
+}
+if(typeof window !== "undefined") window.handleIncomingChaosFx = handleIncomingChaosFx;
 
 function handleIncomingLockdownSync(isLockdown){
   isLockdownMode = !!isLockdown;

@@ -232,3 +232,22 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - `formatCoins(val)` helper formats infinite balances cleanly as `∞` across all headers, profile stats, admin player tables, presence chips, and live notification toasts.
   - Pack Opening Logic: When a player holds infinite coins, booster pack costs are bypassed without deduction, providing unlimited pack openings.
   - P2P Synchronization: Infinite coin gifts broadcast seamlessly across PeerJS and local BroadcastChannels with live celebratory toast banners and victory fanfare.
+
+### Multi-Peer Chaos Lab Live Broadcast Synchronization
+- **Universal Chaos FX Broadcast (`broadcastChaosFx` / `executeIncomingChaosFx`)**:
+  - When Master Admin Cam or an administrator activates visual or auditory phenomena in the Chaos Lab, the event is immediately broadcasted across the decentralized mesh:
+    - **Multi-Tab**: Broadcasted locally to all same-browser tabs via `BroadcastChannel("cardstack_presence_bus")`.
+    - **Remote P2P**: Broadcasted to all connected players and visiting guests over PeerJS WebRTC data channels (`allConnectedPresenceConns` and `activePresencePeers`).
+    - **Self-Echo Prevention**: Managed via unique `tabId` markers so the triggering window does not play duplicate effects.
+  - **Screen FX Phenomena Across Every Player's Screen**:
+    - **Mega Confetti Storm (`mega_confetti`)**: Detonates vibrant dual-cannon confetti bursts across the entire screen for all active players with triumph fanfare and live announcement toast.
+    - **Cosmic Card Rain (`card_rain`)**: Rains 3D tumbling cards down the viewports of all connected players with ascension chimes.
+    - **Nuclear EMP Glitch & Shake (`emp_glitch`)**: Shakes the viewports of all players (`chaos-screen-shake`), flashes a red difference filter overlay, and detonates explosive shockwave audio.
+    - **Rainbow Disco Aura (`disco_mode`)**: Toggles animated cycling rainbow borders across all binder cards on everyone's screen in real time.
+    - **Master SFX Soundboard (`sfx`)**: Plays chosen synthesizer audio presets across all connected clients.
+  - **World Boss Raid Real-Time Multi-Player Sync**:
+    - **Summoning**: Spawns the World Boss Raid banner (`#worldBossBanner`) with active HP bar, boss avatar, weaknesses, and raid rewards on all players' screens simultaneously.
+    - **Real-Time Damage & Floaters**: Strikes made by any player or administrator decrement the shared boss HP in real-time, generate animated floating damage numbers, and synchronize the health meter across all peers.
+    - **Vanquish & Celebration**: When the boss is slain, all players witness the defeat animation, triumph fanfare, and receive +2,500 coin raid rewards.
+    - **Handshake Sync**: Whenever a new player or guest joins, they automatically inherit any currently active World Boss raid or active Disco Mode.
+  - **High-Roller Lucky Wheel Sync (`casino_spin`)**: Broadcasts lucky reel winning prizes and celebratory fanfare across the entire realm.

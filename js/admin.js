@@ -3543,7 +3543,10 @@ window.playSound = playChaosSfx;
 window.playAudioFx = playChaosSfx;
 
 // 1. SCREEN FX: Card Rain
-function triggerCardRain(durationSec = 6){
+function triggerCardRain(durationSec = 6, isRemote = false){
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "card_rain", durationSec });
+  }
   playChaosSfx("ascension");
   const containerId = "chaosCardRainContainer";
   let container = document.getElementById(containerId);
@@ -3610,11 +3613,14 @@ function triggerCardRain(durationSec = 6){
 
   const status = document.getElementById("chaosFxStatus");
   if(status) status.innerHTML = '<span style="color:#c084fc">🌧️ Cosmic Card Rain Storm in progress!</span>';
-  if(typeof showLiveToast === "function") showLiveToast("🌧️ Cosmic Card Rain descending across the realm!", true);
+  if(!isRemote && typeof showLiveToast === "function") showLiveToast("🌧️ Cosmic Card Rain descending across every screen!", true);
 }
 
 // 2. SCREEN FX: Mega Confetti Storm
-function triggerMegaConfetti(){
+function triggerMegaConfetti(isRemote = false){
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "mega_confetti" });
+  }
   playChaosSfx("triumph");
   if(typeof confetti === "function"){
     const end = Date.now() + 3000;
@@ -3627,11 +3633,14 @@ function triggerMegaConfetti(){
   }
   const status = document.getElementById("chaosFxStatus");
   if(status) status.innerHTML = '<span style="color:#f472b6">🎉 Mega Confetti Storm discharged!</span>';
-  if(typeof showLiveToast === "function") showLiveToast("🎉 Mega Confetti Storm detonated!", true);
+  if(!isRemote && typeof showLiveToast === "function") showLiveToast("🎉 Mega Confetti Storm detonated on all players screens!", true);
 }
 
 // 3. SCREEN FX: Nuclear EMP Glitch & Shake
-function triggerEmpGlitch(){
+function triggerEmpGlitch(isRemote = false){
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "emp_glitch" });
+  }
   playChaosSfx("detonation");
   setTimeout(() => playChaosSfx("laser"), 180);
 
@@ -3652,12 +3661,12 @@ function triggerEmpGlitch(){
 
   const status = document.getElementById("chaosFxStatus");
   if(status) status.innerHTML = '<span style="color:#ef4444">💥 Nuclear EMP executed: Visual disturbance localized.</span>';
-  if(typeof showLiveToast === "function") showLiveToast("⚡ NUCLEAR EMP DETONATED: Seismic glitch shockwave unleashed!", true);
+  if(!isRemote && typeof showLiveToast === "function") showLiveToast("⚡ NUCLEAR EMP DETONATED: Seismic glitch shockwave unleashed across all screens!", true);
 }
 
 // 4. SCREEN FX: Rainbow Disco Mode
-function toggleDiscoMode(){
-  const active = document.body.classList.toggle("disco-mode-active");
+function toggleDiscoMode(forcedState = null, isRemote = false){
+  const active = (forcedState !== null) ? (forcedState ? (document.body.classList.add("disco-mode-active"), true) : (document.body.classList.remove("disco-mode-active"), false)) : document.body.classList.toggle("disco-mode-active");
   const btn = document.getElementById("chaosDiscoModeBtn");
   if(btn){
     btn.style.background = active ? "linear-gradient(135deg, #ec4899, #8b5cf6)" : "#06b6d4";
@@ -3666,8 +3675,11 @@ function toggleDiscoMode(){
   playChaosSfx(active ? "ascension" : "packTear");
   const status = document.getElementById("chaosFxStatus");
   if(status) status.innerHTML = active ? '<span style="color:#38bdf8">🌈 Rainbow Disco Aura ACTIVE across all binder cards!</span>' : 'Rainbow Disco Aura deactivated.';
-  if(typeof showLiveToast === "function"){
+  if(!isRemote && typeof showLiveToast === "function"){
     showLiveToast(active ? "✨ Rainbow Disco Aura ACTIVATED across all cards!" : "Rainbow Disco Aura deactivated.", true);
+  }
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "disco_mode", active });
   }
 }
 
@@ -3745,6 +3757,9 @@ function spinChaosCasino(){
 
       if(typeof showLiveToast === "function"){
         showLiveToast(`🎰 CASINO WINNER! ${targetUser} received: ${prize.label}!`, true);
+      }
+      if(typeof broadcastChaosFx === "function"){
+        broadcastChaosFx({ type: "casino_spin", targetUser, prize: prize.label });
       }
     }
   }, 100);
@@ -3920,17 +3935,26 @@ function summonWorldBoss(bossKey, customName, customHp){
 
   renderWorldBossBanner();
   updateChaosBossAdminControls();
+  if(typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "strike_boss", dmg, attacker: (typeof currentUser !== "undefined" && currentUser) ? currentUser : "Admin", newHp: boss.hp, maxHp: boss.maxHp, isDead: boss.hp <= 0 });
+  }
   
   if(typeof showLiveToast === "function"){
     showLiveToast(`🚨 WORLD BOSS SUMMONED: ${boss.name} has emerged on the home battlefield!`, true);
   }
+  if(typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "summon_boss", boss });
+  }
 }
 
-function dismissWorldBoss(){
+function dismissWorldBoss(isRemote = false){
   localStorage.removeItem("cardCollectorWorldBoss");
   renderWorldBossBanner();
   updateChaosBossAdminControls();
-  if(typeof showLiveToast === "function") showLiveToast("🛑 World Boss Raid dismissed.", true);
+  if(!isRemote && typeof showLiveToast === "function") showLiveToast("🛑 World Boss Raid dismissed.", true);
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "dismiss_boss" });
+  }
 }
 
 function healWorldBoss(){
@@ -3943,6 +3967,9 @@ function healWorldBoss(){
   updateChaosBossAdminControls();
   playChaosSfx("ascension");
   if(typeof showLiveToast === "function") showLiveToast(`💖 ${boss.name} fully restored to ${boss.maxHp.toLocaleString()} HP!`, true);
+  if(typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "heal_boss", newHp: boss.hp, maxHp: boss.maxHp });
+  }
 }
 
 function nukeWorldBoss(){
@@ -4172,6 +4199,9 @@ document.addEventListener("DOMContentLoaded", () => {
       playChaosSfx(sfx);
       btn.style.transform = "scale(0.95)";
       setTimeout(() => btn.style.transform = "none", 120);
+      if(typeof broadcastChaosFx === "function"){
+        broadcastChaosFx({ type: "sfx", sound: sfx });
+      }
     };
   });
 
@@ -4185,3 +4215,128 @@ if(document.readyState === "complete" || document.readyState === "interactive"){
     updateChaosBossAdminControls();
   }, 100);
 }
+
+// ==========================================
+// ⚡ INCOMING CHAOS FX SYNCHRONIZATION HANDLER
+// ==========================================
+
+function executeIncomingChaosFx(fxData, sender){
+  if(!fxData || !fxData.type) return;
+  const fromName = sender || "Master Admin Cam";
+
+  if(fxData.type === "mega_confetti"){
+    triggerMegaConfetti(true);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🎉 Mega Confetti Storm unleashed by <b>${fromName}</b>!`, true);
+    }
+  } else if(fxData.type === "card_rain"){
+    triggerCardRain(fxData.durationSec || 6, true);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🌧️ Cosmic Card Rain storm unleashed by <b>${fromName}</b>!`, true);
+    }
+  } else if(fxData.type === "emp_glitch"){
+    triggerEmpGlitch(true);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`💥 NUCLEAR EMP DETONATED by <b>${fromName}</b>: Seismic shockwave across all screens!`, true);
+    }
+  } else if(fxData.type === "disco_mode"){
+    toggleDiscoMode(fxData.active, true);
+    if(!fxData.isSilent && typeof showLiveToast === "function"){
+      showLiveToast(`🌈 Rainbow Disco Aura <b>${fxData.active ? "ACTIVATED" : "deactivated"}</b> by <b>${fromName}</b>!`, true);
+    }
+  } else if(fxData.type === "sfx"){
+    if(typeof playChaosSfx === "function") playChaosSfx(fxData.sound);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🔊 Server SFX Synth [${fxData.sound}] broadcasted by <b>${fromName}</b>!`, false);
+    }
+  } else if(fxData.type === "summon_boss"){
+    if(fxData.boss){
+      localStorage.setItem("cardCollectorWorldBoss", JSON.stringify(fxData.boss));
+      if(!fxData.isSilent){
+        playChaosSfx("siren");
+        setTimeout(() => playChaosSfx("detonation"), 450);
+        if(typeof showLiveToast === "function"){
+          showLiveToast(`🚨 WORLD BOSS SUMMONED by <b>${fromName}</b>: ${fxData.boss.name} has emerged on the battlefield!`, true);
+        }
+      }
+      renderWorldBossBanner();
+      updateChaosBossAdminControls();
+    }
+  } else if(fxData.type === "strike_boss"){
+    let boss = null;
+    try { boss = JSON.parse(localStorage.getItem("cardCollectorWorldBoss")); } catch(e){}
+    if(!boss) return;
+    boss.hp = fxData.newHp;
+    localStorage.setItem("cardCollectorWorldBoss", JSON.stringify(boss));
+
+    const widget = document.getElementById("worldBossWidget");
+    if(widget){
+      const floatEl = document.createElement("div");
+      floatEl.className = "chaos-floating-dmg";
+      floatEl.textContent = `-${(fxData.dmg || 50).toLocaleString()} DMG!`;
+      floatEl.style.left = `${Math.random() * 40 + 30}%`;
+      floatEl.style.top = "20px";
+      widget.appendChild(floatEl);
+      setTimeout(() => floatEl.remove(), 900);
+    }
+
+    const pct = Math.max(0, Math.min(100, Math.round((boss.hp / boss.maxHp) * 100)));
+    const hpDisp = document.getElementById("worldBossHpDisplay");
+    const hpFill = document.getElementById("worldBossHpFill");
+    if(hpDisp) hpDisp.textContent = `${boss.hp.toLocaleString()} / ${boss.maxHp.toLocaleString()} HP (${pct}%)`;
+    if(hpFill) hpFill.style.width = `${pct}%`;
+
+    playChaosSfx("laser");
+
+    if(boss.hp <= 0 || fxData.isDead){
+      playChaosSfx("detonation");
+      setTimeout(() => playChaosSfx("triumph"), 400);
+      if(typeof confetti === "function"){
+        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
+      }
+      if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))){
+        coins += 2500;
+      }
+      const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+      if(curAcc && (typeof isInfiniteValue !== "function" || !isInfiniteValue(curAcc.coins))){
+        curAcc.coins = (curAcc.coins || 0) + 2500;
+      }
+      if(typeof save === "function") save();
+      if(typeof render === "function") render();
+      localStorage.removeItem("cardCollectorWorldBoss");
+      renderWorldBossBanner();
+      updateChaosBossAdminControls();
+      if(typeof showLiveToast === "function"){
+        showLiveToast(`🏆 WORLD BOSS SLAIN by ${fxData.attacker || fromName}! ${boss.name} was vanquished! +2,500 Coins rewarded!`, true);
+      }
+    }
+  } else if(fxData.type === "heal_boss"){
+    let boss = null;
+    try { boss = JSON.parse(localStorage.getItem("cardCollectorWorldBoss")); } catch(e){}
+    if(!boss) return;
+    boss.hp = fxData.newHp || boss.maxHp;
+    localStorage.setItem("cardCollectorWorldBoss", JSON.stringify(boss));
+    renderWorldBossBanner();
+    updateChaosBossAdminControls();
+    playChaosSfx("ascension");
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`💖 ${boss.name} healed by <b>${fromName}</b>!`, true);
+    }
+  } else if(fxData.type === "dismiss_boss"){
+    localStorage.removeItem("cardCollectorWorldBoss");
+    renderWorldBossBanner();
+    updateChaosBossAdminControls();
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🛑 World Boss Raid dismissed by <b>${fromName}</b>.`, true);
+    }
+  } else if(fxData.type === "casino_spin"){
+    playChaosSfx("triumph");
+    if(typeof confetti === "function"){
+      confetti({ particleCount: 80, spread: 75, origin: { y: 0.6 } });
+    }
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🎰 HIGH-ROLLER CASINO: <b>${fxData.targetUser}</b> won <b>[${fxData.prize}]</b>!`, true);
+    }
+  }
+}
+window.executeIncomingChaosFx = executeIncomingChaosFx;

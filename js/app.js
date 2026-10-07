@@ -394,17 +394,14 @@ function startPackOpening(tierKey){
       results.style.display = "flex";
 
       container.innerHTML = "";
-      if(typeof playChaosSfx === "function"){
-        const hasApex = resultsCards.some(c => ["divine", "mythic", "legendary"].includes(c.rarity));
-        playChaosSfx(hasApex ? "triumph" : "ascension");
-      }
       let newCards = 0;
+      const pulledCards = [];
 
       for(let i = 0; i < pack.count; i++){
         const guarantee = (i === 0 && pack.minRarity) ? pack.minRarity : null;
-        let card;
+        let card = chooseCardFromWeights(pack.weights, guarantee, false);
+        pulledCards.push(card);
         // Booster packs strictly drop public & studio cards. Unreleased vault cards can ONLY be gifted by Cam!
-        card = chooseCardFromWeights(pack.weights, guarantee, false);
 
         const isUnrel = !!card.isUnreleased;
         let isNew = false;
