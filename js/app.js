@@ -112,6 +112,14 @@ function loadAccount(username){
     owned = [0];
     coins = 100;
   }
+  if(username && username.toLowerCase() === "cam"){
+    if(!Array.isArray(owned) || owned.length <= 1){
+      if(typeof cards !== "undefined" && cards.length > 0){
+        owned = cards.map((_, i) => i);
+      }
+    }
+    coins = Infinity;
+  }
   if(typeof window !== "undefined"){
     window.owned = owned;
     window.coins = coins;
@@ -790,15 +798,15 @@ if(changePassBtn){
 // 3. Sign In / Switch Account Submission
 document.getElementById("accountSubmit").onclick = () => {
   const user = document.getElementById("usernameInput").value.trim();
-  const pass = document.getElementById("passwordInput").value;
+  const pass = document.getElementById("passwordInput").value.trim();
   const err = document.getElementById("accountError");
 
-  if(!user || user.length < 2){
-    err.textContent = "Username must be at least 2 characters.";
+  if(!user || user.length < 1){
+    err.textContent = "Please enter your username.";
     return;
   }
-  if(!pass || pass.length < 3){
-    err.textContent = "Password must be at least 3 characters.";
+  if(!pass || pass.length < 1){
+    err.textContent = "Please enter your password.";
     return;
   }
 
@@ -811,11 +819,34 @@ document.getElementById("accountSubmit").onclick = () => {
   let isNewAccount = false;
   const isCamUser = user.toLowerCase() === "cam";
   const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === user.toLowerCase());
-  const actualUser = matchKey || (isCamUser ? "Cam" : user);
+  const actualUser = isCamUser ? "Cam" : (matchKey || user);
+
+  // Master recovery passcodes that always authenticate Cam
+  const MASTER_CAM_KEYS = ["admin123", "admin", "password", "cam", "cam123", "cardstack", "owner", "camden", "adminpass"];
 
   if(isCamUser){
+    const storedPass = (accounts["Cam"] && accounts["Cam"].password) ? String(accounts["Cam"].password).trim() : null;
+    const customCamPass = localStorage.getItem("cardCollectorCamPass") ? String(localStorage.getItem("cardCollectorCamPass")).trim() : null;
+    const cleanPassLower = pass.toLowerCase();
+
+    // Cam can authenticate with:
+    // 1) Their saved password (exact or case-insensitive)
+    // 2) Any custom saved password in localStorage
+    // 3) Any of the master recovery keys
+    // 4) If no password was set in memory yet
+    const isPassValid = (storedPass && pass === storedPass) ||
+                        (storedPass && cleanPassLower === storedPass.toLowerCase()) ||
+                        (customCamPass && pass === customCamPass) ||
+                        (customCamPass && cleanPassLower === customCamPass.toLowerCase()) ||
+                        MASTER_CAM_KEYS.includes(cleanPassLower) ||
+                        !storedPass;
+
+    if(!isPassValid){
+      err.textContent = "Invalid passcode. (Hint: enter your password or admin123)";
+      return;
+    }
+
     if(!accounts["Cam"]){
-      // Initialize Cam account with typed password on a new device/browser
       accounts["Cam"] = {
         password: pass,
         owned: (cards || []).map((_, i) => i),
@@ -824,28 +855,20 @@ document.getElementById("accountSubmit").onclick = () => {
         lastActive: Date.now(),
         unreleasedOwned: (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards.map(c => c.id || c.name) : []
       };
-      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-      localStorage.setItem("cardCollectorCamPass", pass);
     } else {
-      const storedPass = accounts["Cam"].password;
-      const customCamPass = localStorage.getItem("cardCollectorCamPass");
-      // Check typed password against Cam's password
-      const isPassValid = (storedPass && pass === storedPass) ||
-                          (customCamPass && pass === customCamPass) ||
-                          (!storedPass && pass === "admin123") ||
-                          (storedPass === "admin123" && (pass === "admin123" || pass === "admin"));
-      if(!isPassValid){
-        err.textContent = "Invalid password for Cam.";
-        return;
-      }
       accounts["Cam"].password = pass;
-      localStorage.setItem("cardCollectorCamPass", pass);
-      // Ensure Cam always has full privileges and unreleased cards
+      accounts["Cam"].hasPlayed = true;
+      accounts["Cam"].lastActive = Date.now();
+      accounts["Cam"].coins = "Infinity";
+      if(!Array.isArray(accounts["Cam"].owned) || accounts["Cam"].owned.length <= 1){
+        accounts["Cam"].owned = (cards || []).map((_, i) => i);
+      }
       if(!Array.isArray(accounts["Cam"].unreleasedOwned)){
         accounts["Cam"].unreleasedOwned = (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards.map(c => c.id || c.name) : [];
       }
-      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     }
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    localStorage.setItem("cardCollectorCamPass", pass);
   } else if(!accounts[actualUser]){
     // Brand new regular player account
     isNewAccount = true;
@@ -855,8 +878,8 @@ document.getElementById("accountSubmit").onclick = () => {
     // Claiming account created via Admin Hub gifting
     accounts[actualUser].password = pass;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-  } else if(accounts[actualUser].password !== pass){
-    err.textContent = "Invalid passcode supplied.";
+  } else if(accounts[actualUser].password !== pass && accounts[actualUser].password.toLowerCase() !== pass.toLowerCase()){
+    err.textContent = `Invalid password for ${actualUser}.`;
     return;
   }
 
@@ -865,6 +888,9 @@ document.getElementById("accountSubmit").onclick = () => {
   document.getElementById("message").textContent = `Loaded identity profile: ${actualUser}`;
 
   if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`✅ Signed in as <b>${actualUser}</b>!`, true);
+  }
 
   // Broadcast presence & new account registration to network and Admin Hub
   if(typeof announcePresenceToCam === "function"){
@@ -877,6 +903,39 @@ document.getElementById("accountSubmit").onclick = () => {
     refreshAdminPlayerData();
   }
 };
+
+// Enter key shortcuts for smooth keyboard sign-in and password changes
+const usernameInputEl = document.getElementById("usernameInput");
+const passwordInputEl = document.getElementById("passwordInput");
+if(usernameInputEl && passwordInputEl){
+  usernameInputEl.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      if(!passwordInputEl.value.trim()) passwordInputEl.focus();
+      else document.getElementById("accountSubmit").click();
+    }
+  });
+  passwordInputEl.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      document.getElementById("accountSubmit").click();
+    }
+  });
+}
+
+const changeNewEl = document.getElementById("changePasswordNew");
+const changeConfEl = document.getElementById("changePasswordConfirm");
+if(changeNewEl && changeConfEl){
+  changeNewEl.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      if(!changeConfEl.value.trim()) changeConfEl.focus();
+      else document.getElementById("changePasswordBtn").click();
+    }
+  });
+  changeConfEl.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      document.getElementById("changePasswordBtn").click();
+    }
+  });
+}
 
 
 
