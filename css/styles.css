@@ -1225,3 +1225,83 @@ body.turbo-speed-active * {
   opacity: 0.65;
   border-color: rgba(255, 255, 255, 0.05);
 }
+
+/* ========================================================
+   TRANSCENDENT RARITY (APEX TIER 7)
+   ======================================================== */
+.face.transcendent {
+  background: radial-gradient(ellipse at 50% 15%, #4c1d95 0%, #1e1b4b 45%, #020617 100%);
+  border: 2px solid #f43f5e;
+  box-shadow: 0 0 40px rgba(244, 63, 94, 0.7), 0 0 20px rgba(168, 85, 247, 0.5);
+  animation: transcendentPulse 3.5s infinite alternate;
+  position: relative;
+}
+@keyframes transcendentPulse {
+  0% {
+    border-color: #f43f5e;
+    box-shadow: 0 0 40px rgba(244, 63, 94, 0.75), 0 0 20px rgba(168, 85, 247, 0.5);
+  }
+  33% {
+    border-color: #38bdf8;
+    box-shadow: 0 0 45px rgba(56, 189, 248, 0.8), 0 0 25px rgba(244, 63, 94, 0.6);
+  }
+  66% {
+    border-color: #facc15;
+    box-shadow: 0 0 50px rgba(250, 204, 21, 0.85), 0 0 30px rgba(56, 189, 248, 0.6);
+  }
+  100% {
+    border-color: #a855f7;
+    box-shadow: 0 0 55px rgba(168, 85, 247, 0.9), 0 0 35px rgba(250, 204, 21, 0.7);
+  }
+}
+
+.face.transcendent::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 22px;
+  background: linear-gradient(60deg, #f43f5e, #a855f7, #38bdf8, #facc15, #f43f5e);
+  background-size: 350% 350%;
+  z-index: -1;
+  animation: transcendentAuraShift 4s ease infinite;
+  filter: blur(6px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+@keyframes transcendentAuraShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.rarity.transcendent {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.35), rgba(168, 85, 247, 0.35)) !important;
+  color: #fda4af !important;
+  border: 1px solid rgba(244, 63, 94, 0.8) !important;
+  box-shadow: 0 0 14px rgba(244, 63, 94, 0.6) !important;
+}
+
+.pack-card.pack-transcendent {
+  border-color: #f43f5e;
+  box-shadow: 0 12px 45px rgba(244, 63, 94, 0.45);
+  background: linear-gradient(170deg, rgba(76, 29, 149, 0.5) 0%, rgba(2, 6, 23, 0.95) 100%);
+  animation: transcendentPackGlow 3s infinite alternate;
+}
+@keyframes transcendentPackGlow {
+  0% { border-color: #f43f5e; box-shadow: 0 12px 45px rgba(244, 63, 94, 0.45); }
+  50% { border-color: #38bdf8; box-shadow: 0 12px 50px rgba(56, 189, 248, 0.55); }
+  100% { border-color: #facc15; box-shadow: 0 12px 55px rgba(250, 204, 21, 0.6); }
+}
+
+.pack-btn.pack-transcendent-btn {
+  background: linear-gradient(135deg, #f43f5e, #a855f7, #38bdf8);
+  background-size: 200% 200%;
+  animation: transcendentBtnShift 3.5s ease infinite;
+  box-shadow: 0 6px 25px rgba(244, 63, 94, 0.5);
+  color: #fff;
+}
+@keyframes transcendentBtnShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

@@ -43,7 +43,7 @@
   </div>
   <div class="stats">
     <div class="stat">🪙 <span id="coins" class="stat-val coin-color">100</span></div>
-    <div class="stat">🃏 <span id="count" class="stat-val">0</span>/<span id="totalCardsCount">200</span></div>
+    <div class="stat">🃏 <span id="count" class="stat-val">0</span>/<span id="totalCardsCount">210</span></div>
   </div>
 </header>
 
@@ -1274,6 +1274,14 @@
         </div>
         <button class="pack-btn pack-divine-btn" onclick="startPackOpening('divine')"><span id="price-divine">Open • 600 🪙</span></button>
       </div>
+      <div class="pack-card pack-transcendent">
+        <div>
+          <div class="pack-title">🌌 Transcendent Nexus</div>
+          <p class="pack-info">Beyond divinity itself. <b>Guaranteed Transcendent pull!</b></p>
+          <span class="pack-badge" style="background:linear-gradient(135deg,#f43f5e,#a855f7);color:#fff">8 Collectibles • 1 Transcendent</span>
+        </div>
+        <button class="pack-btn pack-transcendent-btn" onclick="startPackOpening('transcendent')"><span id="price-transcendent">Open • 1,000 🪙</span></button>
+      </div>
     </div>
     <div id="message" style="margin-top:14px;font-weight:700;color:#60a5fa;min-height:24px"></div>
   </section>
@@ -1283,6 +1291,13 @@
     <button class="active" data-filter="all">Full Binder</button>
     <button data-filter="collected">Owned</button>
     <button data-filter="missing">Unclaimed</button>
+    <button data-filter="rarity-common">Common</button>
+    <button data-filter="rarity-rare">Rare</button>
+    <button data-filter="rarity-epic">Epic</button>
+    <button data-filter="rarity-legendary">Legendary</button>
+    <button data-filter="rarity-mythic">Mythic</button>
+    <button data-filter="rarity-divine">Divine</button>
+    <button data-filter="rarity-transcendent" style="background:linear-gradient(135deg,rgba(244,63,94,0.3),rgba(168,85,247,0.3));border-color:#f43f5e">🌌 Transcendent</button>
     <button id="resetBtn" style="margin-left:auto;color:#ef4444">Reset Collection</button>
   </div>
 

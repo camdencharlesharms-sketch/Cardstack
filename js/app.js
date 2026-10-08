@@ -323,6 +323,7 @@ function chooseCardFromWeights(weightMap, minRarityFilter = null, allowUnrelease
     adjustedWeights.legendary = (adjustedWeights.legendary || 1) * adminLuckMultiplier;
     adjustedWeights.mythic = (adjustedWeights.mythic || 1) * adminLuckMultiplier;
     adjustedWeights.divine = (adjustedWeights.divine || 1) * adminLuckMultiplier;
+    adjustedWeights.transcendent = (adjustedWeights.transcendent || 1) * adminLuckMultiplier;
   }
 
   let totalWeight = pool.reduce((sum, c) => sum + (adjustedWeights[c.rarity] || 1), 0);
@@ -556,6 +557,10 @@ function render(){
     } else {
       const cardIdx = cards.indexOf(c);
       has = owned.some(x => parseInt(x, 10) === cardIdx);
+    }
+    if(filter.startsWith("rarity-")){
+      const rTarget = filter.replace("rarity-", "").toLowerCase();
+      return (c.rarity || "").toLowerCase() === rTarget;
     }
     return filter === "all" || (filter === "collected" && has) || (filter === "missing" && !has);
   });
@@ -1450,7 +1455,8 @@ const MASTER_ACHIEVEMENTS = [
   { id: "wealth_hoard", title: "💎 Treasury Titan", desc: "Amass 50,000 or more Realm Coins.", reward: 20000, check: (acc) => (acc.coins === "Infinity" || acc.coins >= 50000) },
   { id: "centurion_supreme", title: "🔱 Centurion Supreme", desc: "Unlock an imperial collection of 100+ cards.", reward: 50000, check: (acc) => (acc.owned || []).length >= 100 },
   { id: "living_pantheon", title: "👑 Living Pantheon", desc: "Unlock and assemble a colossal deck of 150+ cards.", reward: 75000, check: (acc) => (acc.owned || []).length >= 150 },
-  { id: "celestial_omniverse", title: "🌌 Celestial Omniverse", desc: "Unlock and conquer all 200 cards across the multiverse.", reward: 150000, check: (acc) => (acc.owned || []).length >= 200 }
+  { id: "transcendent_ascent", title: "🌌 Transcendent Ascension", desc: "Acquire any Transcendent apex tier card.", reward: 50000, check: (acc) => (acc.owned || []).some(idx => cards[idx] && cards[idx].rarity === "transcendent") },
+  { id: "celestial_omniverse", title: "🌌 Transcendent Omniverse", desc: "Unlock and conquer all 210 cards across the entire cosmos.", reward: 200000, check: (acc) => (acc.owned || []).length >= 210 }
 ];
 
 function openSummonerMasteryModal(){

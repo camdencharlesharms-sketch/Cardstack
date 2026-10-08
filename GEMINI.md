@@ -437,3 +437,36 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 - **🏆 Multiverse Mastery Trophies**:
   - `👑 Living Pantheon`: Assemble a deck of 150+ cards (+75,000 Coins).
   - `🌌 Celestial Omniverse`: Collect all 200 cards (+150,000 Coins).
+
+### Major Expansion: Strict Rarity Ordering, Better Thematic Card Names & Transcendent Rarity (210 Cards)
+- **🌌 New Apex Rarity Tier: Transcendent (Rank 7)**:
+  - Positioned above Divine as the ultimate celestial tier in the universe.
+  - Visuals: Prismatic shifting rainbow nebula aura (`transcendentAuraShift`), multi-hue pulsating cosmic glow (`transcendentPulse`), glowing holographic badge.
+  - 10 New Transcendent Entities:
+    1. `Azathoth, The Blind Eternity` (350 HP • 105/145 DMG)
+    2. `Yggdrasil, Heart of the Multiverse` (340 HP • 98/138 DMG)
+    3. `Aethelgard Zenith Unbound` (335 HP • 102/142 DMG)
+    4. `The Primordial Demiurge` (360 HP • 110/150 DMG)
+    5. `Chronos Absolute Zero` (325 HP • 100/140 DMG)
+    6. `Ouroboros, The Endless Loop` (345 HP • 99/139 DMG)
+    7. `Solaria, Core of the Cosmos` (330 HP • 104/144 DMG)
+    8. `Kael'thas, Void Singularity Sovereign` (335 HP • 101/141 DMG)
+    9. `Seraphim Apex, Eye of Omniscience` (340 HP • 103/146 DMG)
+    10. `Cosmic Nexus, The Omniverse` (355 HP • 108/148 DMG)
+- **📐 Strict Rarity Ordering Across the Entire Binder**:
+  - All 210 cards are placed in exact rarity order:
+    - Tier 1: **Common** (33 cards)
+    - Tier 2: **Rare** (35 cards)
+    - Tier 3: **Epic** (45 cards)
+    - Tier 4: **Legendary** (38 cards)
+    - Tier 5: **Mythic** (30 cards)
+    - Tier 6: **Divine** (19 cards)
+    - Tier 7: **Transcendent** (10 cards)
+- **✨ Complete Naming Overhaul (Names That Make Sense)**:
+  - Replaced all placeholder single-word and mundane names with evocative, lore-rich fantasy titles matching artwork, elements, and power levels (e.g. `Blaze` -> `Cinder Imp`, `Mud Golem` -> `Mire Elemental`, `Fire Ant` -> `Magma Termite`, `Brown Bear` -> `Timberland Ursine`, `Shadow` -> `Dusk Shadowstalker`, `Titan` -> `Colossus of Earth`, `Void` -> `Abyssal Void Monarch`, `Aethelgard` -> `Aethelgard, King of Deities`).
+- **🛡️ Zero-Loss Account Migration (`RARITY_SORT_INDEX_MIGRATION`)**:
+  - Built-in index translation table automatically migrates existing player account inventories on first load, ensuring no player loses any cards.
+- **📦 Transcendent Nexus Booster Pack**:
+  - Added new apex booster pack in shop (1,000 Coins) with a guaranteed Transcendent card pull.
+- **🏷️ Collection Controls Rarity Filter Tabs**:
+  - Filter by `Common`, `Rare`, `Epic`, `Legendary`, `Mythic`, `Divine`, and `🌌 Transcendent` in the binder navigation bar.

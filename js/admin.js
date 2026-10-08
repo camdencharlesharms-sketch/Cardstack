@@ -887,13 +887,14 @@ document.getElementById("adminCreateCardBtn").onclick = ()=>{
       epic: ["#9333ea", "#3b0764", "🔮", "#f0abfc"],
       legendary: ["#f59e0b", "#78350f", "👑", "#fde68a"],
       mythic: ["#ec4899", "#831843", "🌌", "#fbcfe8"],
-      divine: ["#06b6d4", "#1e1b4b", "✨", "#cffafe"]
+      divine: ["#06b6d4", "#1e1b4b", "✨", "#cffafe"],
+      transcendent: ["#f43f5e", "#1e1b4b", "🌌", "#fda4af"]
     };
     const cPreset = rarityColors[rarity] || ["#6366f1", "#1e1b4b", "✨", "#c7d2fe"];
     image = makeSvgArt(cPreset[0], cPreset[1], cPreset[2], cPreset[3]);
   }
 
-  const hpByRarity = { common: 75, rare: 90, epic: 115, legendary: 150, mythic: 180, divine: 210 };
+  const hpByRarity = { common: 75, rare: 90, epic: 115, legendary: 150, mythic: 180, divine: 210, transcendent: 340 };
   const newCard = { 
     id: "card_custom_" + Date.now(),
     name, 
@@ -1462,7 +1463,8 @@ function populateRarityDropdowns(){
     { id: "epic", name: "Epic", rank: 3 },
     { id: "legendary", name: "Legendary", rank: 4 },
     { id: "mythic", name: "Mythic", rank: 5 },
-    { id: "divine", name: "Divine", rank: 6 }
+    { id: "divine", name: "Divine", rank: 6 },
+    { id: "transcendent", name: "Transcendent", rank: 7 }
   ];
 
   let customList = [];
@@ -3688,7 +3690,7 @@ function triggerCardRain(durationSec = 6, isRemote = false){
     document.body.appendChild(container);
   }
   
-  const highTierCards = (cards || []).filter(c => ["epic", "legendary", "mythic", "divine"].includes(c.rarity));
+  const highTierCards = (cards || []).filter(c => ["epic", "legendary", "mythic", "divine", "transcendent"].includes(c.rarity));
   const pool = highTierCards.length ? highTierCards : (cards || []);
   if(!pool.length) return;
 
@@ -3934,7 +3936,7 @@ function runChaosPackBuster(){
 
   playChaosSfx("warp");
 
-  const rarityStats = { common: 0, rare: 0, epic: 0, legendary: 0, mythic: 0, divine: 0 };
+  const rarityStats = { common: 0, rare: 0, epic: 0, legendary: 0, mythic: 0, divine: 0, transcendent: 0 };
   const customRarityStats = {};
   let totalCards = 0;
   let newDiscoveries = 0;
@@ -3985,7 +3987,7 @@ function runChaosPackBuster(){
     confetti({ particleCount: 75, spread: 70 });
   }
 
-  const colorMap = { common: "#64748b", rare: "#3b82f6", epic: "#a855f7", legendary: "#f59e0b", mythic: "#ec4899", divine: "#06b6d4" };
+  const colorMap = { common: "#64748b", rare: "#3b82f6", epic: "#a855f7", legendary: "#f59e0b", mythic: "#ec4899", divine: "#06b6d4", transcendent: "#f43f5e" };
   const rarityBadges = Object.keys(rarityStats).map(r => {
     const num = rarityStats[r];
     const pct = totalCards > 0 ? ((num / totalCards) * 100).toFixed(1) : 0;
