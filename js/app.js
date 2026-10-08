@@ -442,31 +442,57 @@ function startPackOpening(tierKey){
         `).join("");
 
         const item = document.createElement("div");
-        item.className = "reveal-card-item";
+        item.className = "flip-card-wrapper";
+        item.setAttribute("data-rarity", card.rarity);
         item.style.animationDelay = `${i * 0.12}s`;
 
         item.innerHTML = `
-          <div class="card">
-            <div class="face ${card.rarity}">
-              <div class="card-top">
-                <span class="rarity">${card.rarity}${card.isUnreleased ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : ""}</span>
-                <span style="font-size:11px;font-weight:800;color:#fca5a5">${typeof formatHp === "function" ? formatHp(card.hp) : (card.hp || 80) + " HP"}</span>
-              </div>
-              <div class="card-art-frame">
-                <img class="card-art-img" src="${card.image}" alt="${card.name}">
-                <div class="card-aura"></div>
-              </div>
-              <div class="card-bottom">
-                <div class="name">${card.name}</div>
-                <div class="desc">${card.desc}</div>
-                <div class="attacks-list">
-                  ${attacksHtml}
+          <div class="flip-card-inner">
+            <div class="flip-card-back">
+              <div style="font-size:46px">🃏</div>
+              <div style="font-size:13px;font-weight:900;color:#38bdf8;text-transform:uppercase;letter-spacing:1px">CARD STACK</div>
+              <div style="font-size:11px;font-weight:800;color:#facc15;background:rgba(250,204,21,0.15);padding:2px 8px;border-radius:10px">FLIP TO REVEAL</div>
+            </div>
+            <div class="flip-card-front">
+              <div class="card" style="height:100%">
+                <div class="face ${card.rarity}">
+                  <div class="card-top">
+                    <span class="rarity">${card.rarity}${card.isUnreleased ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : ""}</span>
+                    <span style="font-size:11px;font-weight:800;color:#fca5a5">${typeof formatHp === "function" ? formatHp(card.hp) : (card.hp || 80) + " HP"}</span>
+                  </div>
+                  <div class="card-art-frame">
+                    <img class="card-art-img" src="${card.image}" alt="${card.name}">
+                    <div class="card-aura"></div>
+                  </div>
+                  <div class="card-bottom">
+                    <div class="name">${card.name}</div>
+                    <div class="desc">${card.desc}</div>
+                    <div class="attacks-list">
+                      ${attacksHtml}
+                    </div>
+                  </div>
+                  <div class="holo-glint"></div>
                 </div>
               </div>
+              <div class="reveal-badge ${isNew ? 'new' : 'dup'}">${isNew ? 'New Discovery' : 'Duplicate'}</div>
             </div>
           </div>
-          <div class="reveal-badge ${isNew ? 'new' : 'dup'}">${isNew ? 'New Discovery' : 'Duplicate'}</div>
         `;
+
+        item.onclick = () => {
+          if(item.classList.contains("flipped")) return;
+          item.classList.add("flipped");
+          if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+          if(card.rarity === "divine" || card.rarity === "mythic" || card.rarity === "legendary"){
+            if(typeof confetti === "function"){
+              const rect = item.getBoundingClientRect();
+              const x = (rect.left + rect.width / 2) / window.innerWidth;
+              const y = (rect.top + rect.height / 2) / window.innerHeight;
+              confetti({ particleCount: 45, spread: 60, origin: { x, y } });
+            }
+          }
+        };
+
         container.appendChild(item);
       }
 
@@ -619,6 +645,12 @@ function render(){
     `;
 
     if(has){
+      el.style.cursor = "pointer";
+      el.setAttribute("title", `Click to inspect ${c.name} in 3D!`);
+      el.addEventListener("click", (e) => {
+        if(e.target.tagName.toLowerCase() === "button") return;
+        openCardDetailModal(c);
+      });
       el.addEventListener("mousemove", (e) => {
         const rect = el.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -1311,3 +1343,325 @@ document.addEventListener("DOMContentLoaded", () => {
   initHeaderSfxToggle();
   updateSummonerRankBadge();
 });
+
+/* ========================================================
+   3D CARD INSPECTION MODAL SYSTEM
+   ======================================================== */
+let activeDetailCard = null;
+
+function openCardDetailModal(card){
+  if(!card) return;
+  activeDetailCard = card;
+
+  const modal = document.getElementById("cardDetailModal");
+  const cardEl = document.getElementById("detailCardElement");
+  const nameEl = document.getElementById("detailCardName");
+  const rarityEl = document.getElementById("detailCardRarity");
+  const hpEl = document.getElementById("detailCardHp");
+  const descEl = document.getElementById("detailCardDesc");
+  const attacksContainer = document.getElementById("detailCardAttacks");
+
+  if(!modal || !cardEl) return;
+
+  nameEl.textContent = card.name;
+  rarityEl.textContent = (card.rarity || "COMMON").toUpperCase();
+  rarityEl.className = `rarity ${card.rarity}`;
+  hpEl.textContent = typeof formatHp === "function" ? formatHp(card.hp) : (card.hp || 80) + " HP";
+  descEl.textContent = card.desc || "A rare artifact of cosmic significance.";
+
+  const attacksList = (Array.isArray(card.attacks) && card.attacks.length) ? card.attacks : [
+    { name: card.attack || "Strike", dmg: card.dmg || 20 },
+    { name: "Heavy Strike", dmg: Math.floor((card.dmg || 20) * 1.5) }
+  ];
+
+  attacksContainer.innerHTML = attacksList.map(atk => `
+    <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);padding:10px 14px;border-radius:10px">
+      <span style="font-weight:800;color:#fff">⚔️ ${atk.name}</span>
+      <span style="font-weight:900;color:#fde047">${typeof formatDmg === "function" ? formatDmg(atk.dmg) : atk.dmg + " DMG"}</span>
+    </div>
+  `).join("");
+
+  // Build the 3D card preview
+  cardEl.className = `card foil-standard`;
+  cardEl.innerHTML = `
+    <div class="face ${card.rarity}" style="height:100%">
+      <div class="card-top">
+        <span class="rarity">${card.rarity}</span>
+        <span style="font-size:11px;font-weight:800;color:#fca5a5">${hpEl.textContent}</span>
+      </div>
+      <div class="card-art-frame" style="height:170px">
+        <img class="card-art-img" src="${card.image}" alt="${card.name}">
+        <div class="card-aura"></div>
+      </div>
+      <div class="card-bottom">
+        <div class="name">${card.name}</div>
+        <div class="desc">${card.desc}</div>
+      </div>
+      <div class="holo-glint" style="opacity:0.4"></div>
+    </div>
+  `;
+
+  // Dynamic 3D mousemove on detail card
+  cardEl.onmousemove = (e) => {
+    const rect = cardEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const rotX = ((y - rect.height/2)/(rect.height/2)) * -20;
+    const rotY = ((x - rect.width/2)/(rect.width/2)) * 20;
+    cardEl.style.transform = `perspective(800px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) scale(1.05)`;
+    const glint = cardEl.querySelector(".holo-glint");
+    if(glint){
+      const xPct = Math.round((x / rect.width) * 100);
+      const yPct = Math.round((y / rect.height) * 100);
+      glint.style.background = `radial-gradient(circle at ${xPct}% ${yPct}%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.15) 45%, transparent 75%)`;
+      glint.style.opacity = "1";
+    }
+  };
+  cardEl.onmouseleave = () => {
+    cardEl.style.transform = "";
+    const glint = cardEl.querySelector(".holo-glint");
+    if(glint) glint.style.opacity = "0.4";
+  };
+
+  modal.style.display = "flex";
+  if(typeof playChaosSfx === "function") playChaosSfx("laser");
+}
+window.openCardDetailModal = openCardDetailModal;
+
+function closeCardDetailModal(){
+  const modal = document.getElementById("cardDetailModal");
+  if(modal) modal.style.display = "none";
+}
+
+/* ========================================================
+   SUMMONER MASTERY & ACHIEVEMENTS SYSTEM
+   ======================================================== */
+const MASTER_ACHIEVEMENTS = [
+  { id: "first_blood", title: "🌟 First Steps", desc: "Unlock and own at least 5 unique cards.", reward: 1500, check: (acc) => (acc.owned || []).length >= 5 },
+  { id: "arena_victor", title: "⚔️ Gladiator Debut", desc: "Achieve at least 1 victory in the Combat Arena.", reward: 2500, check: (acc) => (acc.battleWins || 0) >= 1 },
+  { id: "card_collector", title: "📦 Collector's Dedication", desc: "Assemble a binder containing 20+ cards.", reward: 5000, check: (acc) => (acc.owned || []).length >= 20 },
+  { id: "divine_blessing", title: "👑 Divine Ascent", desc: "Acquire any Divine tier card.", reward: 10000, check: (acc) => {
+      const owned = acc.owned || [];
+      return owned.some(idx => cards[idx] && cards[idx].rarity === "divine");
+    }
+  },
+  { id: "timing_pro", title: "⚡ Perfect Timing", desc: "Own 35+ cards across multiple realms.", reward: 12000, check: (acc) => (acc.owned || []).length >= 35 },
+  { id: "centurion", title: "🌌 Centurion Summoner", desc: "Unlock a colossal deck of 60+ cards.", reward: 25000, check: (acc) => (acc.owned || []).length >= 60 },
+  { id: "wealth_hoard", title: "💎 Treasury Titan", desc: "Amass 50,000 or more Realm Coins.", reward: 20000, check: (acc) => (acc.coins === "Infinity" || acc.coins >= 50000) }
+];
+
+function openSummonerMasteryModal(){
+  const modal = document.getElementById("summonerModal");
+  if(!modal) return;
+
+  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]) || { owned: [], coins: 100, battleWins: 0, claimedAchievements: [] };
+  if(!curAcc.claimedAchievements) curAcc.claimedAchievements = [];
+
+  const ownedCount = (curAcc.owned || []).length;
+  const wins = curAcc.battleWins || 0;
+  const userCoins = Number.isFinite(curAcc.coins) ? curAcc.coins : 100;
+  const xp = ownedCount * 120 + wins * 200 + Math.min(5000, Math.floor(userCoins / 50));
+  const level = Math.max(1, Math.floor(xp / 350) + 1);
+
+  const rankTitleEl = document.getElementById("masteryRankTitle");
+  const rankLvlEl = document.getElementById("masteryLevelText");
+  const xpTextEl = document.getElementById("masteryXpText");
+  const xpBarEl = document.getElementById("masteryXpBar");
+  const curLvlSpan = document.getElementById("masteryCurLevelSpan");
+  const nextLvlSpan = document.getElementById("masteryNextLevelSpan");
+  const listEl = document.getElementById("masteryAchievementsList");
+
+  let title = "Novice Summoner";
+  if(level >= 18) title = "👑 Realm Sovereign";
+  else if(level >= 12) title = "🌌 Celestial Champion";
+  else if(level >= 8) title = "✨ Mythic Strategist";
+  else if(level >= 5) title = "⚔️ Elite Battlemage";
+  else if(level >= 3) title = "🃏 Adept Collector";
+
+  if(rankTitleEl) rankTitleEl.textContent = title;
+  if(rankLvlEl) rankLvlEl.textContent = `Mastery Level ${level}`;
+  if(xpTextEl) xpTextEl.textContent = `${xp.toLocaleString()} XP`;
+
+  const curLevelXpBase = (level - 1) * 350;
+  const nextLevelXpBase = level * 350;
+  const progressInLevel = Math.min(100, Math.max(0, Math.round(((xp - curLevelXpBase) / 350) * 100)));
+
+  if(xpBarEl) xpBarEl.style.width = `${progressInLevel}%`;
+  if(curLvlSpan) curLvlSpan.textContent = `Lv. ${level}`;
+  if(nextLvlSpan) nextLvlSpan.textContent = `Lv. ${level + 1} (${nextLevelXpBase} XP)`;
+
+  if(listEl){
+    listEl.innerHTML = MASTER_ACHIEVEMENTS.map(ach => {
+      const isCompleted = ach.check(curAcc);
+      const isClaimed = curAcc.claimedAchievements.includes(ach.id);
+
+      let actionBtn = "";
+      if(isClaimed){
+        actionBtn = '<span style="font-size:12px;font-weight:800;color:#10b981">✅ Claimed</span>';
+      } else if(isCompleted){
+        actionBtn = `<button class="accountBtn" style="background:#10b981;color:#052e16;font-weight:900;padding:6px 12px;font-size:12px" onclick="claimMasteryAchievement('${ach.id}')">Claim +${ach.reward.toLocaleString()} 🪙</button>`;
+      } else {
+        actionBtn = '<span style="font-size:12px;color:#64748b">In Progress...</span>';
+      }
+
+      return `
+        <div class="achievement-card ${isClaimed ? 'claimed' : (isCompleted ? 'completed' : '')}">
+          <div>
+            <div style="font-weight:900;color:#fff;font-size:14px">${ach.title}</div>
+            <div style="font-size:12px;color:#94a3b8">${ach.desc}</div>
+          </div>
+          <div>${actionBtn}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  modal.style.display = "flex";
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+}
+window.openSummonerMasteryModal = openSummonerMasteryModal;
+
+function claimMasteryAchievement(id){
+  const ach = MASTER_ACHIEVEMENTS.find(a => a.id === id);
+  if(!ach) return;
+
+  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+  if(!curAcc) return;
+  if(!curAcc.claimedAchievements) curAcc.claimedAchievements = [];
+  if(curAcc.claimedAchievements.includes(id)) return;
+
+  curAcc.claimedAchievements.push(id);
+  if(curAcc.coins !== "Infinity" && curAcc.coins !== Infinity){
+    curAcc.coins = (curAcc.coins || 0) + ach.reward;
+    coins = curAcc.coins;
+  }
+
+  save();
+  updateDisplay();
+  openSummonerMasteryModal();
+
+  if(typeof confetti === "function"){
+    confetti({ particleCount: 80, spread: 75, origin: { y: 0.5 } });
+  }
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🏆 Trophy Claimed! +${ach.reward.toLocaleString()} Coins added to account!`, false);
+  }
+}
+window.claimMasteryAchievement = claimMasteryAchievement;
+
+/* ========================================================
+   AMBIENT COSMOS BACKGROUND PARTICLES
+   ======================================================== */
+function initAmbientCosmosCanvas(){
+  const canvas = document.getElementById("ambientCosmosCanvas");
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  const stars = [];
+  for(let i = 0; i < 90; i++){
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: Math.random() * 1.5 + 0.4,
+      alpha: Math.random() * 0.7 + 0.2,
+      speedX: (Math.random() - 0.5) * 0.25,
+      speedY: (Math.random() - 0.5) * 0.25
+    });
+  }
+
+  function loop(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.x += s.speedX;
+      s.y += s.speedY;
+      if(s.x < 0) s.x = canvas.width;
+      if(s.x > canvas.width) s.x = 0;
+      if(s.y < 0) s.y = canvas.height;
+      if(s.y > canvas.height) s.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(186, 230, 253, ${s.alpha})`;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "#38bdf8";
+      ctx.fill();
+    });
+    requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+/* Wire up Super Cool Listeners */
+function initSuperCoolDom(){
+  initAmbientCosmosCanvas();
+
+  const closeDetailBtn = document.getElementById("closeCardDetailBtn");
+  if(closeDetailBtn) closeDetailBtn.onclick = closeCardDetailModal;
+
+  const rankBadge = document.getElementById("summonerRankBadge");
+  if(rankBadge) rankBadge.onclick = openSummonerMasteryModal;
+
+  const closeSummonerBtn = document.getElementById("closeSummonerModalBtn");
+  if(closeSummonerBtn) closeSummonerBtn.onclick = () => {
+    const modal = document.getElementById("summonerModal");
+    if(modal) modal.style.display = "none";
+  };
+
+  const revealAllBtn = document.getElementById("packRevealAllBtn");
+  if(revealAllBtn){
+    revealAllBtn.onclick = () => {
+      document.querySelectorAll(".flip-card-wrapper:not(.flipped)").forEach((cardEl, idx) => {
+        setTimeout(() => cardEl.click(), idx * 110);
+      });
+    };
+  }
+
+  const championBtn = document.getElementById("detailSetChampionBtn");
+  if(championBtn){
+    championBtn.onclick = () => {
+      if(!activeDetailCard) return;
+      localStorage.setItem("cardCollectorFavChampion", activeDetailCard.name);
+      if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+      alert(`⚔️ ${activeDetailCard.name} is now designated as your default Arena Champion!`);
+    };
+  }
+
+  const cryBtn = document.getElementById("detailPlayCryBtn");
+  if(cryBtn){
+    cryBtn.onclick = () => {
+      if(!activeDetailCard) return;
+      if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+    };
+  }
+
+  document.querySelectorAll(".detailFoilBtn").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".detailFoilBtn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const foil = btn.getAttribute("data-foil");
+      const cardEl = document.getElementById("detailCardElement");
+      if(cardEl){
+        cardEl.className = `card foil-${foil}`;
+      }
+    };
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initSuperCoolDom();
+});
+
+if(document.readyState === "complete" || document.readyState === "interactive"){
+  setTimeout(() => {
+    initSuperCoolDom();
+  }, 100);
+}
