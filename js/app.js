@@ -1449,7 +1449,8 @@ const MASTER_ACHIEVEMENTS = [
   { id: "centurion", title: "🌌 Centurion Summoner", desc: "Unlock a colossal deck of 60+ cards.", reward: 25000, check: (acc) => (acc.owned || []).length >= 60 },
   { id: "wealth_hoard", title: "💎 Treasury Titan", desc: "Amass 50,000 or more Realm Coins.", reward: 20000, check: (acc) => (acc.coins === "Infinity" || acc.coins >= 50000) },
   { id: "centurion_supreme", title: "🔱 Centurion Supreme", desc: "Unlock an imperial collection of 100+ cards.", reward: 50000, check: (acc) => (acc.owned || []).length >= 100 },
-  { id: "living_pantheon", title: "👑 Living Pantheon", desc: "Unlock and conquer the full 150 card roster.", reward: 100000, check: (acc) => (acc.owned || []).length >= 150 }
+  { id: "living_pantheon", title: "👑 Living Pantheon", desc: "Unlock and assemble a colossal deck of 150+ cards.", reward: 75000, check: (acc) => (acc.owned || []).length >= 150 },
+  { id: "celestial_omniverse", title: "🌌 Celestial Omniverse", desc: "Unlock and conquer all 200 cards across the multiverse.", reward: 150000, check: (acc) => (acc.owned || []).length >= 200 }
 ];
 
 function openSummonerMasteryModal(){

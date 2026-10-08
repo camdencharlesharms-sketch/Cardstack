@@ -425,3 +425,15 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 - **🏆 Grand Summoner Mastery Trophies**:
   - `🔱 Centurion Supreme`: Unlock 100+ cards (+50,000 Coins).
   - `👑 Living Pantheon`: Conquer and unlock the full 150-card roster (+100,000 Coins).
+
+### Colossal Expansion to 200 Cards
+- **🌟 50 Additional New Cards Added (Grand Total: 200 Unique Cards)**:
+  - **👑 Divine (5)**: `Odin Allfather` (265 HP, 114 DMG), `Amaterasu` (250 HP, 108 DMG), `Zeus Omnipotent` (260 HP, 112 DMG), `Tiamat Chaos` (280 HP, 116 DMG), `Deus Ex Machina` (275 HP, 118 DMG).
+  - **✨ Mythic (8)**: `Sun Dragon`, `Moon Empress`, `Cosmic Leviathan`, `Cyber Valkyrie`, `Void Titan`, `Inferno Sovereign`, `Chrono Dragon`, `Nebula Phoenix`.
+  - **⚔️ Legendary (10)**: `Lava Behemoth`, `Glacial Drake`, `Thunder Bird`, `Iron Knight`, `Shadow Samurai`, `Ocean Empress`, `Sun Lion`, `Forest Dryad`, `Cyber Wolf`, `Pegasus Paladin`.
+  - **⚡ Epic (12)**: `Flame Sorcerer`, `Ice Witch`, `Thunder Panther`, `Steel Scorpion`, `Poison Viper`, `Wind Archer`, `Earth Shaman`, `Dark Cleric`, `Aqua Knight`, `Magma Golem`, `Crystal Bird`, `Steam Bot`.
+  - **💧 Rare (8)**: `River Otter`, `Flame Salamander`, `Snow Hare`, `Electric Eel`, `Moss Stag`, `Dusk Raven`, `Desert Beetle`, `Gale Sprite`.
+  - **🌱 Common (7)**: `Field Mouse`, `Tree Frog`, `Brown Bear`, `Woodpecker`, `Garden Snail`, `Grasshopper`, `Cave Spider`.
+- **🏆 Multiverse Mastery Trophies**:
+  - `👑 Living Pantheon`: Assemble a deck of 150+ cards (+75,000 Coins).
+  - `🌌 Celestial Omniverse`: Collect all 200 cards (+150,000 Coins).
