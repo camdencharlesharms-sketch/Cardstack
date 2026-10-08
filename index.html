@@ -18,22 +18,32 @@
 <div id="maintenanceBanner">⚠ MAINTENANCE IN PROGRESS — Admin Test Mode Active</div>
 <div id="serverEventBanner">🎉 2X COIN EVENT ACTIVE — All pack and battle rewards doubled!</div>
 
+<div id="timedEventCountdownBanner" style="display:none;background:linear-gradient(90deg, #b45309, #f59e0b, #b45309);color:#000;font-weight:900;text-align:center;padding:10px 16px;letter-spacing:1px;font-size:13px;box-shadow:0 0 25px rgba(245,158,11,0.6);position:sticky;top:0;z-index:9998">
+  ⚡ FLASH EVENT: <span id="timedEventNameDisplay">TRIPLE COINS</span> [<span id="timedEventTimerDisplay">05:00</span> REMAINING]!
+</div>
+
 <header>
   <div class="brand">
-    <div class="brand-icon">🎴</div>
+    <div class="brand-icon">🃏</div>
     <div>
       <h1>Card Stack</h1>
     </div>
   </div>
   <div class="accountArea">
-    <span class="accountName" id="accountLabel">Guest</span>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span class="accountName" id="accountLabel">Guest</span>
+      <span id="summonerRankBadge" style="background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;box-shadow:0 0 10px rgba(168,85,247,0.4);cursor:pointer;white-space:nowrap" title="Click to view Summoner Rank">Lv. 1 • Novice</span>
+    </div>
     <button class="accountBtn" id="accountBtn">Account</button>
     <button id="arenaBtn">⚔ Arena</button>
+    <button id="headerSfxToggleBtn" class="accountBtn" style="padding:4px 9px;font-size:12px;display:flex;align-items:center;gap:4px">
+      <span id="headerSfxIcon">🔊</span> <span id="headerSfxText" style="font-size:10px;font-weight:800">SFX</span>
+    </button>
     <button id="adminOpenBtn">⚡ Admin Hub <span id="homeOnlineBadge" style="background:#10b981;color:#052e16;font-size:10px;font-weight:900;padding:1px 6px;border-radius:10px;margin-left:4px">🟢 1</span></button>
   </div>
   <div class="stats">
     <div class="stat">🪙 <span id="coins" class="stat-val coin-color">100</span></div>
-    <div class="stat">🃏 <span id="count" class="stat-val">0</span>/<span id="totalCardsCount">37</span></div>
+    <div class="stat">🃏 <span id="count" class="stat-val">0</span>/<span id="totalCardsCount">55</span></div>
   </div>
 </header>
 
@@ -399,6 +409,27 @@
           </div>
         </div>
 
+        <!-- CARD: REALM BACKUP & DISASTER RECOVERY SUITE -->
+        <div class="adminCard" style="grid-column:1 / -1;border:1px solid rgba(16,185,129,0.3);background:rgba(15,23,42,0.85)">
+          <h4 style="color:#34d399;margin:0 0 6px 0">📦 Realm Backup & Disaster Recovery Suite</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 10px 0">
+            Export a full JSON backup of all player accounts, card ownerships, economy values, custom packs, and server settings. Restore any snapshot in one click.
+          </p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="exportRealmBackupBtn" style="background:linear-gradient(135deg, #10b981, #059669);color:#fff;font-weight:800;flex:1;min-width:180px">
+              💾 Export Realm Backup (JSON)
+            </button>
+            <label class="accountBtn" style="background:#0284c7;color:#fff;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:1;min-width:180px">
+              📥 Import Backup File
+              <input type="file" id="importRealmBackupFileInput" accept=".json" style="display:none">
+            </label>
+            <button id="repairCollectionsBtn" class="accountBtn" style="background:#475569;flex:1;min-width:180px">
+              🔄 Verify & Repair Collections
+            </button>
+          </div>
+          <div id="realmBackupStatus" style="font-size:11px;color:#94a3b8;margin-top:8px;min-height:16px">Backup engine ready.</div>
+        </div>
+
         <div class="adminCard">
           <h4>🍀 Pack Luck Multiplier (RNG)</h4>
           <select id="adminLuckSelect" class="adminSelect">
@@ -509,6 +540,18 @@
             <option value="infinite_dmg">⚡ Infinite DMG Cards</option>
           </select>
         </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:11px;font-weight:800;color:#94a3b8">⚡ Quick Stat Balancers:</span>
+          <button id="bulkBuffDamageBtn" class="accountBtn" style="font-size:11px;background:rgba(245,158,11,0.2);border-color:#f59e0b;color:#fde047">
+            ⚔️ Buff All Attacks (+15% DMG)
+          </button>
+          <button id="bulkBuffHpBtn" class="accountBtn" style="font-size:11px;background:rgba(16,185,129,0.2);border-color:#10b981;color:#6ee7b7">
+            🛡️ Buff All Tankiness (+20% HP)
+          </button>
+          <button id="bulkResetStatsBtn" class="accountBtn" style="font-size:11px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5">
+            🔄 Reset Custom Stats
+          </button>
+        </div>
       </div>
 
       <div id="cardManagerList" style="display:flex;flex-direction:column;gap:14px;max-height:72vh;overflow-y:auto;padding-right:8px">
@@ -555,6 +598,31 @@
             <option value="50">Black Friday Mega Sale (50% Off!)</option>
           </select>
           <button id="applyServerEventsBtn" style="background:#f59e0b;color:#000;font-weight:900">Broadcast World Event</button>
+        </div>
+
+        <!-- CARD: TIMED FLASH EVENTS SCHEDULER -->
+        <div class="adminCard" style="grid-column:1 / -1;border:1px solid rgba(245,158,11,0.4);background:radial-gradient(circle at top, rgba(245,158,11,0.15), rgba(15,23,42,0.85))">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h4 style="margin:0;color:#fbbf24">⏱️ Timed Flash Events Scheduler (Live Countdown)</h4>
+            <span id="activeFlashEventBadge" style="font-size:11px;font-weight:900;padding:2px 8px;border-radius:999px;background:#475569;color:#fff">NO FLASH EVENT</span>
+          </div>
+          <p style="font-size:12px;color:#cbd5e1;margin:8px 0">
+            Launch temporary high-stakes events with a synchronized live countdown timer across all players' screens! Automatically reverts when timer ends.
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+            <button class="accountBtn flashEventLaunchBtn" data-event="tripleCoins" data-dur="300" data-name="3X COIN FRENZY" style="background:rgba(245,158,11,0.2);border-color:#f59e0b;color:#fde047">
+              ⚡ 5-Min Triple Coins (3x)
+            </button>
+            <button class="accountBtn flashEventLaunchBtn" data-event="godLuck" data-dur="600" data-name="50X GOD LUCK SURGE" style="background:rgba(236,72,153,0.2);border-color:#ec4899;color:#f472b6">
+              🔥 10-Min 50x God Luck Surge
+            </button>
+            <button class="accountBtn flashEventLaunchBtn" data-event="packSale" data-dur="900" data-name="50% PACK FLASH SALE" style="background:rgba(6,182,212,0.2);border-color:#06b6d4;color:#67e8f9">
+              🎁 15-Min 50% Off Pack Sale
+            </button>
+          </div>
+          <button id="cancelActiveFlashEventBtn" class="accountBtn" style="width:100%;margin-top:8px;background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5">
+            🛑 Cancel Current Flash Event
+          </button>
         </div>
 
         <div class="adminCard">

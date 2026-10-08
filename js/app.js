@@ -614,10 +614,38 @@ function render(){
             ${attacksHtml}
           </div>
         </div>
+        ${has ? '<div class="holo-glint"></div>' : ''}
       </div>
     `;
+
+    if(has){
+      el.addEventListener("mousemove", (e) => {
+        const rect = el.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotX = ((y - centerY) / centerY) * -14;
+        const rotY = ((x - centerX) / centerX) * 14;
+        el.style.transform = `perspective(900px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) translateY(-8px) scale3d(1.025, 1.025, 1.025)`;
+        const glint = el.querySelector(".holo-glint");
+        if(glint){
+          const xPct = Math.round((x / rect.width) * 100);
+          const yPct = Math.round((y / rect.height) * 100);
+          glint.style.background = `radial-gradient(circle at ${xPct}% ${yPct}%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.08) 40%, transparent 75%), linear-gradient(${rotY * 12}deg, rgba(255,0,128,0.12), rgba(0,255,255,0.12), rgba(255,255,0,0.12))`;
+          glint.style.opacity = "1";
+        }
+      });
+      el.addEventListener("mouseleave", () => {
+        el.style.transform = "";
+        const glint = el.querySelector(".holo-glint");
+        if(glint) glint.style.opacity = "0";
+      });
+    }
+
     grid.appendChild(el);
   });
+  updateSummonerRankBadge();
 
   if(typeof renderArenaCardPicker === "function"){
     renderArenaCardPicker();
@@ -1208,4 +1236,78 @@ window.addEventListener("storage", (e) => {
       render();
     } catch(err){}
   }
+});
+
+/* ========================================================
+   SUMMONER RANKING & AUDIO TOGGLE
+   ======================================================== */
+function updateSummonerRankBadge(){
+  const badge = document.getElementById("summonerRankBadge");
+  if(!badge) return;
+
+  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+  const userOwned = (curAcc && Array.isArray(curAcc.owned)) ? curAcc.owned : (Array.isArray(owned) ? owned : []);
+  const ownedCount = userOwned.length;
+  const wins = (curAcc && curAcc.battleWins) ? curAcc.battleWins : 0;
+  const userCoins = (curAcc && Number.isFinite(curAcc.coins)) ? curAcc.coins : 100;
+
+  const xp = ownedCount * 120 + wins * 200 + Math.min(5000, Math.floor(userCoins / 50));
+  const level = Math.max(1, Math.floor(xp / 350) + 1);
+
+  let title = "Novice Summoner";
+  let color = "linear-gradient(135deg,#64748b,#475569)";
+  if(level >= 18){
+    title = "👑 Realm Sovereign";
+    color = "linear-gradient(135deg,#f59e0b,#ec4899)";
+  } else if(level >= 12){
+    title = "🌌 Celestial Champion";
+    color = "linear-gradient(135deg,#06b6d4,#3b82f6)";
+  } else if(level >= 8){
+    title = "✨ Mythic Strategist";
+    color = "linear-gradient(135deg,#a855f7,#ec4899)";
+  } else if(level >= 5){
+    title = "⚔️ Elite Battlemage";
+    color = "linear-gradient(135deg,#8b5cf6,#6366f1)";
+  } else if(level >= 3){
+    title = "🃏 Adept Collector";
+    color = "linear-gradient(135deg,#3b82f6,#0284c7)";
+  }
+
+  badge.textContent = `Lv. ${level} • ${title}`;
+  badge.style.background = color;
+  badge.title = `Summoner Level ${level} (${title})\nXP: ${xp} (Cards: ${ownedCount}, Arena Wins: ${wins})`;
+}
+window.updateSummonerRankBadge = updateSummonerRankBadge;
+
+function updateDisplay(){
+  if(typeof render === "function") render();
+  updateSummonerRankBadge();
+}
+window.updateDisplay = updateDisplay;
+
+function initHeaderSfxToggle(){
+  const btn = document.getElementById("headerSfxToggleBtn");
+  const icon = document.getElementById("headerSfxIcon");
+  const text = document.getElementById("headerSfxText");
+  if(!btn) return;
+
+  function refreshSfxBtn(){
+    const isMuted = localStorage.getItem("cardCollectorSfxMuted") === "true";
+    if(icon) icon.textContent = isMuted ? "🔇" : "🔊";
+    if(text) text.textContent = isMuted ? "MUTED" : "SFX";
+    btn.style.color = isMuted ? "#f87171" : "#38bdf8";
+  }
+
+  btn.onclick = () => {
+    const isMuted = localStorage.getItem("cardCollectorSfxMuted") === "true";
+    localStorage.setItem("cardCollectorSfxMuted", (!isMuted).toString());
+    refreshSfxBtn();
+    if(isMuted && typeof playChaosSfx === "function") playChaosSfx("laser");
+  };
+  refreshSfxBtn();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initHeaderSfxToggle();
+  updateSummonerRankBadge();
 });

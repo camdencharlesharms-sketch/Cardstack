@@ -325,6 +325,7 @@ function refreshAdminPlayerData(){
       <td>🪙 ${(typeof formatCoins === "function") ? formatCoins(data.coins) : (isInfiniteValue(data.coins) ? "∞" : (data.coins || 0).toLocaleString())}</td>
       <td>${(data.owned || []).length} / ${cards.length}</td>
       <td>
+        <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#6366f1;color:#fff;margin-right:4px" onclick="adminWhisperPlayerPrompt('${name}')" title="Send direct whisper to player">💬 Whisper</button>
         <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#059669;color:#fff;margin-right:4px" onclick="quickGiftPlayerCardPrompt('${name}')">🎁 Gift</button>
         <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#0284c7;color:#fff;margin-right:4px" onclick="adminChangePlayerPasswordPrompt('${name}')" title="Change or reset password">🔑 Pass</button>
         ${!isMaster ? ((typeof isMasterAdmin === "function" && isMasterAdmin()) ? `<button class="accountBtn" style="padding:4px 8px;font-size:11px;color:#f87171" onclick="adminDeleteSingleAccount('${name}')">Delete</button>` : '') : '<span style="color:#94a3b8;font-size:11px">Owner</span>'}
@@ -3208,6 +3209,7 @@ function getChaosVolume(){
 }
 
 function playChaosSfx(type){
+  if(localStorage.getItem("cardCollectorSfxMuted") === "true") return;
   const ctx = getChaosAudioCtx();
   if(!ctx) return;
   const now = ctx.currentTime;
@@ -4513,6 +4515,17 @@ function executeIncomingChaosFx(fxData, sender){
     if(typeof showLiveToast === "function"){
       showLiveToast(`👑 TRIPLE CROWN DIVINE JACKPOT HIT! Free Coins & Rewards across the realm!`, true);
     }
+  } else if(fxData.type === "direct_whisper"){
+    if(fxData.targetUser && currentUser && fxData.targetUser.toLowerCase() === currentUser.toLowerCase()){
+      playChaosSfx("ascension");
+      if(typeof showLiveToast === "function"){
+        showLiveToast(`💬 <b>[DIRECT WHISPER]</b> from <b>${fxData.sender || "Admin"}</b>: "${fxData.msg}"`, true);
+      }
+    }
+  } else if(fxData.type === "timed_flash_event"){
+    launchTimedFlashEvent(fxData.eventType, fxData.durationSec, fxData.displayName, true);
+  } else if(fxData.type === "cancel_flash_event"){
+    cancelTimedFlashEvent(true);
   }
 }
 window.executeIncomingChaosFx = executeIncomingChaosFx;
@@ -5397,4 +5410,301 @@ if(document.readyState === "complete" || document.readyState === "interactive"){
   setTimeout(() => {
     initGodRealmDom();
   }, 120);
+}
+
+/* ========================================================
+   USEFUL ADMIN SUITE:
+   - Full Realm Snapshot & Data Backup / Rollback System
+   - Timed World Events & Flash Boosters (Event Scheduler)
+   - Quick Stat Balancer (Attack DMG & HP Buffs)
+   - Direct Player Whisper
+   ======================================================== */
+
+// Direct Player Whisper
+function adminWhisperPlayerPrompt(targetUser){
+  const msg = prompt(`💬 Send Direct Whisper to ${targetUser}:`);
+  if(!msg || !msg.trim()) return;
+  const fromName = currentUser || "Master Cam";
+  if(typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "direct_whisper", targetUser, msg: msg.trim(), sender: fromName });
+  }
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`💬 Whisper sent to <b>${targetUser}</b>: "${msg.trim()}"`, false);
+  }
+}
+window.adminWhisperPlayerPrompt = adminWhisperPlayerPrompt;
+
+// Realm Backup & Disaster Recovery
+function exportRealmBackup(){
+  const snapshot = {
+    accounts: JSON.parse(localStorage.getItem("cardCollectorAccounts") || "{}"),
+    serverEvents: JSON.parse(localStorage.getItem("cardCollectorServerEvents") || "{}"),
+    customCards: JSON.parse(localStorage.getItem("cardCollectorCustomCards") || "[]"),
+    unreleasedCards: JSON.parse(localStorage.getItem("cardCollectorUnreleasedCards") || "[]"),
+    unreleasedPacks: JSON.parse(localStorage.getItem("cardCollectorUnreleasedPacks") || "[]"),
+    promoCodes: JSON.parse(localStorage.getItem("cardCollectorPromoCodes") || "[]"),
+    subAdmins: JSON.parse(localStorage.getItem("cardCollectorSubAdmins") || "{}"),
+    timestamp: new Date().toISOString(),
+    exportVersion: "3.5"
+  };
+
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(snapshot, null, 2));
+  const dlAnchor = document.createElement("a");
+  const dateStr = new Date().toISOString().slice(0, 10);
+  dlAnchor.setAttribute("href", dataStr);
+  dlAnchor.setAttribute("download", `cardstack-realm-backup-${dateStr}.json`);
+  document.body.appendChild(dlAnchor);
+  dlAnchor.click();
+  dlAnchor.remove();
+
+  const status = document.getElementById("realmBackupStatus");
+  if(status) status.innerHTML = "<span style='color:#34d399'>✅ Backup successfully exported to JSON file!</span>";
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+}
+window.exportRealmBackup = exportRealmBackup;
+
+function importRealmBackup(file){
+  const status = document.getElementById("realmBackupStatus");
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!data || !data.accounts){
+        throw new Error("Invalid backup format: missing accounts object.");
+      }
+
+      if(confirm(`Restore Realm Backup from ${data.timestamp || "snapshot"}? This will safely update accounts and world state.`)){
+        if(data.accounts) localStorage.setItem("cardCollectorAccounts", JSON.stringify(data.accounts));
+        if(data.serverEvents) localStorage.setItem("cardCollectorServerEvents", JSON.stringify(data.serverEvents));
+        if(data.customCards) localStorage.setItem("cardCollectorCustomCards", JSON.stringify(data.customCards));
+        if(data.unreleasedCards) localStorage.setItem("cardCollectorUnreleasedCards", JSON.stringify(data.unreleasedCards));
+        if(data.unreleasedPacks) localStorage.setItem("cardCollectorUnreleasedPacks", JSON.stringify(data.unreleasedPacks));
+        if(data.promoCodes) localStorage.setItem("cardCollectorPromoCodes", JSON.stringify(data.promoCodes));
+        if(data.subAdmins) localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(data.subAdmins));
+
+        if(status) status.innerHTML = "<span style='color:#34d399'>🎉 Backup restored! Reloading platform...</span>";
+        if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+        setTimeout(() => window.location.reload(), 800);
+      }
+    } catch(err){
+      alert("Failed to parse backup JSON: " + err.message);
+      if(status) status.innerHTML = `<span style='color:#f87171'>Restore failed: ${err.message}</span>`;
+    }
+  };
+  reader.readAsText(file);
+}
+window.importRealmBackup = importRealmBackup;
+
+function repairCollections(){
+  const status = document.getElementById("realmBackupStatus");
+  let fixedCount = 0;
+  const maxIdx = cards.length + (Array.isArray(unreleasedCards) ? unreleasedCards.length : 0);
+
+  Object.keys(accounts).forEach(u => {
+    const acc = accounts[u];
+    if(acc && Array.isArray(acc.owned)){
+      const initialLen = acc.owned.length;
+      acc.owned = Array.from(new Set(acc.owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n >= 0 && n < maxIdx)));
+      if(acc.owned.length !== initialLen) fixedCount++;
+    }
+  });
+
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof save === "function") save();
+  if(typeof updateDisplay === "function") updateDisplay();
+  if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+
+  if(status) status.innerHTML = `<span style='color:#38bdf8'>🔄 Repaired and sanitized ${fixedCount} account collections!</span>`;
+  if(typeof playChaosSfx === "function") playChaosSfx("laser");
+}
+window.repairCollections = repairCollections;
+
+// Timed Flash Events Scheduler
+let timedEventInterval = null;
+let activeFlashEventData = null;
+
+function launchTimedFlashEvent(eventType, durationSec, displayName, isRemote = false){
+  const banner = document.getElementById("timedEventCountdownBanner");
+  const nameDisp = document.getElementById("timedEventNameDisplay");
+  const timerDisp = document.getElementById("timedEventTimerDisplay");
+  const badge = document.getElementById("activeFlashEventBadge");
+
+  if(timedEventInterval) clearInterval(timedEventInterval);
+
+  const duration = parseInt(durationSec, 10) || 300;
+  const endTime = Date.now() + (duration * 1000);
+  activeFlashEventData = { eventType, endTime, displayName };
+
+  if(nameDisp) nameDisp.textContent = displayName || "FLASH EVENT";
+  if(banner) banner.style.display = "block";
+  if(badge){
+    badge.textContent = `ACTIVE: ${displayName}`;
+    badge.style.background = "#f59e0b";
+  }
+
+  if(eventType === "tripleCoins"){
+    eventCoinMultiplier = 3;
+  } else if(eventType === "godLuck"){
+    const luckSel = document.getElementById("adminLuckSelect");
+    if(luckSel) luckSel.value = "10";
+    const saveLuckBtn = document.getElementById("adminSaveLuckBtn");
+    if(saveLuckBtn) saveLuckBtn.click();
+  } else if(eventType === "packSale"){
+    eventPackDiscount = 50;
+  }
+
+  if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+  if(typeof confetti === "function"){
+    confetti({ particleCount: 75, spread: 80, origin: { y: 0.1 } });
+  }
+
+  function updateTicker(){
+    const remainingMs = endTime - Date.now();
+    if(remainingMs <= 0){
+      cancelTimedFlashEvent(false);
+      if(typeof showLiveToast === "function"){
+        showLiveToast(`🎉 FLASH EVENT [${displayName}] has concluded!`, true);
+      }
+      if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+      return;
+    }
+    const totalSec = Math.ceil(remainingMs / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    if(timerDisp) timerDisp.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
+  updateTicker();
+  timedEventInterval = setInterval(updateTicker, 1000);
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "timed_flash_event", eventType, durationSec: duration, displayName });
+  }
+}
+window.launchTimedFlashEvent = launchTimedFlashEvent;
+
+function cancelTimedFlashEvent(isRemote = false){
+  if(timedEventInterval) clearInterval(timedEventInterval);
+  timedEventInterval = null;
+  activeFlashEventData = null;
+
+  const banner = document.getElementById("timedEventCountdownBanner");
+  if(banner) banner.style.display = "none";
+
+  const badge = document.getElementById("activeFlashEventBadge");
+  if(badge){
+    badge.textContent = "NO FLASH EVENT";
+    badge.style.background = "#475569";
+  }
+
+  eventCoinMultiplier = 1;
+  eventPackDiscount = 0;
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "cancel_flash_event" });
+  }
+}
+window.cancelTimedFlashEvent = cancelTimedFlashEvent;
+
+// Quick Stat Balancer
+function bulkBuffDamage(multiplier = 1.15){
+  cards.forEach(c => {
+    if(Array.isArray(c.attacks)){
+      c.attacks.forEach(atk => {
+        if(Number.isFinite(atk.dmg)){
+          atk.dmg = Math.max(1, Math.round(atk.dmg * multiplier));
+        }
+      });
+    }
+    if(Number.isFinite(c.dmg)){
+      c.dmg = Math.max(1, Math.round(c.dmg * multiplier));
+    }
+  });
+
+  localStorage.setItem("cardCollectorCardsOverride", JSON.stringify(cards));
+  if(typeof render === "function") render();
+  if(typeof renderCardManagerList === "function") renderCardManagerList();
+  if(typeof playChaosSfx === "function") playChaosSfx("laser");
+  alert(`⚔️ All card attacks buffed by +${Math.round((multiplier - 1) * 100)}% damage!`);
+}
+window.bulkBuffDamage = bulkBuffDamage;
+
+function bulkBuffHp(multiplier = 1.20){
+  cards.forEach(c => {
+    if(Number.isFinite(c.hp)){
+      c.hp = Math.max(1, Math.round(c.hp * multiplier));
+    }
+  });
+
+  localStorage.setItem("cardCollectorCardsOverride", JSON.stringify(cards));
+  if(typeof render === "function") render();
+  if(typeof renderCardManagerList === "function") renderCardManagerList();
+  if(typeof playChaosSfx === "function") playChaosSfx("laser");
+  alert(`🛡️ All card health buffed by +${Math.round((multiplier - 1) * 100)}% HP!`);
+}
+window.bulkBuffHp = bulkBuffHp;
+
+function bulkResetStats(){
+  if(confirm("Reset all card health and damage stats to defaults?")){
+    if(typeof defaultCards !== "undefined"){
+      cards = JSON.parse(JSON.stringify(defaultCards));
+      localStorage.removeItem("cardCollectorCardsOverride");
+      if(typeof render === "function") render();
+      if(typeof renderCardManagerList === "function") renderCardManagerList();
+      if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+      alert("🔄 All cards restored to default statistics!");
+    }
+  }
+}
+window.bulkResetStats = bulkResetStats;
+
+// Wire up Useful Admin Tools Listeners
+function initUsefulAdminToolsDom(){
+  const exportBtn = document.getElementById("exportRealmBackupBtn");
+  if(exportBtn) exportBtn.onclick = () => exportRealmBackup();
+
+  const fileInput = document.getElementById("importRealmBackupFileInput");
+  if(fileInput){
+    fileInput.onchange = (e) => {
+      if(e.target.files && e.target.files[0]){
+        importRealmBackup(e.target.files[0]);
+      }
+    };
+  }
+
+  const repairBtn = document.getElementById("repairCollectionsBtn");
+  if(repairBtn) repairBtn.onclick = () => repairCollections();
+
+  document.querySelectorAll(".flashEventLaunchBtn").forEach(btn => {
+    btn.onclick = () => {
+      const evType = btn.getAttribute("data-event");
+      const dur = parseInt(btn.getAttribute("data-dur"), 10);
+      const evName = btn.getAttribute("data-name");
+      launchTimedFlashEvent(evType, dur, evName, false);
+    };
+  });
+
+  const cancelFlashBtn = document.getElementById("cancelActiveFlashEventBtn");
+  if(cancelFlashBtn) cancelFlashBtn.onclick = () => cancelTimedFlashEvent(false);
+
+  const buffDmgBtn = document.getElementById("bulkBuffDamageBtn");
+  if(buffDmgBtn) buffDmgBtn.onclick = () => bulkBuffDamage(1.15);
+
+  const buffHpBtn = document.getElementById("bulkBuffHpBtn");
+  if(buffHpBtn) buffHpBtn.onclick = () => bulkBuffHp(1.20);
+
+  const resetStatsBtn = document.getElementById("bulkResetStatsBtn");
+  if(resetStatsBtn) resetStatsBtn.onclick = () => bulkResetStats();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initUsefulAdminToolsDom();
+});
+
+if(document.readyState === "complete" || document.readyState === "interactive"){
+  setTimeout(() => {
+    initUsefulAdminToolsDom();
+  }, 140);
 }

@@ -1044,3 +1044,85 @@ body.turbo-speed-active * {
   50% { transform: translateY(6px); filter: blur(2px); }
   100% { transform: translateY(-6px); filter: blur(2px); }
 }
+
+/* ========================================================
+   HOLOGRAPHIC 3D FOIL TILT, PRISMATIC SHIMMER & AUDIO UI
+   ======================================================== */
+.card {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.holo-glint {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  mix-blend-mode: color-dodge;
+}
+
+/* Prismatic Celestial Auras for Divine & Mythic cards */
+.face.divine {
+  position: relative;
+}
+.face.divine::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 22px;
+  background: linear-gradient(60deg, #38bdf8, #facc15, #f43f5e, #38bdf8);
+  background-size: 300% 300%;
+  z-index: -1;
+  animation: divineAuraShift 4s ease infinite;
+  filter: blur(5px);
+  opacity: 0.85;
+  pointer-events: none;
+}
+@keyframes divineAuraShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.face.mythic {
+  position: relative;
+}
+.face.mythic::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 22px;
+  background: linear-gradient(60deg, #ec4899, #a855f7, #06b6d4, #ec4899);
+  background-size: 300% 300%;
+  z-index: -1;
+  animation: divineAuraShift 4.5s ease infinite;
+  filter: blur(4px);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.face.legendary {
+  position: relative;
+}
+.face.legendary::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 22px;
+  background: linear-gradient(60deg, #f59e0b, #ea580c, #ef4444, #f59e0b);
+  background-size: 300% 300%;
+  z-index: -1;
+  animation: divineAuraShift 5s ease infinite;
+  filter: blur(3px);
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+#summonerRankBadge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(168,85,247,0.7);
+}

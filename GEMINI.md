@@ -361,3 +361,31 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
     - `⚡ One-Punch 99K DMG`: Activates One-Punch God mode (deals 99,999 damage in their next combat arena attack).
   - **Custom Promo Code Dispenser**: Admins can generate custom promo codes and broadcast them directly to the top-screen marquee hype ticker.
   - **Code Redemption Box**: Players can redeem active promo codes in the Admin tab or directly inside the User Account Modal.
+
+### Site Coolness & Useful Admin Tools Upgrade
+- **🃏 3D Holographic Foil Card Tilt & Dynamic Glint**:
+  - Implemented 3D perspective mousemove tilting on all unlocked cards in the collection binder.
+  - Added a dynamic reflective holographic glint (`.holo-glint`) that tracks the cursor angle across cards.
+  - Added animated shifting prismatic aura borders for **Divine** (`#38bdf8` -> `#facc15` -> `#f43f5e`), **Mythic** (`#ec4899` -> `#a855f7` -> `#06b6d4`), and **Legendary** (`#f59e0b` -> `#ea580c` -> `#ef4444`) cards.
+- **👑 Summoner Rank & XP Leveling Badge**:
+  - Added a dynamic rank badge in the main navigation header (e.g. `Lv. 1 • Novice Summoner`, `Lv. 5 • Elite Battlemage`, `Lv. 12 • Celestial Champion`, `Lv. 18 • Realm Sovereign`).
+  - Progresses dynamically based on total cards collected, arena combat victories, and coins accumulated.
+- **🔊 Global Audio & SFX Header Toggle**:
+  - Added an interactive sound toggle (`🔊 SFX ON` / `🔇 MUTED`) in the header that mutes/unmutes all synth sound effects across the app.
+- **📦 Full Realm Snapshot & Data Backup / Rollback System** (`tabEconomy`):
+  - **`💾 Export Realm Backup (JSON)`**: Exports complete encrypted snapshot of all accounts, cards, packs, and world settings as a timestamped JSON download.
+  - **`📥 Import Backup File`**: Safely restores an existing backup file in one click.
+  - **`🔄 Verify & Repair Collections`**: Sanitize account card indices, strips orphaned values, and resolves data sync issues.
+- **⏱️ Timed World Events & Flash Boosters Scheduler** (`tabEvents`):
+  - Launch temporary high-stakes events:
+    - **5-Min 3x Coin Frenzy**
+    - **10-Min 50x God Luck Surge**
+    - **15-Min 50% Off Pack Flash Sale**
+  - Displays a synchronized countdown banner (`#timedEventCountdownBanner`) across the top of all connected players' screens.
+  - Automatically concludes event and restores normal economy settings when timer reaches 00:00.
+- **⚔️ Quick Card Stat Balancer** (`tabCardManager`):
+  - `⚔️ Buff All Attacks (+15% DMG)`: Multiplies attack damage across the entire 55+ card roster.
+  - `🛡️ Buff All Tankiness (+20% HP)`: Multiplies card HP across the card roster.
+  - `🔄 Reset Custom Stats`: Restores all cards back to canonical defaults.
+- **💬 Direct Player Whisper & Moderation** (`tabPlayers`):
+  - Added a `💬 Whisper` action button on each player row in the Player Manager table, allowing Master Cam and admins to send private direct toast notifications directly to a specific player's screen.
