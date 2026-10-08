@@ -490,3 +490,24 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - **Mythic**: `Chronos Weaver`, `Cosmic Pioneer`, `Vortex Phantom`, `Void Monarch`, `Dimension Ripper`, `Quantum Shifter`, `Nebula Weaver`, `Shadow Monarch`, `Cyber Phoenix`, `Solar Eclipse`, `Nebula Phoenix`, `Cyber Valkyrie`, `Apex Predator`, `Plasma Drake`, `Chrono Dragon`, `Galaxy Tiger`, `Omega Sovereign`, `Moon Empress`, `Titan of Time`, `Inferno Lord`, `Hyperion Sun`, `Nebula Dragon`, `Cyber Overlord`, `Solar Behemoth`, `Dark Matter`, `Sun Dragon`, `Storm Leviathan`, `Void Titan`, `Abyssal Behemoth`, `Cosmic Leviathan`.
   - **Divine**: `Seraphina Angel`, `Nyxara Void`, `King Aethelgard`, `Solar Empress`, `Archangel Gabriel`, `Solarius Omnis`, `Infinity Walker`, `Astral Archon`, `Celestial Phoenix`, `Aegis Prime`, `Amaterasu Dawn`, `Chronos Sovereign`, `Omni Dragon`, `Zeus Omnipotent`, `Odin Allfather`, `Void Singularity`, `Deus Ex Machina`, `Genesis Tree`, `Tiamat Chaos`.
   - **Transcendent**: `Chronos Absolute`, `Solaria Prime`, `Aethelgard Zenith`, `Void Sovereign`, `Apex Metatron`, `Yggdrasil Nexus`, `Ouroboros Prime`, `Azathoth Cosmic`, `Omniverse Nexus`, `The Demiurge`.
+
+### Universal Cross-Device Cloud Account Sync & Multi-Google Account Authentication
+- **Global Cloud Registry (`https://api.restful-api.dev/objects/ff808181a09d98f701a11bcfb094215b`)**:
+  - Global, serverless REST cloud registry accessible by any browser and device worldwide without backend deployment.
+  - Automatically loads and synchronizes accounts, cards, coin balances, unreleased cards, and Google account associations across all player devices (phones, tablets, laptops, school Chromebooks).
+  - Background synchronization is debounced (600ms) to ensure smooth gameplay during rapid booster pack openings and arena battles.
+  - When saving an account, progress is saved to local `localStorage`, broadcast to connected peers via WebRTC, and pushed to the global cloud registry.
+- **Universal Multi-Google Account Authentication**:
+  - **1-Click Google Sign-In**: Integrated official Google Sign-in button with Google Identity Services (GIS).
+  - **Multi-Google Account Device Switcher**: Supports multiple Google accounts on the same device with a dedicated "Switch Google Account" tray and "+ Use Another" Google account prompt. Players sharing a family PC or school Chromebook can easily switch between their respective Google accounts in one click.
+  - **Account Auto-Linking**: Seamlessly links Google accounts (`googleEmail`, `googleName`, `googlePicture`) to existing or newly created Cardstack profiles.
+  - **Cam Master Admin Association**: `camden.charles.harms@gmail.com` maps directly to Master Admin `Cam` with infinite coins and complete 210-card collection across all devices.
+  - **Direct Email Sign-In**: Entering any `@gmail.com` or school email into the username field automatically routes to Google Sign-In.
+- **Multi-Channel Instant Device Pairing & Sign-In**:
+  - **6-Digit Device Pair Code**: One-click instant code generation (e.g. `839 204`) using WebRTC PeerJS channels (`cardstack_sync_pair_XXXXXX`). Enter the 6 digits on another device's login screen to instantly sync the full collection and sign in.
+  - **Live Camera QR Code**: Displays a live, high-resolution QR code (`api.qrserver.com`) that mobile devices can scan to immediately open Cardstack and sign in with all cards transferred.
+  - **Direct Sign-In Link**: Generates a shareable URL containing an encrypted token (`?syncAccount=...` or `?pair=...`), which automatically authenticates the recipient device on load and sanitizes the URL with `window.history.replaceState`.
+- **Zero-Loss Progress Merging (`mergeAccountData`)**:
+  - Automatically merges card collections using set union (`Set([...localOwned, ...cloudOwned])`), ensuring no player ever loses unlocked cards when playing across multiple devices.
+  - Merges coin balances dynamically, honoring `Infinity` coin status and taking the maximum coin value between devices.
+  - Syncs exclusive unreleased prototype cards and Admin Hub gifts directly to the cloud.

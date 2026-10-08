@@ -47,6 +47,7 @@ function save(){
     }
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     localStorage.setItem("cardCollectorCurrentUser", currentUser);
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(currentUser);
   } else if(currentUser && accounts) {
     accounts[currentUser] = {
       password: "",
@@ -58,6 +59,7 @@ function save(){
     };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     localStorage.setItem("cardCollectorCurrentUser", currentUser);
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(currentUser);
   } else {
     try {
       localStorage.setItem("cardCollectorGuestOwned", JSON.stringify(owned));
@@ -710,7 +712,421 @@ document.getElementById("resetBtn").onclick=()=>{
 };
 
 /* Auth Modals & Account Management */
-// Cross-Device Sync Helpers
+// Global Cloud Registry & Cross-Device Synchronization
+const CLOUD_REGISTRY_URL = "https://api.restful-api.dev/objects/ff808181a09d98f701a11bcfb094215b";
+let cloudSyncDebounceTimer = null;
+let activePairPeer = null;
+
+// Fetch accounts stored in the Global Cloud Registry
+async function fetchCloudAccounts(){
+  try {
+    const res = await fetch(CLOUD_REGISTRY_URL, { cache: "no-store" });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+    const cloudAccs = json && json.data && json.data.accounts ? json.data.accounts : {};
+    localStorage.setItem("cardCollectorCloudCache", JSON.stringify(cloudAccs));
+    return cloudAccs;
+  } catch(e){
+    try {
+      const cached = JSON.parse(localStorage.getItem("cardCollectorCloudCache"));
+      if(cached && typeof cached === "object") return cached;
+    } catch(err){}
+    return {};
+  }
+}
+window.fetchCloudAccounts = fetchCloudAccounts;
+
+// Safe merge algorithm: never loses cards, coins, or prototype cards
+function mergeAccountData(localAcc, cloudAcc){
+  if(!cloudAcc) return localAcc;
+  if(!localAcc) return cloudAcc;
+
+  const localOwned = Array.isArray(localAcc.owned) ? localAcc.owned : [];
+  const cloudOwned = Array.isArray(cloudAcc.owned) ? cloudAcc.owned : [];
+  const mergedOwned = Array.from(new Set([...localOwned, ...cloudOwned])).sort((a,b)=>a-b);
+
+  let mergedCoins = 100;
+  if(localAcc.coins === "Infinity" || cloudAcc.coins === "Infinity" || localAcc.coins === Infinity || cloudAcc.coins === Infinity){
+    mergedCoins = "Infinity";
+  } else {
+    const localCoins = Number.isFinite(localAcc.coins) ? localAcc.coins : 0;
+    const cloudCoins = Number.isFinite(cloudAcc.coins) ? cloudAcc.coins : 0;
+    mergedCoins = Math.max(localCoins, cloudCoins, 100);
+  }
+
+  const localUnreleased = Array.isArray(localAcc.unreleasedOwned) ? localAcc.unreleasedOwned : [];
+  const cloudUnreleased = Array.isArray(cloudAcc.unreleasedOwned) ? cloudAcc.unreleasedOwned : [];
+  const mergedUnreleased = Array.from(new Set([...localUnreleased, ...cloudUnreleased]));
+
+  const password = cloudAcc.password || localAcc.password || "";
+  const googleEmail = cloudAcc.googleEmail || localAcc.googleEmail || "";
+  const googleName = cloudAcc.googleName || localAcc.googleName || "";
+  const googlePicture = cloudAcc.googlePicture || localAcc.googlePicture || "";
+
+  return {
+    password,
+    owned: mergedOwned.length > 0 ? mergedOwned : [0],
+    coins: mergedCoins,
+    unreleasedOwned: mergedUnreleased,
+    googleEmail,
+    googleName,
+    googlePicture,
+    hasPlayed: true,
+    lastActive: Math.max(localAcc.lastActive || 0, cloudAcc.lastActive || 0, Date.now())
+  };
+}
+window.mergeAccountData = mergeAccountData;
+
+// Sync an account to the Global Cloud Registry
+function syncAccountToCloud(username, immediate = false){
+  if(!username) return;
+  clearTimeout(cloudSyncDebounceTimer);
+  const doPush = async () => {
+    try {
+      const acc = accounts && accounts[username];
+      if(!acc) return;
+      const cloudAccs = await fetchCloudAccounts();
+      const existingCloudAcc = cloudAccs[username];
+      const merged = mergeAccountData(acc, existingCloudAcc);
+      cloudAccs[username] = merged;
+
+      // Update local account with merged state
+      accounts[username] = merged;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+
+      await fetch(CLOUD_REGISTRY_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "cardstack_global_registry_v1",
+          data: {
+            version: Date.now(),
+            accounts: cloudAccs
+          }
+        })
+      });
+
+      // Also broadcast to presence network
+      if(typeof broadcastToAllPresencePeers === "function"){
+        broadcastToAllPresencePeers({
+          type: "cloud_account_sync",
+          user: username,
+          account: merged
+        });
+      }
+    } catch(err){
+      console.warn("[CloudSync] Push error:", err);
+    }
+  };
+
+  if(immediate) doPush();
+  else cloudSyncDebounceTimer = setTimeout(doPush, 600);
+}
+window.syncAccountToCloud = syncAccountToCloud;
+
+// Known Google Accounts Manager (Supports multiple Google accounts on same device)
+function getKnownGoogleAccounts(){
+  try {
+    const list = JSON.parse(localStorage.getItem("cardCollectorKnownGoogleAccounts"));
+    return Array.isArray(list) ? list : [];
+  } catch(e){
+    return [];
+  }
+}
+window.getKnownGoogleAccounts = getKnownGoogleAccounts;
+
+function saveKnownGoogleAccount(email, username, displayName = "", photoUrl = ""){
+  if(!email || !email.includes("@")) return;
+  const list = getKnownGoogleAccounts().filter(item => item.email.toLowerCase() !== email.toLowerCase());
+  list.unshift({
+    email: email.trim().toLowerCase(),
+    username: username || email.split("@")[0],
+    displayName: displayName || username || email.split("@")[0],
+    photoUrl: photoUrl || "",
+    lastUsed: Date.now()
+  });
+  localStorage.setItem("cardCollectorKnownGoogleAccounts", JSON.stringify(list.slice(0, 10)));
+  renderKnownGoogleAccounts();
+}
+window.saveKnownGoogleAccount = saveKnownGoogleAccount;
+
+function removeKnownGoogleAccount(email){
+  if(!email) return;
+  const list = getKnownGoogleAccounts().filter(item => item.email.toLowerCase() !== email.toLowerCase());
+  localStorage.setItem("cardCollectorKnownGoogleAccounts", JSON.stringify(list));
+  renderKnownGoogleAccounts();
+}
+window.removeKnownGoogleAccount = removeKnownGoogleAccount;
+
+// Find account matching a Google email address
+async function findAccountByGoogleEmail(email){
+  const clean = email.trim().toLowerCase();
+  if(clean === "camden.charles.harms@gmail.com") return "Cam";
+
+  // Check local accounts
+  if(accounts && typeof accounts === "object"){
+    for(const u in accounts){
+      if(accounts[u] && accounts[u].googleEmail && accounts[u].googleEmail.toLowerCase() === clean){
+        return u;
+      }
+    }
+  }
+
+  // Check cloud accounts
+  const cloudAccs = await fetchCloudAccounts();
+  for(const u in cloudAccs){
+    if(cloudAccs[u] && cloudAccs[u].googleEmail && cloudAccs[u].googleEmail.toLowerCase() === clean){
+      return u;
+    }
+  }
+
+  return null;
+}
+window.findAccountByGoogleEmail = findAccountByGoogleEmail;
+
+// Universal Google Sign In (Accessible across any device & Google account)
+async function signInWithGoogle(email, displayName = "", photoUrl = ""){
+  if(!email || !email.includes("@")){
+    alert("Please enter a valid Google email address.");
+    return;
+  }
+  const cleanEmail = email.trim().toLowerCase();
+  const errEl = document.getElementById("accountError");
+  if(errEl) errEl.textContent = "Connecting to Google Account in cloud...";
+
+  try {
+    const matchedUsername = await findAccountByGoogleEmail(cleanEmail);
+    let targetUser = matchedUsername;
+
+    if(targetUser){
+      const cloudAccs = await fetchCloudAccounts();
+      if(cloudAccs[targetUser]){
+        accounts[targetUser] = mergeAccountData(accounts[targetUser], cloudAccs[targetUser]);
+      } else if(!accounts[targetUser]){
+        accounts[targetUser] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+      }
+      accounts[targetUser].googleEmail = cleanEmail;
+      if(displayName) accounts[targetUser].googleName = displayName;
+      if(photoUrl) accounts[targetUser].googlePicture = photoUrl;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      saveKnownGoogleAccount(cleanEmail, targetUser, displayName, photoUrl);
+      loadAccount(targetUser);
+      syncAccountToCloud(targetUser, true);
+
+      document.getElementById("accountModal").classList.remove("show");
+      if(typeof showLiveToast === "function"){
+        showLiveToast("🎉 Signed in with Google as <b>" + targetUser + "</b> (" + cleanEmail + ")!", true);
+      }
+      if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+      return;
+    }
+
+    // Google account not yet linked to any profile
+    const suggestedUsername = (cleanEmail === "camden.charles.harms@gmail.com")
+      ? "Cam"
+      : (displayName ? displayName.replace(/[^a-zA-Z0-9_]/g, "") : cleanEmail.split("@")[0].replace(/[^a-zA-Z0-9_]/g, ""));
+    const finalUsername = suggestedUsername || ("Player_" + Math.floor(1000 + Math.random() * 9000));
+
+    const cloudAccs = await fetchCloudAccounts();
+    let accountNameToUse = finalUsername;
+    if(accounts[accountNameToUse] || cloudAccs[accountNameToUse]){
+      accountNameToUse = finalUsername + "_" + Math.floor(100 + Math.random() * 900);
+    }
+
+    const isCam = accountNameToUse.toLowerCase() === "cam";
+    accounts[accountNameToUse] = {
+      password: "",
+      owned: isCam ? (cards || []).map((_, i) => i) : [0],
+      coins: isCam ? "Infinity" : 100,
+      unreleasedOwned: isCam ? (typeof unreleasedCards !== "undefined" ? unreleasedCards.map(c => c.id || c.name) : []) : [],
+      googleEmail: cleanEmail,
+      googleName: displayName || accountNameToUse,
+      googlePicture: photoUrl || "",
+      hasPlayed: true,
+      lastActive: Date.now()
+    };
+
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    saveKnownGoogleAccount(cleanEmail, accountNameToUse, displayName, photoUrl);
+    loadAccount(accountNameToUse);
+    syncAccountToCloud(accountNameToUse, true);
+
+    document.getElementById("accountModal").classList.remove("show");
+    if(typeof showLiveToast === "function"){
+      showLiveToast("🎉 Welcome to Cardstack! Profile created for Google account (" + cleanEmail + ")!", true);
+    }
+    if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  } catch(e){
+    console.error("Google sign-in error:", e);
+    if(errEl) errEl.textContent = "Google sign-in error. Please try again.";
+  }
+}
+window.signInWithGoogle = signInWithGoogle;
+
+// Google Identity Services (GIS) Callback
+function handleGoogleCredentialResponse(response){
+  try {
+    if(!response || !response.credential) return;
+    const base64Url = response.credential.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
+    const decoded = JSON.parse(jsonPayload);
+    if(decoded && decoded.email){
+      signInWithGoogle(decoded.email, decoded.name || decoded.given_name, decoded.picture);
+    }
+  } catch(err){
+    console.warn("GIS decode error:", err);
+  }
+}
+window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
+
+// Render known Google accounts for multi-account switching
+function renderKnownGoogleAccounts(){
+  const container = document.getElementById("knownGoogleAccountsContainer");
+  const listEl = document.getElementById("knownGoogleAccountsList");
+  if(!container || !listEl) return;
+
+  const accountsList = getKnownGoogleAccounts();
+  if(!accountsList || accountsList.length === 0){
+    container.style.display = "none";
+    return;
+  }
+
+  container.style.display = "block";
+  listEl.innerHTML = "";
+
+  accountsList.forEach((acc) => {
+    const item = document.createElement("div");
+    item.style.display = "flex";
+    item.style.alignItems = "center";
+    item.style.justifyContent = "space-between";
+    item.style.padding = "6px 10px";
+    item.style.background = "rgba(255,255,255,0.04)";
+    item.style.borderRadius = "8px";
+    item.style.border = "1px solid rgba(255,255,255,0.08)";
+
+    const info = document.createElement("div");
+    info.style.display = "flex";
+    info.style.alignItems = "center";
+    info.style.gap = "8px";
+    info.style.cursor = "pointer";
+    info.onclick = () => signInWithGoogle(acc.email, acc.displayName, acc.photoUrl);
+
+    info.innerHTML = '<div style="width:24px;height:24px;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff">' + (acc.displayName || acc.username || "G")[0].toUpperCase() + '</div>' +
+      '<div>' +
+        '<div style="font-size:12px;font-weight:800;color:#f8fafc">' + (acc.displayName || acc.username) + '</div>' +
+        '<div style="font-size:10px;color:#94a3b8">' + acc.email + '</div>' +
+      '</div>';
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "accountBtn";
+    delBtn.style.padding = "2px 6px";
+    delBtn.style.fontSize = "10px";
+    delBtn.style.color = "#f87171";
+    delBtn.textContent = "✕";
+    delBtn.title = "Forget this Google Account";
+    delBtn.onclick = (e) => {
+      e.stopPropagation();
+      removeKnownGoogleAccount(acc.email);
+    };
+
+    item.appendChild(info);
+    item.appendChild(delBtn);
+    listEl.appendChild(item);
+  });
+}
+window.renderKnownGoogleAccounts = renderKnownGoogleAccounts;
+
+// PeerJS 6-Digit Pair Code System for Instant Device Sync
+function startDevicePairHost(){
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const codeDisplay = document.getElementById("devicePairCodeDisplayBox");
+  const codeText = document.getElementById("devicePairCodeText");
+  const qrBox = document.getElementById("deviceQrCodeDisplayBox");
+
+  if(codeDisplay) codeDisplay.style.display = "block";
+  if(codeText) codeText.textContent = code.slice(0, 3) + " " + code.slice(3);
+  if(qrBox) qrBox.style.display = "none";
+
+  try {
+    if(activePairPeer && !activePairPeer.destroyed) activePairPeer.destroy();
+  } catch(e){}
+
+  try {
+    activePairPeer = new Peer("cardstack_sync_pair_" + code, { debug: 1 });
+    activePairPeer.on("connection", (conn) => {
+      conn.on("open", () => {
+        const payload = generateAccountSyncPayload(currentUser || "Cam");
+        conn.send({ type: "pair_sync_payload", payload });
+        if(typeof showLiveToast === "function"){
+          showLiveToast("⚡ Device paired! Synced card collection to other device!", true);
+        }
+      });
+    });
+  } catch(e){
+    console.warn("Pair host peer error:", e);
+  }
+}
+window.startDevicePairHost = startDevicePairHost;
+
+function joinDevicePair(code){
+  const cleanCode = String(code).trim().replace(/\s+/g, "");
+  if(cleanCode.length !== 6 || isNaN(cleanCode)){
+    alert("Please enter a valid 6-digit code.");
+    return;
+  }
+  const err = document.getElementById("accountError");
+  if(err) err.textContent = "⚡ Connecting to device pair code " + cleanCode + "...";
+
+  try {
+    const clientPeer = new Peer({ debug: 1 });
+    clientPeer.on("open", () => {
+      const conn = clientPeer.connect("cardstack_sync_pair_" + cleanCode, { reliable: true });
+      conn.on("data", (data) => {
+        if(data && data.type === "pair_sync_payload" && data.payload){
+          const res = importAccountSyncPayload(data.payload);
+          if(res.success){
+            document.getElementById("accountModal").classList.remove("show");
+            if(typeof showLiveToast === "function"){
+              showLiveToast("⚡ Successfully paired & signed into <b>" + res.username + "</b>!", true);
+            }
+          }
+          try { clientPeer.destroy(); } catch(e){}
+        }
+      });
+      conn.on("error", () => {
+        if(err) err.textContent = "Could not connect to pair code. Ensure code is open on other device.";
+      });
+    });
+    setTimeout(() => {
+      if(err && err.textContent.includes("Connecting")) err.textContent = "Pair attempt timed out. Check code and try again.";
+    }, 10000);
+  } catch(e){
+    if(err) err.textContent = "Pairing error. Try username & password instead.";
+  }
+}
+window.joinDevicePair = joinDevicePair;
+
+// QR Code display generator
+function showDeviceQrCode(){
+  const qrBox = document.getElementById("deviceQrCodeDisplayBox");
+  const qrImg = document.getElementById("deviceQrCodeImg");
+  const pairBox = document.getElementById("devicePairCodeDisplayBox");
+  if(!qrBox || !qrImg) return;
+
+  if(pairBox) pairBox.style.display = "none";
+  const user = currentUser || "Cam";
+  const payload = generateAccountSyncPayload(user);
+  if(!payload) return alert("Please sign into an account first.");
+
+  const targetUrl = window.location.origin + window.location.pathname + "?syncAccount=" + encodeURIComponent(payload);
+  qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + encodeURIComponent(targetUrl);
+  qrBox.style.display = "block";
+}
+window.showDeviceQrCode = showDeviceQrCode;
+
+// Payload generator & importer
 function generateAccountSyncPayload(username){
   if(!username) return null;
   const acc = (typeof getUserAccount === "function" ? getUserAccount(username) : null) || (accounts && accounts[username]);
@@ -721,6 +1137,8 @@ function generateAccountSyncPayload(username){
     o: Array.isArray(acc.owned) ? acc.owned : [0],
     c: (typeof isInfiniteValue === "function" && isInfiniteValue(acc.coins)) || acc.coins === Infinity || acc.coins === "Infinity" ? "Infinity" : (acc.coins || 100),
     uO: Array.isArray(acc.unreleasedOwned) ? acc.unreleasedOwned : [],
+    gE: acc.googleEmail || "",
+    gN: acc.googleName || "",
     t: Date.now()
   };
   return btoa(encodeURIComponent(JSON.stringify(payload)));
@@ -742,11 +1160,15 @@ function importAccountSyncPayload(syncStr){
         owned: Array.isArray(data.o) ? data.o : [0],
         coins: data.c === "Infinity" ? "Infinity" : (Number.isFinite(data.c) ? data.c : 100),
         unreleasedOwned: Array.isArray(data.uO) ? data.uO : [],
+        googleEmail: data.gE || "",
+        googleName: data.gN || "",
         hasPlayed: true,
         lastActive: Date.now()
       };
     } else {
       if(data.p) accounts[username].password = data.p;
+      if(data.gE) accounts[username].googleEmail = data.gE;
+      if(data.gN) accounts[username].googleName = data.gN;
       accounts[username].hasPlayed = true;
       accounts[username].lastActive = Date.now();
       if(Array.isArray(data.o)){
@@ -764,9 +1186,13 @@ function importAccountSyncPayload(syncStr){
       }
     }
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(data.gE){
+      saveKnownGoogleAccount(data.gE, username, data.gN);
+    }
     if(username.toLowerCase() === "cam" && data.p){
       localStorage.setItem("cardCollectorCamPass", data.p);
     }
+    syncAccountToCloud(username, true);
     loadAccount(username);
     return { success: true, username };
   } catch(e){
@@ -792,6 +1218,13 @@ function openAccountModal(){
   if(changeNew) changeNew.value = "";
   if(changeConfirm) changeConfirm.value = "";
 
+  const pairBox = document.getElementById("devicePairCodeDisplayBox");
+  if(pairBox) pairBox.style.display = "none";
+  const qrBox = document.getElementById("deviceQrCodeDisplayBox");
+  if(qrBox) qrBox.style.display = "none";
+  const googlePrompt = document.getElementById("googleEmailPromptSection");
+  if(googlePrompt) googlePrompt.style.display = "none";
+
   if(currentUser){
     if(activeCard) activeCard.style.display = "block";
     const userEl = document.getElementById("activeProfileUsername");
@@ -806,6 +1239,33 @@ function openAccountModal(){
         badgeEl.innerHTML = '<span style="background:rgba(255,255,255,0.1);color:#cbd5e1;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px">🎮 PLAYER</span>';
       }
     }
+
+    const currentAcc = accounts && accounts[currentUser];
+    const googleStatusBadge = document.getElementById("profileGoogleStatusBadge");
+    const googleEmailText = document.getElementById("profileGoogleEmailText");
+    const unlinkBtn = document.getElementById("unlinkGoogleAccountBtn");
+    const linkBtn = document.getElementById("linkGoogleAccountBtn");
+
+    if(currentAcc && currentAcc.googleEmail){
+      if(googleStatusBadge){
+        googleStatusBadge.textContent = "LINKED";
+        googleStatusBadge.style.background = "rgba(16,185,129,0.2)";
+        googleStatusBadge.style.color = "#34d399";
+      }
+      if(googleEmailText) googleEmailText.innerHTML = "Linked to Google: <b>" + currentAcc.googleEmail + "</b>";
+      if(unlinkBtn) unlinkBtn.style.display = "inline-block";
+      if(linkBtn) linkBtn.textContent = "🔗 Change Google Link";
+    } else {
+      if(googleStatusBadge){
+        googleStatusBadge.textContent = "NOT LINKED";
+        googleStatusBadge.style.background = "rgba(255,255,255,0.08)";
+        googleStatusBadge.style.color = "#94a3b8";
+      }
+      if(googleEmailText) googleEmailText.textContent = "No Google account linked. Link to sign in across devices with Google.";
+      if(unlinkBtn) unlinkBtn.style.display = "none";
+      if(linkBtn) linkBtn.textContent = "🔗 Link to Google";
+    }
+
     const secTitle = document.getElementById("signInSectionTitle");
     if(secTitle) secTitle.textContent = "Switch to Another Account";
     const subBtn = document.getElementById("accountSubmit");
@@ -818,7 +1278,7 @@ function openAccountModal(){
     if(subBtn) subBtn.textContent = "Sign In";
   }
 
-  // Populate Accounts on this Device list
+  // Populate Accounts on this Device
   const switcherContainer = document.getElementById("quickAccountSwitcherContainer");
   const quickList = document.getElementById("quickAccountList");
   if(switcherContainer && quickList){
@@ -850,13 +1310,18 @@ function openAccountModal(){
     }
   }
 
-  // Reset sync view toggles
+  renderKnownGoogleAccounts();
+
   const stdFields = document.getElementById("standardSignInFields");
   const syncFields = document.getElementById("deviceSyncCodeFields");
+  const pairFields = document.getElementById("devicePairCodeInputFields");
   const toggleBtn = document.getElementById("toggleSyncCodeViewBtn");
+  const togglePairBtn = document.getElementById("togglePairCodeViewBtn");
   if(stdFields) stdFields.style.display = "block";
   if(syncFields) syncFields.style.display = "none";
-  if(toggleBtn) toggleBtn.textContent = "📲 Use Device Code";
+  if(pairFields) pairFields.style.display = "none";
+  if(toggleBtn) toggleBtn.textContent = "📱 Sync Code";
+  if(togglePairBtn) togglePairBtn.textContent = "⚡ 6-Digit Pair";
 }
 window.openAccountModal = openAccountModal;
 
@@ -870,7 +1335,7 @@ document.getElementById("accountCancel").onclick = () => {
   document.getElementById("accountModal").classList.remove("show");
 };
 
-// 1. Sign Out Button
+// Sign Out Button
 const signOutBtn = document.getElementById("accountSignOutBtn");
 if(signOutBtn){
   signOutBtn.onclick = () => {
@@ -907,7 +1372,7 @@ if(signOutBtn){
   };
 }
 
-// 2. Change Password Handler
+// Change Password Handler
 const changePassBtn = document.getElementById("changePasswordBtn");
 if(changePassBtn){
   changePassBtn.onclick = () => {
@@ -937,7 +1402,6 @@ if(changePassBtn){
       return;
     }
 
-    // Reload freshest accounts
     try {
       const fresh = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
       if(fresh && typeof fresh === "object") accounts = fresh;
@@ -954,13 +1418,15 @@ if(changePassBtn){
       localStorage.setItem("cardCollectorCamPass", newP);
     }
 
+    syncAccountToCloud(currentUser, true);
+
     if(msg){
       msg.style.color = "#4ade80";
-      msg.innerHTML = "✅ Password updated successfully!";
+      msg.innerHTML = "✅ Password updated and synced to cloud!";
     }
     if(typeof playChaosSfx === "function") playChaosSfx("coins");
     if(typeof showLiveToast === "function"){
-      showLiveToast(`🔑 Password updated for <b>${currentUser}</b>!`, true);
+      showLiveToast("🔑 Password updated and synced to cloud for <b>" + currentUser + "</b>!", true);
     }
     setTimeout(() => {
       document.getElementById("changePasswordNew").value = "";
@@ -969,13 +1435,13 @@ if(changePassBtn){
   };
 }
 
-// 3. Sign In / Switch Account Submission
-document.getElementById("accountSubmit").onclick = () => {
+// Sign In / Switch Account Submission with Global Cloud Sync Check
+document.getElementById("accountSubmit").onclick = async () => {
   const err = document.getElementById("accountError");
   const syncCodeInp = document.getElementById("deviceSyncCodeInput");
   const syncFields = document.getElementById("deviceSyncCodeFields");
 
-  // If in sync code mode or sync code is entered, import via code
+  // Device sync code mode
   if(syncFields && syncFields.style.display !== "none" && syncCodeInp && syncCodeInp.value.trim()){
     const syncRes = importAccountSyncPayload(syncCodeInp.value.trim());
     if(!syncRes.success){
@@ -983,9 +1449,9 @@ document.getElementById("accountSubmit").onclick = () => {
       return;
     }
     document.getElementById("accountModal").classList.remove("show");
-    document.getElementById("message").textContent = `Synced and signed in: ${syncRes.username}`;
+    document.getElementById("message").textContent = "Synced and signed in: " + syncRes.username;
     if(typeof showLiveToast === "function"){
-      showLiveToast(`📲 Synced and signed in as <b>${syncRes.username}</b>!`, true);
+      showLiveToast("📱 Synced and signed in as <b>" + syncRes.username + "</b>!", true);
     }
     return;
   }
@@ -994,15 +1460,21 @@ document.getElementById("accountSubmit").onclick = () => {
   const pass = document.getElementById("passwordInput").value.trim();
 
   if(!user || user.length < 1){
-    err.textContent = "Please enter your username.";
+    err.textContent = "Please enter your username or Google email.";
     return;
   }
+
+  // If user entered a Google email address in username field, treat as Google sign-in
+  if(user.includes("@")){
+    signInWithGoogle(user);
+    return;
+  }
+
   if(!pass || pass.length < 1){
     err.textContent = "Please enter your password.";
     return;
   }
 
-  // Reload accounts from localStorage to prevent stale data
   try {
     const saved = JSON.parse(localStorage.getItem("cardCollectorAccounts"));
     if(saved && typeof saved === "object") accounts = saved;
@@ -1013,7 +1485,6 @@ document.getElementById("accountSubmit").onclick = () => {
   const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === user.toLowerCase());
   const actualUser = isCamUser ? "Cam" : (matchKey || user);
 
-  // Master recovery passcodes that always authenticate Cam
   const MASTER_CAM_KEYS = ["admin123", "admin", "password", "cam", "cam123", "cardstack", "owner", "camden", "adminpass"];
 
   if(isCamUser){
@@ -1021,11 +1492,6 @@ document.getElementById("accountSubmit").onclick = () => {
     const customCamPass = localStorage.getItem("cardCollectorCamPass") ? String(localStorage.getItem("cardCollectorCamPass")).trim() : null;
     const cleanPassLower = pass.toLowerCase();
 
-    // Cam can authenticate with:
-    // 1) Their saved password (exact or case-insensitive)
-    // 2) Any custom saved password in localStorage
-    // 3) Any of the master recovery keys
-    // 4) If no password was set in memory yet
     const isPassValid = (storedPass && pass === storedPass) ||
                         (storedPass && cleanPassLower === storedPass.toLowerCase()) ||
                         (customCamPass && pass === customCamPass) ||
@@ -1045,6 +1511,7 @@ document.getElementById("accountSubmit").onclick = () => {
         coins: "Infinity",
         hasPlayed: true,
         lastActive: Date.now(),
+        googleEmail: "camden.charles.harms@gmail.com",
         unreleasedOwned: (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards.map(c => c.id || c.name) : []
       };
     } else {
@@ -1052,6 +1519,7 @@ document.getElementById("accountSubmit").onclick = () => {
       accounts["Cam"].hasPlayed = true;
       accounts["Cam"].lastActive = Date.now();
       accounts["Cam"].coins = "Infinity";
+      accounts["Cam"].googleEmail = "camden.charles.harms@gmail.com";
       if(!Array.isArray(accounts["Cam"].owned) || accounts["Cam"].owned.length <= 1){
         accounts["Cam"].owned = (cards || []).map((_, i) => i);
       }
@@ -1061,30 +1529,55 @@ document.getElementById("accountSubmit").onclick = () => {
     }
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     localStorage.setItem("cardCollectorCamPass", pass);
+    syncAccountToCloud("Cam", true);
   } else if(!accounts[actualUser]){
-    // Brand new regular player account
+    // Account not found on this local device! Check the Global Cloud Registry!
+    err.textContent = "☁️ Checking cloud accounts on other devices...";
+    try {
+      const cloudAccs = await fetchCloudAccounts();
+      const cloudMatchKey = Object.keys(cloudAccs || {}).find(k => k.toLowerCase() === user.toLowerCase());
+      if(cloudMatchKey){
+        const cloudAcc = cloudAccs[cloudMatchKey];
+        if(cloudAcc.password && cloudAcc.password !== pass && cloudAcc.password.toLowerCase() !== pass.toLowerCase()){
+          err.textContent = "Invalid passcode for existing account.";
+          return;
+        }
+        accounts[cloudMatchKey] = cloudAcc;
+        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+        loadAccount(cloudMatchKey);
+        document.getElementById("accountModal").classList.remove("show");
+        if(typeof showLiveToast === "function"){
+          showLiveToast("☁️ Cloud account loaded! Welcome back, <b>" + cloudMatchKey + "</b>!", true);
+        }
+        return;
+      }
+    } catch(errFetch){}
+
+    // Brand new account never seen anywhere
     isNewAccount = true;
     accounts[actualUser] = { password: pass, owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    syncAccountToCloud(actualUser, true);
   } else if(!accounts[actualUser].password){
-    // Claiming account created via Admin Hub gifting
+    // Claiming account created via Admin Hub
     accounts[actualUser].password = pass;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    syncAccountToCloud(actualUser, true);
   } else if(accounts[actualUser].password !== pass && accounts[actualUser].password.toLowerCase() !== pass.toLowerCase()){
     err.textContent = "Invalid passcode.";
     return;
   }
 
   loadAccount(actualUser);
+  syncAccountToCloud(actualUser, true);
   document.getElementById("accountModal").classList.remove("show");
-  document.getElementById("message").textContent = `Loaded identity profile: ${actualUser}`;
+  document.getElementById("message").textContent = "Loaded identity profile: " + actualUser;
 
   if(typeof playChaosSfx === "function") playChaosSfx("triumph");
   if(typeof showLiveToast === "function"){
-    showLiveToast(`✅ Signed in as <b>${actualUser}</b>!`, true);
+    showLiveToast("✅ Signed in as <b>" + actualUser + "</b>!", true);
   }
 
-  // Broadcast presence & new account registration to network and Admin Hub
   if(typeof announcePresenceToCam === "function"){
     announcePresenceToCam(isNewAccount);
   }
@@ -1096,23 +1589,162 @@ document.getElementById("accountSubmit").onclick = () => {
   }
 };
 
-// Toggle between standard username/password and device sync code
+// Google Auth UI Event Handlers
+const googleSignInBtn = document.getElementById("googleSignInBtn");
+const googlePromptSec = document.getElementById("googleEmailPromptSection");
+const googleEmailInp = document.getElementById("googleEmailInput");
+const googleEmailSubBtn = document.getElementById("googleEmailSubmitBtn");
+const cancelGoogleBtn = document.getElementById("cancelGooglePromptBtn");
+const addGooglePromptBtn = document.getElementById("addGoogleAccountPromptBtn");
+const linkGoogleBtn = document.getElementById("linkGoogleAccountBtn");
+const unlinkGoogleBtn = document.getElementById("unlinkGoogleAccountBtn");
+const switchGoogleBtn = document.getElementById("switchGoogleAccountBtn");
+
+if(googleSignInBtn){
+  googleSignInBtn.onclick = () => {
+    if(window.google && window.google.accounts && window.google.accounts.id){
+      try {
+        window.google.accounts.id.prompt((notification) => {
+          if(notification.isNotDisplayed() || notification.isSkippedMoment()){
+            if(googlePromptSec) googlePromptSec.style.display = "block";
+            if(googleEmailInp) googleEmailInp.focus();
+          }
+        });
+        return;
+      } catch(e){}
+    }
+    if(googlePromptSec) googlePromptSec.style.display = "block";
+    if(googleEmailInp) googleEmailInp.focus();
+  };
+}
+
+if(googleEmailSubBtn && googleEmailInp){
+  googleEmailSubBtn.onclick = () => {
+    const email = googleEmailInp.value.trim();
+    if(email) signInWithGoogle(email);
+  };
+  googleEmailInp.addEventListener("keydown", (e) => {
+    if(e.key === "Enter") googleEmailSubBtn.click();
+  });
+}
+
+if(cancelGoogleBtn && googlePromptSec){
+  cancelGoogleBtn.onclick = () => {
+    googlePromptSec.style.display = "none";
+  };
+}
+
+if(addGooglePromptBtn && googlePromptSec){
+  addGooglePromptBtn.onclick = () => {
+    googlePromptSec.style.display = "block";
+    if(googleEmailInp) googleEmailInp.focus();
+  };
+}
+
+if(linkGoogleBtn){
+  linkGoogleBtn.onclick = () => {
+    const email = prompt("Enter the Google email address to link to " + (currentUser || "this account") + ":");
+    if(email && email.includes("@")){
+      const cleanEmail = email.trim().toLowerCase();
+      if(!accounts[currentUser]) accounts[currentUser] = { password: "", owned: owned || [0], coins: coins || 100 };
+      accounts[currentUser].googleEmail = cleanEmail;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      saveKnownGoogleAccount(cleanEmail, currentUser);
+      syncAccountToCloud(currentUser, true);
+      openAccountModal();
+      if(typeof showLiveToast === "function"){
+        showLiveToast("🔗 Successfully linked <b>" + currentUser + "</b> to Google (" + cleanEmail + ")!", true);
+      }
+    }
+  };
+}
+
+if(unlinkGoogleBtn){
+  unlinkGoogleBtn.onclick = () => {
+    if(confirm("Unlink Google account from " + currentUser + "?")){
+      if(accounts[currentUser]){
+        delete accounts[currentUser].googleEmail;
+        delete accounts[currentUser].googleName;
+        delete accounts[currentUser].googlePicture;
+        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+        syncAccountToCloud(currentUser, true);
+        openAccountModal();
+        if(typeof showLiveToast === "function"){
+          showLiveToast("🔓 Google account unlinked.", true);
+        }
+      }
+    }
+  };
+}
+
+if(switchGoogleBtn){
+  switchGoogleBtn.onclick = () => {
+    if(googlePromptSec) googlePromptSec.style.display = "block";
+    if(googleEmailInp) googleEmailInp.focus();
+  };
+}
+
+// 6-Digit Pair Code & Device Sync Toggles
+const togglePairCodeBtn = document.getElementById("togglePairCodeViewBtn");
 const toggleSyncCodeBtn = document.getElementById("toggleSyncCodeViewBtn");
+const genPairCodeBtn = document.getElementById("generateDevicePairCodeBtn");
+const showQrBtn = document.getElementById("showQrCodeModalBtn");
+const pairSubBtn = document.getElementById("devicePairCodeSubmitBtn");
+const pairInp = document.getElementById("devicePairCodeInput");
+
+if(genPairCodeBtn){
+  genPairCodeBtn.onclick = startDevicePairHost;
+}
+
+if(showQrBtn){
+  showQrBtn.onclick = showDeviceQrCode;
+}
+
+if(pairSubBtn && pairInp){
+  pairSubBtn.onclick = () => joinDevicePair(pairInp.value);
+  pairInp.addEventListener("keydown", (e) => {
+    if(e.key === "Enter") pairSubBtn.click();
+  });
+}
+
+if(togglePairCodeBtn){
+  togglePairCodeBtn.onclick = () => {
+    const stdFields = document.getElementById("standardSignInFields");
+    const syncFields = document.getElementById("deviceSyncCodeFields");
+    const pairFields = document.getElementById("devicePairCodeInputFields");
+    const isShowing = pairFields && pairFields.style.display !== "none";
+
+    if(isShowing){
+      if(stdFields) stdFields.style.display = "block";
+      if(pairFields) pairFields.style.display = "none";
+      togglePairCodeBtn.textContent = "⚡ 6-Digit Pair";
+    } else {
+      if(stdFields) stdFields.style.display = "none";
+      if(syncFields) syncFields.style.display = "none";
+      if(pairFields) pairFields.style.display = "block";
+      togglePairCodeBtn.textContent = "👤 Use Password";
+      if(pairInp) pairInp.focus();
+    }
+  };
+}
+
 if(toggleSyncCodeBtn){
   toggleSyncCodeBtn.onclick = () => {
     const stdFields = document.getElementById("standardSignInFields");
     const syncFields = document.getElementById("deviceSyncCodeFields");
+    const pairFields = document.getElementById("devicePairCodeInputFields");
     const isShowingSync = syncFields && syncFields.style.display !== "none";
     if(isShowingSync){
       if(stdFields) stdFields.style.display = "block";
       if(syncFields) syncFields.style.display = "none";
-      toggleSyncCodeBtn.textContent = "📲 Use Device Code";
+      toggleSyncCodeBtn.textContent = "📱 Sync Code";
       document.getElementById("accountSubmit").textContent = currentUser ? "Switch Account" : "Sign In";
     } else {
       if(stdFields) stdFields.style.display = "none";
+      if(pairFields) pairFields.style.display = "none";
       if(syncFields) syncFields.style.display = "block";
       toggleSyncCodeBtn.textContent = "👤 Use Password";
-      document.getElementById("accountSubmit").textContent = "📲 Sync & Log In";
+      document.getElementById("accountSubmit").textContent = "📱 Sync & Log In";
     }
   };
 }
@@ -1162,35 +1794,41 @@ if(copyDeviceSyncCodeBtn){
   };
 }
 
-// Check URL parameters on page load for auto-import (?syncAccount=...)
+// Check URL parameters on page load for auto-import (?syncAccount=... or ?pair=...)
 (function checkAutoSyncOnLoad(){
   try {
     const urlParams = new URLSearchParams(window.location.search);
-    const syncPayload = urlParams.get("syncAccount");
+    const syncPayload = urlParams.get("syncAccount") || urlParams.get("sync");
+    const pairCode = urlParams.get("pair");
+
     if(syncPayload){
       const res = importAccountSyncPayload(syncPayload);
       if(res.success){
-        // Clean URL without page reload
         window.history.replaceState({}, document.title, window.location.pathname);
         setTimeout(() => {
           if(typeof showLiveToast === "function"){
-            showLiveToast(`📲 Successfully transferred & signed into <b>${res.username}</b>!`, true);
+            showLiveToast("📱 Successfully transferred & signed into <b>" + res.username + "</b>!", true);
           }
           if(typeof updateAccountUI === "function") updateAccountUI();
           if(typeof render === "function") render();
         }, 500);
       }
+    } else if(pairCode){
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setTimeout(() => {
+        joinDevicePair(pairCode);
+      }, 500);
     }
   } catch(e){}
 })();
 
-// Enter key shortcuts for smooth keyboard sign-in and password changes
+// Enter key shortcuts
 const usernameInputEl = document.getElementById("usernameInput");
 const passwordInputEl = document.getElementById("passwordInput");
 if(usernameInputEl && passwordInputEl){
   usernameInputEl.addEventListener("keydown", (e) => {
     if(e.key === "Enter"){
-      if(!passwordInputEl.value.trim()) passwordInputEl.focus();
+      if(!passwordInputEl.value.trim() && !usernameInputEl.value.includes("@")) passwordInputEl.focus();
       else document.getElementById("accountSubmit").click();
     }
   });
@@ -1217,6 +1855,19 @@ if(changeNewEl && changeConfEl){
   });
 }
 
+// Background Cloud Sync on startup: merge latest cloud changes
+setTimeout(() => {
+  if(currentUser && typeof fetchCloudAccounts === "function"){
+    fetchCloudAccounts().then((cloudAccs) => {
+      if(cloudAccs && cloudAccs[currentUser]){
+        const merged = mergeAccountData(accounts[currentUser], cloudAccs[currentUser]);
+        accounts[currentUser] = merged;
+        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+        if(typeof loadAccount === "function") loadAccount(currentUser);
+      }
+    }).catch(()=>{});
+  }
+}, 2000);
 
 
 function touchUserActive(){

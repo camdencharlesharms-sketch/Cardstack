@@ -10,6 +10,7 @@
 <!-- Free WebRTC P2P library to connect two devices via room codes -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="css/styles.css?v=3.0">
 </head>
 <body>
@@ -68,12 +69,24 @@
 </div>
 
 <div id="accountModal">
-  <div class="accountBox" style="width:min(480px,94vw);max-height:90vh;overflow-y:auto">
+  <div class="accountBox" style="width:min(500px,94vw);max-height:92vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;margin-bottom:16px">
       <h2 id="accountTitle" style="margin:0;font-size:22px;display:flex;align-items:center;gap:8px">
         <span>👤</span> <span>Account & Profile</span>
       </h2>
       <button id="accountModalCloseBtn" class="accountBtn" style="padding:4px 10px;font-size:14px">✕</button>
+    </div>
+
+    <!-- Cloud Sync Indicator Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:10px;padding:8px 12px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">☁️</span>
+        <div>
+          <div style="font-size:12px;font-weight:800;color:#38bdf8">Global Cloud Sync Active</div>
+          <div style="font-size:10px;color:#94a3b8">Play on any device & sign into different Google accounts seamlessly</div>
+        </div>
+      </div>
+      <span id="cloudSyncLiveBadge" style="background:#0284c7;color:#fff;font-size:10px;font-weight:900;padding:2px 7px;border-radius:6px">ONLINE</span>
     </div>
 
     <!-- Active Profile Card (shown when logged in) -->
@@ -89,6 +102,29 @@
         <button id="accountSignOutBtn" class="accountBtn" style="background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5;padding:6px 12px;font-size:12px;font-weight:800">
           🚪 Sign Out
         </button>
+      </div>
+
+      <!-- Google Account Linking Status in Active Profile -->
+      <div id="activeProfileGoogleSection" style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:800;color:#e2e8f0;display:flex;align-items:center;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            <span>Linked Google Account</span>
+          </span>
+          <span id="profileGoogleStatusBadge" style="font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.08);color:#94a3b8">Checking...</span>
+        </div>
+        <div id="profileGoogleEmailText" style="font-size:12px;color:#cbd5e1;margin-bottom:8px">No Google account linked yet.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="linkGoogleAccountBtn" type="button" class="accountBtn" style="flex:1;background:linear-gradient(135deg,#0284c7,#2563eb);color:#fff;font-size:11px;font-weight:800;padding:7px">
+            🔗 Link to Google
+          </button>
+          <button id="unlinkGoogleAccountBtn" type="button" class="accountBtn" style="display:none;background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5;font-size:11px;font-weight:800;padding:7px">
+            Unlink
+          </button>
+          <button id="switchGoogleAccountBtn" type="button" class="accountBtn" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#e2e8f0;font-size:11px;font-weight:800;padding:7px">
+            🔄 Switch Google
+          </button>
+        </div>
       </div>
 
       <!-- Change Password Section inside active profile -->
@@ -112,20 +148,44 @@
       <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <span style="font-size:13px;font-weight:800;color:#38bdf8;display:flex;align-items:center;gap:6px">
-            📲 Sign In on Another Device
+            📱 Sign In on Another Device
           </span>
+          <span style="font-size:10px;font-weight:800;background:rgba(56,189,248,0.2);color:#38bdf8;padding:2px 6px;border-radius:4px">INSTANT</span>
         </div>
         <p style="font-size:11px;color:#94a3b8;margin:0 0 10px 0;line-height:1.4">
-          Want to play with this account on your phone, tablet, or another computer? Copy a direct sign-in link or your device sync code below:
+          Want to play on your phone, tablet, or another computer? Use any of these 1-click methods:
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button id="copyDeviceSyncLinkBtn" class="accountBtn" style="flex:1;background:linear-gradient(135deg,#0284c7,#0369a1);border:1px solid #38bdf8;color:#fff;font-size:11px;font-weight:800;padding:8px" type="button">
-            🔗 Copy Direct Sign-In Link
+          <button id="generateDevicePairCodeBtn" class="accountBtn" style="flex:1;min-width:130px;background:linear-gradient(135deg,#7c3aed,#6d28d9);border:1px solid #a78bfa;color:#fff;font-size:11px;font-weight:800;padding:8px" type="button">
+            ⚡ 6-Digit Pair Code
           </button>
-          <button id="copyDeviceSyncCodeBtn" class="accountBtn" style="flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#e2e8f0;font-size:11px;font-weight:800;padding:8px" type="button">
+          <button id="showQrCodeModalBtn" class="accountBtn" style="flex:1;min-width:110px;background:linear-gradient(135deg,#059669,#10b981);border:1px solid #34d399;color:#fff;font-size:11px;font-weight:800;padding:8px" type="button">
+            📷 Scan QR Code
+          </button>
+          <button id="copyDeviceSyncLinkBtn" class="accountBtn" style="flex:1;min-width:130px;background:linear-gradient(135deg,#0284c7,#0369a1);border:1px solid #38bdf8;color:#fff;font-size:11px;font-weight:800;padding:8px" type="button">
+            🔗 Copy Direct Link
+          </button>
+          <button id="copyDeviceSyncCodeBtn" class="accountBtn" style="flex:1;min-width:110px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#e2e8f0;font-size:11px;font-weight:800;padding:8px" type="button">
             📋 Copy Sync Code
           </button>
         </div>
+
+        <!-- Pair Code Display Box -->
+        <div id="devicePairCodeDisplayBox" style="display:none;margin-top:10px;background:rgba(124,58,237,0.15);border:1px dashed #a78bfa;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:#c4b5fd;font-weight:700;text-transform:uppercase">6-Digit Pair Code for this account:</div>
+          <div id="devicePairCodeText" style="font-size:28px;font-weight:900;letter-spacing:6px;color:#fff;margin:8px 0;font-family:monospace">------</div>
+          <div style="font-size:11px;color:#ddd6fe">Enter this 6-digit code on your other device to sign in instantly!</div>
+        </div>
+
+        <!-- QR Code Display Box -->
+        <div id="deviceQrCodeDisplayBox" style="display:none;margin-top:10px;background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:#6ee7b7;font-weight:700;margin-bottom:8px">Point your phone camera at this QR code:</div>
+          <div style="display:inline-block;padding:8px;background:#fff;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,0.4)">
+            <img id="deviceQrCodeImg" src="" alt="Sign-In QR Code" width="160" height="160" style="display:block">
+          </div>
+          <div style="font-size:11px;color:#a7f3d0;margin-top:8px">Scanning immediately transfers your cards and signs you in!</div>
+        </div>
+
         <div id="deviceSyncCopiedMsg" style="color:#4ade80;font-size:12px;min-height:16px;margin-top:6px;font-weight:700"></div>
       </div>
     </div>
@@ -134,10 +194,53 @@
     <div id="signInSection" style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px">
       <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
         <h4 id="signInSectionTitle" style="margin:0;font-size:14px;color:#cbd5e1">Sign In / Switch Account</h4>
-        <!-- Toggle button to switch between Username/Password and Device Sync Code -->
-        <button id="toggleSyncCodeViewBtn" type="button" class="accountBtn" style="font-size:11px;padding:3px 8px;color:#38bdf8;border:1px solid #0284c7;background:rgba(2,132,199,0.15)">
-          📲 Use Device Code
+        <div style="display:flex;gap:6px">
+          <button id="togglePairCodeViewBtn" type="button" class="accountBtn" style="font-size:11px;padding:3px 8px;color:#c084fc;border:1px solid #7c3aed;background:rgba(124,58,237,0.15)">
+            ⚡ 6-Digit Pair
+          </button>
+          <button id="toggleSyncCodeViewBtn" type="button" class="accountBtn" style="font-size:11px;padding:3px 8px;color:#38bdf8;border:1px solid #0284c7;background:rgba(2,132,199,0.15)">
+            📱 Sync Code
+          </button>
+        </div>
+      </div>
+
+      <!-- Google Sign-In Area -->
+      <div style="margin-bottom:14px">
+        <button id="googleSignInBtn" type="button" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#ffffff;color:#1f2937;border:1px solid #d1d5db;border-radius:12px;padding:10px 16px;font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);transition:all 0.2s">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <span>Sign in with Google</span>
         </button>
+      </div>
+
+      <!-- Multiple Google Accounts Switcher (shown if 1 or more Google accounts exist on device) -->
+      <div id="knownGoogleAccountsContainer" style="display:none;margin-bottom:14px;background:rgba(255,255,255,0.03);padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px">Switch Google Account:</span>
+          <button id="addGoogleAccountPromptBtn" type="button" class="accountBtn" style="font-size:10px;padding:2px 7px;color:#38bdf8;border:1px solid #0284c7;background:rgba(2,132,199,0.15)">+ Use Another</button>
+        </div>
+        <div id="knownGoogleAccountsList" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+
+      <!-- Google Account Input Prompt -->
+      <div id="googleEmailPromptSection" style="display:none;margin-bottom:14px;background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.3);border-radius:12px;padding:12px">
+        <div style="font-size:12px;color:#cbd5e1;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <span>Enter your Google Account email:</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <input id="googleEmailInput" type="email" class="adminInput" placeholder="e.g. name@gmail.com or school Google email" style="margin:0;font-size:12px;flex:1">
+          <button id="googleEmailSubmitBtn" type="button" class="accountBtn" style="background:linear-gradient(135deg,#0284c7,#2563eb);color:#fff;font-weight:800;font-size:12px;padding:8px 14px;white-space:nowrap">Continue</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px">
+          <span style="color:#94a3b8">Sign in with any Gmail or school Google account</span>
+          <button id="cancelGooglePromptBtn" type="button" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:11px">Cancel</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+        <span style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px">OR SIGN IN WITH USERNAME & PASSWORD</span>
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
       </div>
 
       <!-- Quick Account Switcher for accounts existing on this device -->
@@ -148,8 +251,15 @@
 
       <!-- Standard Username & Password Inputs -->
       <div id="standardSignInFields">
-        <input id="usernameInput" class="adminInput" placeholder="Username" maxlength="20" style="margin-bottom:10px">
+        <input id="usernameInput" class="adminInput" placeholder="Username or Google Email" maxlength="40" style="margin-bottom:10px">
         <input id="passwordInput" type="password" class="adminInput" placeholder="Password" maxlength="40" style="margin-bottom:6px">
+      </div>
+
+      <!-- 6-Digit Pair Code Input Form -->
+      <div id="devicePairCodeInputFields" style="display:none;margin-bottom:10px;background:rgba(124,58,237,0.12);border:1px dashed #7c3aed;border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:12px;color:#ddd6fe;font-weight:700;margin-bottom:6px">Enter 6-Digit Pair Code from your other device:</div>
+        <input id="devicePairCodeInput" type="text" class="adminInput" maxlength="6" placeholder="e.g. 842193" style="text-align:center;font-size:24px;letter-spacing:6px;width:200px;font-family:monospace;margin:0 auto;display:block">
+        <button id="devicePairCodeSubmitBtn" type="button" class="accountBtn" style="margin-top:8px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-weight:800;padding:8px 16px;font-size:12px">⚡ Pair & Log In</button>
       </div>
 
       <!-- Device Sync Code Input Form (Alternative cross-device method) -->

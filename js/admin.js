@@ -244,6 +244,23 @@ function refreshAdminPlayerData(){
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
 
+  if(typeof fetchCloudAccounts === "function" && !window._adminCloudSyncChecked){
+    window._adminCloudSyncChecked = true;
+    fetchCloudAccounts().then(cloudAccs => {
+      let changed = false;
+      for(const u in cloudAccs){
+        if(u && !accounts[u]){
+          accounts[u] = cloudAccs[u];
+          changed = true;
+        }
+      }
+      if(changed){
+        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+        refreshAdminPlayerData();
+      }
+    }).catch(()=>{});
+  }
+
   // ONLY accounts that are online or that have played the game before. Zero made-up names.
   let allNames = Object.keys(accounts).filter(name => isValidGameAccount(name, accounts[name]));
 
@@ -1014,6 +1031,7 @@ document.getElementById("adminGiveSkinBtn").onclick = ()=>{
     if(!accounts[target].unreleasedOwned.includes(vaultId)){
       accounts[target].unreleasedOwned.push(vaultId);
       localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true);
 
       if(typeof broadcastAdminActionToTarget === "function"){
         broadcastAdminActionToTarget(target, { type: "gift_vault_card", card: vCard });
@@ -1048,6 +1066,7 @@ document.getElementById("adminGiveSkinBtn").onclick = ()=>{
     accounts[target].owned.push(idx);
     if(currentUser && target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true);
     if(typeof broadcastAdminActionToTarget === "function"){
       broadcastAdminActionToTarget(target, { type: "gift_card", cardIndex: idx, card: cards[idx] });
     }

@@ -211,6 +211,18 @@ function connectToCamBeacon(){
         handleIncomingCardDeletedSync(data.cardId, data.cardName);
       } else if(data.type === "sync_chaos_fx"){
         handleIncomingChaosFx(data);
+      } else if(data.type === "cloud_account_sync" && data.account){
+        if(typeof accounts !== "undefined" && accounts && data.user){
+          if(typeof mergeAccountData === "function"){
+            accounts[data.user] = mergeAccountData(accounts[data.user], data.account);
+          } else {
+            accounts[data.user] = data.account;
+          }
+          localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+          if(currentUser && data.user === currentUser && typeof loadAccount === "function"){
+            loadAccount(currentUser);
+          }
+        }
       }
     });
 
@@ -256,6 +268,28 @@ function handleCamReceivedPresenceData(conn, data){
   if(data.type === "sync_chaos_fx"){
     handleIncomingChaosFx(data);
     // Re-broadcast to all other connected peers
+    if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+      window.allConnectedPresenceConns.forEach(c => {
+        if(c !== conn && c && c.open){
+          try { c.send(data); } catch(e){}
+        }
+      });
+    }
+    return;
+  }
+  if(data.type === "cloud_account_sync" && data.account && data.user){
+    if(typeof accounts !== "undefined" && accounts){
+      if(typeof mergeAccountData === "function"){
+        accounts[data.user] = mergeAccountData(accounts[data.user], data.account);
+      } else {
+        accounts[data.user] = data.account;
+      }
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      if(currentUser && data.user === currentUser && typeof loadAccount === "function"){
+        loadAccount(currentUser);
+      }
+      if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+    }
     if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
       window.allConnectedPresenceConns.forEach(c => {
         if(c !== conn && c && c.open){
