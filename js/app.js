@@ -1447,7 +1447,9 @@ const MASTER_ACHIEVEMENTS = [
   },
   { id: "timing_pro", title: "⚡ Perfect Timing", desc: "Own 35+ cards across multiple realms.", reward: 12000, check: (acc) => (acc.owned || []).length >= 35 },
   { id: "centurion", title: "🌌 Centurion Summoner", desc: "Unlock a colossal deck of 60+ cards.", reward: 25000, check: (acc) => (acc.owned || []).length >= 60 },
-  { id: "wealth_hoard", title: "💎 Treasury Titan", desc: "Amass 50,000 or more Realm Coins.", reward: 20000, check: (acc) => (acc.coins === "Infinity" || acc.coins >= 50000) }
+  { id: "wealth_hoard", title: "💎 Treasury Titan", desc: "Amass 50,000 or more Realm Coins.", reward: 20000, check: (acc) => (acc.coins === "Infinity" || acc.coins >= 50000) },
+  { id: "centurion_supreme", title: "🔱 Centurion Supreme", desc: "Unlock an imperial collection of 100+ cards.", reward: 50000, check: (acc) => (acc.owned || []).length >= 100 },
+  { id: "living_pantheon", title: "👑 Living Pantheon", desc: "Unlock and conquer the full 150 card roster.", reward: 100000, check: (acc) => (acc.owned || []).length >= 150 }
 ];
 
 function openSummonerMasteryModal(){

@@ -168,7 +168,63 @@ const defaultCards = [
   { name: "Glow Bug", rarity: "common", hp: 66, attacks: [{name:"Blink Flash", dmg:16}, {name:"Spark Zap", dmg:25}], desc: "Glows with a cozy amber warmth, lighting forest paths on moonless nights.", image: makeSvgArt("#eab308", "#713f12", "💡", "#fef08a") },
   { name: "River Minnow", rarity: "common", hp: 72, attacks: [{name:"Splash Tail", dmg:15}, {name:"Water Dart", dmg:23}], desc: "A nimble freshwater fish that darts through crystal river currents.", image: makeSvgArt("#0284c7", "#075985", "🐟", "#7dd3fc") },
   { name: "Breeze Finch", rarity: "common", hp: 74, attacks: [{name:"Feather Gust", dmg:14}, {name:"Sky Peck", dmg:22}], desc: "A songbird whose chirps can summon gentle spring breezes.", image: makeSvgArt("#10b981", "#064e3b", "🐦", "#a7f3d0") },
-  { name: "Pebble Pup", rarity: "common", hp: 86, attacks: [{name:"Rock Nip", dmg:13}, {name:"Headbutt", dmg:21}], desc: "An adorable rocky canine who loves fetching round river stones.", image: makeSvgArt("#71717a", "#18181b", "🐕", "#e4e4e7") }
+  { name: "Pebble Pup", rarity: "common", hp: 86, attacks: [{name:"Rock Nip", dmg:13}, {name:"Headbutt", dmg:21}], desc: "An adorable rocky canine who loves fetching round river stones.", image: makeSvgArt("#71717a", "#18181b", "🐕", "#e4e4e7") },
+
+  // ==================================================
+  // --- ULTRA EXPANSION: 40 NEW CARDS (150 ROSTER) ---
+  // ==================================================
+
+  // --- NEW DIVINE EXPANSION (4) ---
+  { name: "Chronos Sovereign", rarity: "divine", hp: 250, attacks: [{name:"Temporal Fracture", dmg:80}, {name:"Timeless Paradox", dmg:112}], desc: "The supreme ruler of timelines who can rewind destiny itself.", image: makeSvgArt("#e11d48", "#1e1b4b", "⏳", "#fda4af", "rgba(225, 29, 72, 0.6)") },
+  { name: "Celestial Phoenix", rarity: "divine", hp: 245, attacks: [{name:"Solar Reincarnation", dmg:76}, {name:"Eternal Supernova", dmg:106}], desc: "Bathing in the light of exploding stars, rising eternally from holy embers.", image: makeSvgArt("#ea580c", "#450a0a", "🪶", "#fde047", "rgba(234, 88, 12, 0.6)") },
+  { name: "Void Singularity", rarity: "divine", hp: 270, attacks: [{name:"Gravity Well", dmg:72}, {name:"Universal Devour", dmg:115}], desc: "The point of infinite density where all known laws of physics cease to exist.", image: makeSvgArt("#09090b", "#020617", "🕳️", "#cbd5e1", "rgba(148, 163, 184, 0.6)") },
+  { name: "Archangel Gabriel", rarity: "divine", hp: 230, attacks: [{name:"Horn of Zion", dmg:75}, {name:"Heavenly Retribution", dmg:105}], desc: "Messenger of eternal light carrying holy scriptures of creation and judgement.", image: makeSvgArt("#0284c7", "#1e1b4b", "📯", "#facc15", "rgba(56, 189, 248, 0.6)") },
+
+  // --- NEW MYTHIC EXPANSION (6) ---
+  { name: "Nebula Dragon", rarity: "mythic", hp: 195, attacks: [{name:"Stardust Inferno", dmg:58}, {name:"Galaxy Claw", dmg:86}], desc: "Wings spanning five light-years across vibrant deep-space star nurseries.", image: makeSvgArt("#7c3aed", "#2e1065", "🐉", "#e9d5ff", "rgba(124, 58, 237, 0.5)") },
+  { name: "Storm Leviathan", rarity: "mythic", hp: 205, attacks: [{name:"Maelstrom Surge", dmg:54}, {name:"Ocean Tempest", dmg:82}], desc: "A titanic serpent residing in abyssal depths beneath raging typhoons.", image: makeSvgArt("#0369a1", "#082f49", "🌊", "#7dd3fc", "rgba(3, 105, 161, 0.5)") },
+  { name: "Solar Behemoth", rarity: "mythic", hp: 200, attacks: [{name:"Corona Blast", dmg:56}, {name:"Thermonuclear Stomp", dmg:85}], desc: "A four-legged sun titan that leaves glowing nuclear footprints in molten rock.", image: makeSvgArt("#d97706", "#451a03", "☀️", "#fde68a", "rgba(217, 119, 6, 0.5)") },
+  { name: "Shadow Monarch", rarity: "mythic", hp: 180, attacks: [{name:"Army of Shadows", dmg:60}, {name:"Monarch's Domain", dmg:88}], desc: "Lord of fallen warriors whose dark army obeys every whispered command.", image: makeSvgArt("#1e1b4b", "#020617", "👑", "#a855f7", "rgba(168, 85, 247, 0.5)") },
+  { name: "Quantum Shifter", rarity: "mythic", hp: 175, attacks: [{name:"Entanglement Ray", dmg:62}, {name:"Phase Disruption", dmg:90}], desc: "Exists simultaneously in multiple locations until observed in combat.", image: makeSvgArt("#06b6d4", "#164e63", "⚛️", "#a5f3fc", "rgba(6, 182, 212, 0.5)") },
+  { name: "Titan of Time", rarity: "mythic", hp: 190, attacks: [{name:"Decay Beam", dmg:57}, {name:"Epoch Smash", dmg:84}], desc: "Wields heavy sundial pendulums that accelerate opponent aging.", image: makeSvgArt("#e11d48", "#4c0519", "⏰", "#fda4af", "rgba(225, 29, 72, 0.5)") },
+
+  // --- NEW LEGENDARY EXPANSION (8) ---
+  { name: "Thunder Pegasus", rarity: "legendary", hp: 152, attacks: [{name:"Lightning Wing", dmg:44}, {name:"Thunder Charge", dmg:66}], desc: "Winged steed galloping through stormclouds carrying celestial knights.", image: makeSvgArt("#0284c7", "#0c4a6e", "⚡", "#bae6fd") },
+  { name: "Magma Wyrm", rarity: "legendary", hp: 168, attacks: [{name:"Lava Breath", dmg:41}, {name:"Subterranean Slam", dmg:63}], desc: "Burrows through tectonic plates, surfacing only when volcanoes erupt.", image: makeSvgArt("#b91c1c", "#450a0a", "🌋", "#fca5a5") },
+  { name: "Abyssal Siren", rarity: "legendary", hp: 144, attacks: [{name:"Enchanting Song", dmg:45}, {name:"Drowning Wave", dmg:67}], desc: "Lures sailors and wandering warriors into bottomless whirlpools.", image: makeSvgArt("#0e7490", "#082f49", "🧜‍♀️", "#38bdf8") },
+  { name: "Frost Giant", rarity: "legendary", hp: 176, attacks: [{name:"Iceberg Toss", dmg:38}, {name:"Glacial Hammer", dmg:59}], desc: "Carves towering glaciers into weapons with ancestral ice magic.", image: makeSvgArt("#38bdf8", "#075985", "❄️", "#e0f2fe") },
+  { name: "Emerald Dragon", rarity: "legendary", hp: 162, attacks: [{name:"Venomous Breath", dmg:42}, {name:"Jade Talon", dmg:64}], desc: "Scales of pure glowing jade protecting enchanted primordial forests.", image: makeSvgArt("#15803d", "#052e16", "🐲", "#86efac") },
+  { name: "Cyber Minotaur", rarity: "legendary", hp: 170, attacks: [{name:"Overcharged Horn", dmg:39}, {name:"Hydraulic Cleave", dmg:61}], desc: "Heavy mechanical labyrinth guardian powered by a diesel plasma core.", image: makeSvgArt("#475569", "#0f172a", "🐂", "#cbd5e1") },
+  { name: "Solar Knight", rarity: "legendary", hp: 158, attacks: [{name:"Sunburst Blade", dmg:43}, {name:"Radiant Shield Bash", dmg:65}], desc: "Armored in pure gold, reflecting hostile sorcery back at opponents.", image: makeSvgArt("#f59e0b", "#78350f", "🛡️", "#fef08a") },
+  { name: "Ghost Samurai", rarity: "legendary", hp: 148, attacks: [{name:"Spectral Slash", dmg:46}, {name:"Soul Cleaver", dmg:68}], desc: "An honorable phantom warrior whose katana slices through physical shields.", image: makeSvgArt("#6b21a8", "#3b0764", "⚔️", "#d8b4fe") },
+
+  // --- NEW EPIC EXPANSION (10) ---
+  { name: "Desert Scorpion", rarity: "epic", hp: 124, attacks: [{name:"Stinger Strike", dmg:31}, {name:"Sand Pincer", dmg:48}], desc: "Stalks under shifting dunes, striking quickly with a venom-filled barb.", image: makeSvgArt("#ca8a04", "#422006", "🦂", "#fef08a") },
+  { name: "Valkyrie Archer", rarity: "epic", hp: 112, attacks: [{name:"Arrow of Light", dmg:33}, {name:"Rain of Feathers", dmg:51}], desc: "Fires luminous photon arrows that never miss their designated target.", image: makeSvgArt("#eab308", "#713f12", "🏹", "#fde68a") },
+  { name: "Iron Boar", rarity: "epic", hp: 138, attacks: [{name:"Steel Tusk", dmg:28}, {name:"Juggernaut Rush", dmg:45}], desc: "Plated in solid cold-rolled steel, crashing through heavy stone walls.", image: makeSvgArt("#64748b", "#0f172a", "🐗", "#cbd5e1") },
+  { name: "Plasma Jelly", rarity: "epic", hp: 116, attacks: [{name:"Bio-Zap", dmg:32}, {name:"Electrified Tentacles", dmg:49}], desc: "Drifts lazily through the midnight zone, delivering high-voltage shocks.", image: makeSvgArt("#06b6d4", "#164e63", "🪼", "#cffafe") },
+  { name: "Shadow Fox", rarity: "epic", hp: 108, attacks: [{name:"Nightshade Claw", dmg:34}, {name:"Twilight Dash", dmg:52}], desc: "Leaves shadow duplicates in its wake to disorient pursuing rivals.", image: makeSvgArt("#334155", "#020617", "🦊", "#cbd5e1") },
+  { name: "Rock Drake", rarity: "epic", hp: 132, attacks: [{name:"Stone Wing", dmg:29}, {name:"Canyon Breath", dmg:46}], desc: "A flightless drake dwelling along jagged mountain cliffs.", image: makeSvgArt("#78716c", "#1c1917", "🦎", "#e7e5e4") },
+  { name: "Blizzard Falcon", rarity: "epic", hp: 114, attacks: [{name:"Frost Gust", dmg:32}, {name:"Ice Dive", dmg:50}], desc: "Dives through blinding whiteouts to snatch icy mountain prey.", image: makeSvgArt("#0284c7", "#0c4a6e", "🦅", "#bae6fd") },
+  { name: "Runic Mage", rarity: "epic", hp: 106, attacks: [{name:"Glyph of Fire", dmg:35}, {name:"Arcane Cascade", dmg:53}], desc: "Inscribes ancient glyphs of power into the earth beneath battlefields.", image: makeSvgArt("#9333ea", "#3b0764", "📜", "#d8b4fe") },
+  { name: "Steam Engine", rarity: "epic", hp: 140, attacks: [{name:"Piston Strike", dmg:27}, {name:"Overheat Explosion", dmg:44}], desc: "A runaway locomotive construct generating boiling steam pressure.", image: makeSvgArt("#ea580c", "#431407", "🚂", "#fed7aa") },
+  { name: "Swamp Hydra", rarity: "epic", hp: 134, attacks: [{name:"Triple Fang", dmg:30}, {name:"Mud Acid", dmg:47}], desc: "Three serpent heads spitting corrosive venom across stagnant bogs.", image: makeSvgArt("#15803d", "#052e16", "🐍", "#86efac") },
+
+  // --- NEW RARE EXPANSION (6) ---
+  { name: "Coral Sprite", rarity: "rare", hp: 86, attacks: [{name:"Reef Dart", dmg:24}, {name:"Ocean Splash", dmg:36}], desc: "Protects living coral reefs using needle-sharp calcium spines.", image: makeSvgArt("#f43f5e", "#881337", "🪸", "#fecdd3") },
+  { name: "Cinder Hound", rarity: "rare", hp: 90, attacks: [{name:"Bite of Ash", dmg:23}, {name:"Flame Bark", dmg:35}], desc: "Barks out clouds of hot ash that sting opponent eyes.", image: makeSvgArt("#dc2626", "#450a0a", "🐕", "#fca5a5") },
+  { name: "Glacier Badger", rarity: "rare", hp: 96, attacks: [{name:"Frost Claws", dmg:21}, {name:"Tundra Dig", dmg:33}], desc: "Digs underground burrows beneath thick layers of permafrost.", image: makeSvgArt("#38bdf8", "#0369a1", "🦡", "#e0f2fe") },
+  { name: "Zephyr Hawk", rarity: "rare", hp: 84, attacks: [{name:"Sky Slash", dmg:25}, {name:"Wind Whistle", dmg:37}], desc: "Slices through gales effortlessly with razor-sharp feathers.", image: makeSvgArt("#10b981", "#064e3b", "🦅", "#a7f3d0") },
+  { name: "Toxic Gecko", rarity: "rare", hp: 88, attacks: [{name:"Poison Spit", dmg:24}, {name:"Camouflage Strike", dmg:36}], desc: "Blends seamlessly into jungle tree trunks before striking with venom.", image: makeSvgArt("#16a34a", "#052e16", "🦎", "#bbf7d0") },
+  { name: "Crystal Moth", rarity: "rare", hp: 82, attacks: [{name:"Stardust Wing", dmg:26}, {name:"Prism Flutter", dmg:38}], desc: "Spreads glittering dust that reflects rainbow colors under moonlight.", image: makeSvgArt("#a855f7", "#3b0764", "🦋", "#e9d5ff") },
+
+  // --- NEW COMMON EXPANSION (6) ---
+  { name: "Cave Mole", rarity: "common", hp: 84, attacks: [{name:"Dirt Claws", dmg:14}, {name:"Tunnel Bash", dmg:22}], desc: "A blind underground dweller with sturdy claws built for digging.", image: makeSvgArt("#78350f", "#1c1917", "🦔", "#fde68a") },
+  { name: "Prairie Dog", rarity: "common", hp: 76, attacks: [{name:"Burrow Nip", dmg:15}, {name:"Dust Cloud", dmg:23}], desc: "A curious plains critter warning its pack with loud chirps.", image: makeSvgArt("#ca8a04", "#422006", "🐿️", "#fef08a") },
+  { name: "Marsh Toad", rarity: "common", hp: 90, attacks: [{name:"Tongue Lash", dmg:13}, {name:"Bog Hop", dmg:21}], desc: "Sits on lily pads, catching insects with a lightning-fast sticky tongue.", image: makeSvgArt("#166534", "#052e16", "🐸", "#86efac") },
+  { name: "Pine Squirrel", rarity: "common", hp: 70, attacks: [{name:"Acorn Throw", dmg:16}, {name:"Branch Pounce", dmg:24}], desc: "Stores acorns high in evergreen trees, throwing them when startled.", image: makeSvgArt("#b45309", "#451a03", "🐿️", "#fed7aa") },
+  { name: "Sea Snail", rarity: "common", hp: 88, attacks: [{name:"Brine Slime", dmg:13}, {name:"Shell Slam", dmg:21}], desc: "Drifts on ocean waves, feeding on seaweed along rocky shores.", image: makeSvgArt("#0284c7", "#075985", "🐌", "#7dd3fc") },
+  { name: "Spark Fly", rarity: "common", hp: 68, attacks: [{name:"Electric Buzz", dmg:16}, {name:"Mini Shock", dmg:25}], desc: "A tiny insect that glows with a faint electric sparkle in the dark.", image: makeSvgArt("#eab308", "#713f12", "🪰", "#fef08a") }
 ];
 
 function getDeletedCardsFromStorage(){

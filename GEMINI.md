@@ -413,3 +413,15 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - Claimable achievements with substantial coin bounties (First Steps, Gladiator Debut, Divine Ascent, Treasury Titan, etc.).
 - **🌌 Ambient Deep Space Nebula & Stardust Canvas**:
   - High-performance ambient background rendering floating stars and deep space stardust across the application.
+
+### Roster Expansion to 150 Cards
+- **🌟 40 Additional New Cards Added (Grand Total: 150 Cards Roster)**:
+  - **👑 Divine**: `Chronos Sovereign` (250 HP, 112 DMG), `Celestial Phoenix` (245 HP, 106 DMG), `Void Singularity` (270 HP, 115 DMG), `Archangel Gabriel` (230 HP, 105 DMG).
+  - **✨ Mythic**: `Nebula Dragon`, `Storm Leviathan`, `Solar Behemoth`, `Shadow Monarch`, `Quantum Shifter`, `Titan of Time`.
+  - **⚔️ Legendary**: `Thunder Pegasus`, `Magma Wyrm`, `Abyssal Siren`, `Frost Giant`, `Emerald Dragon`, `Cyber Minotaur`, `Solar Knight`, `Ghost Samurai`.
+  - **⚡ Epic**: `Desert Scorpion`, `Valkyrie Archer`, `Iron Boar`, `Plasma Jelly`, `Shadow Fox`, `Rock Drake`, `Blizzard Falcon`, `Runic Mage`, `Steam Engine`, `Swamp Hydra`.
+  - **💧 Rare**: `Coral Sprite`, `Cinder Hound`, `Glacier Badger`, `Zephyr Hawk`, `Toxic Gecko`, `Crystal Moth`.
+  - **🌱 Common**: `Cave Mole`, `Prairie Dog`, `Marsh Toad`, `Pine Squirrel`, `Sea Snail`, `Spark Fly`.
+- **🏆 Grand Summoner Mastery Trophies**:
+  - `🔱 Centurion Supreme`: Unlock 100+ cards (+50,000 Coins).
+  - `👑 Living Pantheon`: Conquer and unlock the full 150-card roster (+100,000 Coins).
