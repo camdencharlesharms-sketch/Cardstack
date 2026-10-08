@@ -316,6 +316,7 @@
       <button class="admin-tab-btn" data-tab="tabEvents">🌪️ World Events</button>
       <button class="admin-tab-btn" data-tab="tabBroadcast">📢 Broadcast & Leaks</button>
       <button class="admin-tab-btn" data-tab="tabChaosLab" id="chaosLabTabBtn" style="color:#fbbf24">⚡ Chaos Lab</button>
+      <button class="admin-tab-btn" data-tab="tabGodRealm" id="godRealmTabBtn" style="color:#e879f9;font-weight:900">🔮 God Realm & Arcade</button>
       <button class="admin-tab-btn" data-tab="tabPermissions" id="permissionsTabBtn" style="display:none">🛡 Sub-Admin Roles</button>
       <button class="admin-tab-btn" data-tab="tabUnreleased" id="unreleasedTabBtn" style="display:none;color:#fb7185">🔒 Unreleased Vault</button>
     </div>
@@ -757,6 +758,135 @@
     </div>
 
 
+
+    <!-- TAB: GOD REALM & ARCADE -->
+    <div class="admin-tab-content" id="tabGodRealm">
+      <div class="adminGrid">
+
+        <!-- CARD 1: REALITY WARP & SCREEN PHYSICS ENGINE -->
+        <div class="adminCard">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h4 style="margin:0;color:#e879f9">🛸 Reality Warp & Screen Physics</h4>
+            <span id="realityWarpBadge" style="font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;background:#475569;color:#fff">NORMAL SPACE</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:8px 0">
+            Manipulate game physics, viewport gravity, and CRT filters across all connected players' screens.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button id="toggleZeroGravityBtn" class="accountBtn" style="background:rgba(168,85,247,0.2);border-color:#a855f7;color:#d8b4fe">🎈 Zero-G Floating</button>
+            <button id="toggleTurboSpeedBtn" class="accountBtn" style="background:rgba(234,179,8,0.2);border-color:#eab308;color:#fde047">⚡ 2x Turbo Speed</button>
+            <button id="toggleCrtArcadeBtn" class="accountBtn" style="background:rgba(6,182,212,0.2);border-color:#06b6d4;color:#67e8f9">📺 80s Retro CRT</button>
+            <button id="toggleMirrorWorldBtn" class="accountBtn" style="background:rgba(244,63,94,0.2);border-color:#f43f5e;color:#fda4af">🪞 Mirror World</button>
+          </div>
+          <button id="resetAllRealityWarpsBtn" class="accountBtn" style="width:100%;margin-top:8px;background:rgba(255,255,255,0.08);color:#cbd5e1">☀️ Reset Normal Physics</button>
+        </div>
+
+        <!-- CARD 2: DIVINE MEGA-JACKPOT SLOT MACHINE -->
+        <div class="adminCard">
+          <h4 style="color:#fbbf24">🎰 Divine Omni-Jackpot Slot Machine</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 10px 0">
+            Pull the arcade slot machine lever! Matching 3 symbols rewards all active players across the realm.
+          </p>
+          <div class="slot-machine-frame">
+            <div style="font-size:11px;font-weight:900;color:#fde68a;text-transform:uppercase;letter-spacing:1px">Retro Omni-Slot</div>
+            <div class="slot-reels-container">
+              <div class="slot-reel" id="slotReel1">👑</div>
+              <div class="slot-reel" id="slotReel2">💎</div>
+              <div class="slot-reel" id="slotReel3">⚡</div>
+            </div>
+            <div id="slotMachineOutcome" style="font-size:12px;font-weight:800;color:#cbd5e1;min-height:20px">Pull the lever to test your luck!</div>
+          </div>
+          <div class="adminBtnGroup" style="margin-top:10px">
+            <button id="spinOmniSlotBtn" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#000;font-weight:900;flex:2">🎰 PULL SLOT LEVER</button>
+            <button id="forceJackpotBtn" class="accountBtn" style="background:#7c3aed;color:#fff;font-weight:800;flex:1">👑 Force Jackpot</button>
+          </div>
+        </div>
+
+        <!-- CARD 3: GLADIATOR ARENA MATCH SIMULATOR (FULL WIDTH) -->
+        <div class="adminCard" style="grid-column:1 / -1">
+          <h4 style="color:#38bdf8">⚔️ Gladiator Duel Simulator (Card vs Card Benchmarker)</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 10px 0">
+            Pit any two cards from the 55+ card roster against each other in automated simulation duels with real combat damage formulas and skill timing.
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:center">
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Challenger A (Blue Corner):</label>
+              <select id="simChallengerASelect" class="adminSelect" style="margin:0"></select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Challenger B (Red Corner):</label>
+              <select id="simChallengerBSelect" class="adminSelect" style="margin:0"></select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Match Rounds:</label>
+              <select id="simRoundsSelect" class="adminSelect" style="margin:0">
+                <option value="1">1 Epic Showcase Round</option>
+                <option value="10">10 Fast Benchmark Rounds</option>
+                <option value="100" selected>100 Statistical Simulation Rounds</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button id="runGladiatorSimBtn" style="background:linear-gradient(135deg,#0284c7,#2563eb);color:#fff;font-weight:900;margin:0;width:100%;height:38px">
+                ⚔️ Run Gladiator Duel
+              </button>
+            </div>
+          </div>
+
+          <div id="simResultsContainer" style="display:none;margin-top:12px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px">
+            <div id="simHeaderBadge" style="text-align:center;font-size:14px;font-weight:900;color:#fbbf24;margin-bottom:8px"></div>
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+              <div id="simBarA" style="height:14px;background:#38bdf8;border-radius:7px;transition:width 0.4s;min-width:5%"></div>
+              <div id="simBarB" style="height:14px;background:#f43f5e;border-radius:7px;transition:width 0.4s;min-width:5%"></div>
+            </div>
+            <div id="simScoreText" style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:#cbd5e1;margin-bottom:8px"></div>
+            <div id="simCombatLog" style="font-family:monospace;font-size:11px;color:#94a3b8;max-height:120px;overflow-y:auto;background:rgba(0,0,0,0.3);padding:8px;border-radius:6px"></div>
+          </div>
+        </div>
+
+        <!-- CARD 4: SECRET PROMO CODES & EASTER EGGS -->
+        <div class="adminCard">
+          <h4 style="color:#34d399">🎟️ Secret Promo Codes & Easter Egg Cheats</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 8px 0">
+            Create custom redemption promo codes or trigger instant one-click cheat codes for any player.
+          </p>
+
+          <label style="font-size:11px;color:#94a3b8">Instant One-Click Cheats (Click to Run):</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+            <button class="accountBtn instantCheatBtn" data-cheat="rich" style="font-size:11px;background:rgba(234,179,8,0.15);color:#fde047;border-color:#eab308">🪙 +1M Coins Cheat</button>
+            <button class="accountBtn instantCheatBtn" data-cheat="divine" style="font-size:11px;background:rgba(168,85,247,0.15);color:#d8b4fe;border-color:#a855f7">👑 All Divines Cheat</button>
+            <button class="accountBtn instantCheatBtn" data-cheat="godArmor" style="font-size:11px;background:rgba(16,185,129,0.15);color:#6ee7b7;border-color:#10b981">🛡️ God-HP Next Battle</button>
+            <button class="accountBtn instantCheatBtn" data-cheat="onePunch" style="font-size:11px;background:rgba(239,68,68,0.15);color:#fca5a5;border-color:#ef4444">⚡ One-Punch 99K DMG</button>
+          </div>
+
+          <label style="font-size:11px;color:#94a3b8">Create Custom Promo Code:</label>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <input id="customPromoCodeInput" class="adminInput" placeholder="Code (e.g. CAM50K)" style="margin:0;flex:1;text-transform:uppercase">
+            <input type="number" id="customPromoCoinsInput" class="adminInput" placeholder="Coins" value="25000" style="margin:0;width:90px">
+          </div>
+          <div class="adminBtnGroup">
+            <button id="createPromoCodeBtn" style="background:#10b981;font-weight:800;font-size:12px">✨ Create & Broadcast Code</button>
+            <button id="clearAllPromoCodesBtn" class="accountBtn" style="font-size:12px">Clear Codes</button>
+          </div>
+          <div id="activePromoCodesList" style="margin-top:8px;font-size:11px;color:#cbd5e1;max-height:80px;overflow-y:auto"></div>
+        </div>
+
+        <!-- CARD 5: REDEEM SECRET CODE BOX -->
+        <div class="adminCard">
+          <h4 style="color:#fde047">🎁 Promo Code Redemption Box</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 8px 0">
+            Enter any active promo code to instantly claim coins, cards, and special powers.
+          </p>
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <input id="redeemPromoInput" class="adminInput" placeholder="Enter Promo Code..." style="margin:0;text-transform:uppercase;flex:1">
+            <button id="redeemPromoBtn" style="background:linear-gradient(135deg, #10b981, #059669);color:#fff;font-weight:900;padding:8px 16px;margin:0">
+              Claim Code
+            </button>
+          </div>
+          <div id="redeemPromoStatus" style="font-size:12px;font-weight:800;min-height:20px;color:#cbd5e1"></div>
+        </div>
+
+      </div>
+    </div>
 
     <!-- TAB 6: SUB-ADMIN PERMISSIONS (Master Cam Only) -->
     <div class="admin-tab-content" id="tabPermissions">

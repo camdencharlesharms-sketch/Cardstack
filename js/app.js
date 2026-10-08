@@ -182,6 +182,7 @@ function updateAccountUI(){
   const tabBtnEvents = document.querySelector('.admin-tab-btn[data-tab="tabEvents"]');
   const tabBtnBroadcast = document.querySelector('.admin-tab-btn[data-tab="tabBroadcast"]');
   const tabBtnChaos = document.getElementById("chaosLabTabBtn") || document.querySelector('.admin-tab-btn[data-tab="tabChaosLab"]');
+  const tabBtnGodRealm = document.getElementById("godRealmTabBtn") || document.querySelector('.admin-tab-btn[data-tab="tabGodRealm"]');
 
   let statusBanner = document.getElementById("subAdminStatusBanner");
 
@@ -198,6 +199,7 @@ function updateAccountUI(){
     if(tabBtnEvents) tabBtnEvents.style.display = "block";
     if(tabBtnBroadcast) tabBtnBroadcast.style.display = "block";
     if(tabBtnChaos) tabBtnChaos.style.display = "block";
+    if(tabBtnGodRealm) tabBtnGodRealm.style.display = "block";
 
     const headerEl = document.getElementById("adminHubHeader");
     if(headerEl) headerEl.textContent = "⚡ Supreme Admin Suite (Cam)";
@@ -222,6 +224,7 @@ function updateAccountUI(){
     if(tabBtnEvents) tabBtnEvents.style.display = perms.events ? "block" : "none";
     if(tabBtnBroadcast) tabBtnBroadcast.style.display = perms.broadcast ? "block" : "none";
     if(tabBtnChaos) tabBtnChaos.style.display = perms.chaosLab ? "block" : "none";
+    if(tabBtnGodRealm) tabBtnGodRealm.style.display = perms.godRealm ? "block" : "none";
 
     // Reset tab if currently on disallowed or Cam-only tabs
     const activeTab = document.querySelector(".admin-tab-content.active");

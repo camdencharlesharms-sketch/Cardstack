@@ -333,3 +333,31 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - **Max Out Account**: Instantly gives the target account **Infinite Coins** and **100% of all 55+ cards in the game**.
 - **📢 Master Soundboard Realm Broadcaster**:
   - Added a Realm Broadcast toggle switch to the SFX Soundboard. When enabled, playing any sound effect broadcasts that audio across all connected players' speakers simultaneously.
+
+### New Dedicated Admin Tab: 🔮 God Realm & Arcade
+- **🛸 Reality Warp & Screen Physics Engine**:
+  - **Zero-G Floating**: Floats and bobs all cards, pack buttons, headers, and UI elements in 3D outer-space zero gravity.
+  - **2x Turbo Speed**: Turbocharges all animations, pack openers, and battle transitions.
+  - **80s Retro CRT Filter**: Adds vintage arcade scanlines and phosphorescent glow across the viewport.
+  - **Mirror World**: Flips the entire layout horizontally across all connected players' screens.
+  - Synchronizes across all connected peers in real time via P2P `reality_warp` broadcasts.
+- **🎰 Divine Omni-Jackpot Slot Machine**:
+  - Interactive 3-reel arcade slot machine with spinning emoji reels (`👑`, `💎`, `⚡`, `🐉`, `🪙`, `💀`).
+  - Matching 3 symbols distributes real realm-wide payouts:
+    - `👑 👑 👑`: **Divine Omni-Jackpot** (+50,000 Coins + Guaranteed Divine Card to all players + confetti hurricane).
+    - `💎 💎 💎`: **Diamond Fever** (+25,000 Coins).
+    - `⚡ ⚡ ⚡`: **Lightning Overclock** (10x God Luck activated).
+  - Includes a `👑 Force Jackpot` button for instant celebrations.
+- **⚔️ Gladiator Arena Duel Simulator**:
+  - Select any two challengers from the full 55+ card roster.
+  - Choose between 1 Epic Showcase Round, 10 Benchmark Rounds, or 100 Statistical Simulation Rounds.
+  - Runs damage algorithms factoring card HP, skill timing multipliers (1.0x, 0.75x, 0.5x), and critical hits.
+  - Renders live animated health meters, detailed combat logs, win percentages, and declares the ultimate champion.
+- **🎟️ Secret Promo Codes & Easter Egg Cheats**:
+  - **One-Click Instant Cheats**:
+    - `🪙 +1M Coins Cheat`: Directly credits 1,000,000 coins.
+    - `👑 All Divines Cheat`: Unlocks all Divine cards.
+    - `🛡️ God-HP Next Battle`: Activates God Armor (gives player 99,999 HP in their next combat arena match).
+    - `⚡ One-Punch 99K DMG`: Activates One-Punch God mode (deals 99,999 damage in their next combat arena attack).
+  - **Custom Promo Code Dispenser**: Admins can generate custom promo codes and broadcast them directly to the top-screen marquee hype ticker.
+  - **Code Redemption Box**: Players can redeem active promo codes in the Admin tab or directly inside the User Account Modal.

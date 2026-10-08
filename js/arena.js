@@ -608,6 +608,9 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
   if(!battleOppCard) battleOppCard = cards[1] || cards[0];
 
   battlePlayerHp = (typeof isInfiniteValue === "function" && isInfiniteValue(battlePlayerCard.hp)) ? Infinity : (battlePlayerCard.hp || 85);
+  if(window._godArmorActive){
+    battlePlayerHp = 99999;
+  }
   battleOppHp = (typeof isInfiniteValue === "function" && isInfiniteValue(battleOppCard.hp)) ? Infinity : (battleOppCard.hp || 85);
   isPlayerTurn = playerStartsFirst;
 
@@ -926,7 +929,12 @@ function performPlayerAttackWithMultiplier(attackObj, multiplier, tierLabel, tie
 
   const isOppHpInf = (typeof isInfiniteValue === "function" && isInfiniteValue(battleOppHp));
   const rawBaseDmg = Number.isFinite(attackObj.dmg) ? attackObj.dmg : 20;
-  const playerDmg = Math.max(1, Math.round(rawBaseDmg * multiplier));
+  let playerDmg = Math.max(1, Math.round(rawBaseDmg * multiplier));
+  if(window._onePunchActive){
+    playerDmg = 99999;
+    tierLabel = "ONE-PUNCH GOD";
+    tierColor = "#ef4444";
+  }
 
   if(isOppHpInf){
     appendBattleLog(`🛡️ <b>${battleOppCard.name}</b> has <b style="color:#38bdf8">∞ INFINITE HP</b> and absorbed ${attackObj.name} with 0 damage!`);

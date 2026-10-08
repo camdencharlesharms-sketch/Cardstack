@@ -4499,6 +4499,20 @@ function executeIncomingChaosFx(fxData, sender){
     }
   } else if(fxData.type === "marquee_banner"){
     showMarqueeBanner(fxData.text, true);
+  } else if(fxData.type === "reality_warp"){
+    applyRealityWarp(fxData.warpType, fxData.active, true);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🛸 Reality Warp [${fxData.warpType}] ${fxData.active ? "ENGAGED" : "DISENGAGED"} by <b>${fromName}</b>!`, true);
+    }
+  } else if(fxData.type === "slot_jackpot"){
+    playChaosSfx("triumph");
+    setTimeout(() => playChaosSfx("ascension"), 350);
+    if(typeof confetti === "function"){
+      confetti({ particleCount: 160, spread: 90, origin: { y: 0.5 } });
+    }
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`👑 TRIPLE CROWN DIVINE JACKPOT HIT! Free Coins & Rewards across the realm!`, true);
+    }
   }
 }
 window.executeIncomingChaosFx = executeIncomingChaosFx;
@@ -4851,4 +4865,536 @@ if(document.readyState === "complete" || document.readyState === "interactive"){
   setTimeout(() => {
     initRealmWeather();
   }, 100);
+}
+
+/* ========================================================
+   GOD REALM & ARCADE SUITE
+   - Reality Warp & Screen Physics Engine
+   - Divine Mega-Jackpot Slot Machine
+   - Gladiator Arena Duel Simulator
+   - Secret Promo Codes & Easter Egg Cheats
+   ======================================================== */
+
+// 1. REALITY WARP ENGINE
+function applyRealityWarp(warpType, active, isRemote = false){
+  const badge = document.getElementById("realityWarpBadge");
+
+  if(warpType === "resetAll"){
+    document.body.classList.remove("zero-gravity-active", "turbo-speed-active", "crt-arcade-active", "mirror-dimension-active");
+    if(badge){
+      badge.textContent = "NORMAL SPACE";
+      badge.style.background = "#475569";
+    }
+    if(!isRemote && typeof broadcastChaosFx === "function"){
+      broadcastChaosFx({ type: "reality_warp", warpType: "resetAll", active: false });
+    }
+    return;
+  }
+
+  let className = "";
+  if(warpType === "zeroGravity") className = "zero-gravity-active";
+  else if(warpType === "turboSpeed") className = "turbo-speed-active";
+  else if(warpType === "crtArcade") className = "crt-arcade-active";
+  else if(warpType === "mirrorWorld") className = "mirror-dimension-active";
+
+  if(!className) return;
+
+  const willBeActive = active !== undefined ? active : !document.body.classList.contains(className);
+  document.body.classList.toggle(className, willBeActive);
+
+  if(badge){
+    const activeCount = [
+      document.body.classList.contains("zero-gravity-active"),
+      document.body.classList.contains("turbo-speed-active"),
+      document.body.classList.contains("crt-arcade-active"),
+      document.body.classList.contains("mirror-dimension-active")
+    ].filter(Boolean).length;
+
+    badge.textContent = activeCount > 0 ? `WARPED (${activeCount} MODS)` : "NORMAL SPACE";
+    badge.style.background = activeCount > 0 ? "#e879f9" : "#475569";
+  }
+
+  if(typeof playChaosSfx === "function") playChaosSfx("warp");
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "reality_warp", warpType, active: willBeActive });
+  }
+}
+
+// 2. DIVINE MEGA-JACKPOT SLOT MACHINE
+const slotSymbols = ["👑", "💎", "⚡", "🐉", "🪙", "💀"];
+let isSlotSpinning = false;
+
+function spinOmniSlot(forceJackpot = false){
+  if(isSlotSpinning) return;
+  isSlotSpinning = true;
+
+  const r1 = document.getElementById("slotReel1");
+  const r2 = document.getElementById("slotReel2");
+  const r3 = document.getElementById("slotReel3");
+  const outcomeEl = document.getElementById("slotMachineOutcome");
+
+  if(r1) r1.classList.add("spinning");
+  if(r2) r2.classList.add("spinning");
+  if(r3) r3.classList.add("spinning");
+
+  if(outcomeEl){
+    outcomeEl.innerHTML = "<span style='color:#fde047;animation:pulse 0.5s infinite'>🎰 Rolling Omni-Reels...</span>";
+  }
+
+  if(typeof playChaosSfx === "function") playChaosSfx("laser");
+
+  // Rapid emoji shuffle animation
+  const interval = setInterval(() => {
+    if(r1) r1.textContent = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+    if(r2) r2.textContent = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+    if(r3) r3.textContent = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+  }, 100);
+
+  setTimeout(() => {
+    clearInterval(interval);
+    if(r1) r1.classList.remove("spinning");
+    if(r2) r2.classList.remove("spinning");
+    if(r3) r3.classList.remove("spinning");
+
+    let s1, s2, s3;
+    if(forceJackpot){
+      s1 = "👑"; s2 = "👑"; s3 = "👑";
+    } else {
+      const roll = Math.random();
+      if(roll < 0.25){
+        const sym = slotSymbols[Math.floor(Math.random() * (slotSymbols.length - 1))];
+        s1 = sym; s2 = sym; s3 = sym;
+      } else if(roll < 0.70){
+        const sym = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+        const symDiff = slotSymbols[(slotSymbols.indexOf(sym) + 1) % slotSymbols.length];
+        s1 = sym; s2 = sym; s3 = symDiff;
+      } else {
+        s1 = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+        s2 = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+        s3 = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+      }
+    }
+
+    if(r1) r1.textContent = s1;
+    if(r2) r2.textContent = s2;
+    if(r3) r3.textContent = s3;
+
+    isSlotSpinning = false;
+    evaluateSlotOutcome(s1, s2, s3, outcomeEl);
+  }, 1200);
+}
+
+function evaluateSlotOutcome(s1, s2, s3, outcomeEl){
+  if(s1 === s2 && s2 === s3){
+    if(s1 === "👑"){
+      if(outcomeEl) outcomeEl.innerHTML = "<b style='color:#fbbf24;font-size:14px'>👑 TRIPLE CROWN DIVINE OMNI-JACKPOT! (+50,000 Coins & Divine Card!)</b>";
+      if(typeof playChaosSfx === "function"){
+        playChaosSfx("triumph");
+        setTimeout(() => playChaosSfx("ascension"), 350);
+      }
+      if(typeof confetti === "function"){
+        confetti({ particleCount: 160, spread: 90, origin: { y: 0.5 } });
+      }
+
+      const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+      if(curAcc && (typeof isInfiniteValue !== "function" || !isInfiniteValue(curAcc.coins))){
+        curAcc.coins = (curAcc.coins || 0) + 50000;
+      }
+      if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))){
+        coins += 50000;
+      }
+
+      const divines = cards.filter(c => (c.rarity || "").toLowerCase() === "divine");
+      if(divines.length > 0){
+        const userOwned = (curAcc && Array.isArray(curAcc.owned)) ? curAcc.owned : (Array.isArray(owned) ? owned : []);
+        const divIdx = cards.indexOf(divines[Math.floor(Math.random() * divines.length)]);
+        if(divIdx !== -1 && !userOwned.includes(divIdx)) userOwned.push(divIdx);
+        if(curAcc) curAcc.owned = userOwned;
+        if(typeof owned !== "undefined") owned = userOwned;
+      }
+
+      if(typeof save === "function") save();
+      if(typeof updateDisplay === "function") updateDisplay();
+      if(typeof render === "function") render();
+      if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+
+      if(typeof broadcastChaosFx === "function"){
+        broadcastChaosFx({ type: "slot_jackpot" });
+      }
+    } else if(s1 === "💎"){
+      if(outcomeEl) outcomeEl.innerHTML = "<b style='color:#67e8f9;font-size:14px'>💎 TRIPLE DIAMOND FEVER! (+25,000 Coins awarded!)</b>";
+      if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+      if(typeof confetti === "function") confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+
+      if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))) coins += 25000;
+      const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+      if(curAcc && (typeof isInfiniteValue !== "function" || !isInfiniteValue(curAcc.coins))) curAcc.coins = (curAcc.coins || 0) + 25000;
+      if(typeof save === "function") save();
+      if(typeof updateDisplay === "function") updateDisplay();
+    } else if(s1 === "⚡"){
+      if(outcomeEl) outcomeEl.innerHTML = "<b style='color:#fde047;font-size:14px'>⚡ TRIPLE LIGHTNING OVERCLOCK! 10x God Luck Activated!</b>";
+      if(typeof playChaosSfx === "function") playChaosSfx("detonation");
+      const luckSel = document.getElementById("adminLuckSelect");
+      if(luckSel) luckSel.value = "10";
+      const saveLuckBtn = document.getElementById("adminSaveLuckBtn");
+      if(saveLuckBtn) saveLuckBtn.click();
+    } else {
+      if(outcomeEl) outcomeEl.innerHTML = `<b style='color:#a78bfa;font-size:13px'>✨ TRIPLE ${s1}! (+5,000 Coins Reward!)</b>`;
+      if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+      if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))) coins += 5000;
+      if(typeof updateDisplay === "function") updateDisplay();
+    }
+  } else if(s1 === s2 || s2 === s3 || s1 === s3){
+    if(outcomeEl) outcomeEl.innerHTML = "<span style='color:#cbd5e1'>🥈 Double Match! Good try! (+1,000 Coins)</span>";
+    if(typeof playChaosSfx === "function") playChaosSfx("laser");
+    if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))) coins += 1000;
+    if(typeof updateDisplay === "function") updateDisplay();
+  } else {
+    if(outcomeEl) outcomeEl.innerHTML = "<span style='color:#94a3b8'>No match! Pull again to seek fortune!</span>";
+    if(typeof playChaosSfx === "function") playChaosSfx("hit");
+  }
+}
+
+// 3. GLADIATOR DUEL SIMULATOR
+function initGladiatorDuelSimulator(){
+  const selA = document.getElementById("simChallengerASelect");
+  const selB = document.getElementById("simChallengerBSelect");
+  if(!selA || !selB || !Array.isArray(cards) || cards.length === 0) return;
+
+  selA.innerHTML = "";
+  selB.innerHTML = "";
+
+  cards.forEach((c, idx) => {
+    const optA = document.createElement("option");
+    optA.value = idx;
+    optA.textContent = `${c.name} [${(c.rarity || "").toUpperCase()}] (${c.hp} HP)`;
+    selA.appendChild(optA);
+
+    const optB = document.createElement("option");
+    optB.value = idx;
+    optB.textContent = `${c.name} [${(c.rarity || "").toUpperCase()}] (${c.hp} HP)`;
+    selB.appendChild(optB);
+  });
+
+  if(selA.options.length > 2) selA.selectedIndex = 0;
+  if(selB.options.length > 2) selB.selectedIndex = Math.min(cards.length - 1, 3);
+}
+
+function runGladiatorDuelSimulation(){
+  const selA = document.getElementById("simChallengerASelect");
+  const selB = document.getElementById("simChallengerBSelect");
+  const roundsSel = document.getElementById("simRoundsSelect");
+  const resContainer = document.getElementById("simResultsContainer");
+  const headerBadge = document.getElementById("simHeaderBadge");
+  const barA = document.getElementById("simBarA");
+  const barB = document.getElementById("simBarB");
+  const scoreText = document.getElementById("simScoreText");
+  const logEl = document.getElementById("simCombatLog");
+
+  if(!selA || !selB || !cards) return;
+  const idxA = parseInt(selA.value, 10);
+  const idxB = parseInt(selB.value, 10);
+  const cardA = cards[idxA];
+  const cardB = cards[idxB];
+  if(!cardA || !cardB) return alert("Select two valid challengers.");
+
+  const rounds = parseInt(roundsSel ? roundsSel.value : "100", 10) || 100;
+  if(resContainer) resContainer.style.display = "block";
+
+  let winsA = 0;
+  let winsB = 0;
+  const detailedLogs = [];
+
+  for(let r = 1; r <= rounds; r++){
+    let hpA = Number.isFinite(cardA.hp) ? cardA.hp : 150;
+    let hpB = Number.isFinite(cardB.hp) ? cardB.hp : 150;
+    let roundTurn = 1;
+
+    if(r === 1){
+      detailedLogs.push(`--- SHOWCASE DUEL: [${cardA.name}] vs [${cardB.name}] ---`);
+    }
+
+    while(hpA > 0 && hpB > 0 && roundTurn < 50){
+      const atksA = cardA.attacks || [{ dmg: 25, name: "Strike" }];
+      const atkA = atksA[Math.floor(Math.random() * atksA.length)];
+      const multA = [1.0, 0.75, 0.5][Math.floor(Math.random() * 3)];
+      const critA = Math.random() < 0.12 ? 1.5 : 1.0;
+      const dmgA = Math.max(1, Math.round((atkA.dmg || 20) * multA * critA));
+      hpB -= dmgA;
+
+      if(r === 1){
+        detailedLogs.push(`T${roundTurn} (A): ${cardA.name} landed ${atkA.name} for ${dmgA} DMG! (${cardB.name} HP: ${Math.max(0, hpB)})`);
+      }
+      if(hpB <= 0) break;
+
+      const atksB = cardB.attacks || [{ dmg: 25, name: "Strike" }];
+      const atkB = atksB[Math.floor(Math.random() * atksB.length)];
+      const multB = [1.0, 0.75, 0.5][Math.floor(Math.random() * 3)];
+      const critB = Math.random() < 0.12 ? 1.5 : 1.0;
+      const dmgB = Math.max(1, Math.round((atkB.dmg || 20) * multB * critB));
+      hpA -= dmgB;
+
+      if(r === 1){
+        detailedLogs.push(`T${roundTurn} (B): ${cardB.name} countered with ${atkB.name} for ${dmgB} DMG! (${cardA.name} HP: ${Math.max(0, hpA)})`);
+      }
+      roundTurn++;
+    }
+
+    if(hpA > 0) winsA++;
+    else winsB++;
+  }
+
+  const pctA = Math.round((winsA / rounds) * 100);
+  const pctB = 100 - pctA;
+
+  if(barA) barA.style.width = pctA + "%";
+  if(barB) barB.style.width = pctB + "%";
+
+  const victorName = winsA >= winsB ? cardA.name : cardB.name;
+  if(headerBadge){
+    headerBadge.innerHTML = `🏆 SIMULATION COMPLETE: <b style="color:#fbbf24">${victorName}</b> DOMINATES THE ARENA!`;
+  }
+  if(scoreText){
+    scoreText.innerHTML = `
+      <span style="color:#38bdf8">🔵 ${cardA.name}: ${winsA} Wins (${pctA}%)</span>
+      <span style="color:#f43f5e">🔴 ${cardB.name}: ${winsB} Wins (${pctB}%)</span>
+    `;
+  }
+
+  if(logEl){
+    detailedLogs.push(`\nFINAL STATISTICAL VERDICT: ${cardA.name} [${winsA}W] vs ${cardB.name} [${winsB}W] across ${rounds} battles.`);
+    logEl.innerHTML = detailedLogs.map(l => `<div>${l}</div>`).join("");
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+}
+
+// 4. SECRET PROMO CODES & EASTER EGG CHEATS
+function getPromoCodes(){
+  try {
+    const list = JSON.parse(localStorage.getItem("cardCollectorPromoCodes"));
+    if(Array.isArray(list)) return list;
+  } catch(e){}
+  return [
+    { code: "CAM_IS_RICH", coins: 1000000, desc: "Master 1,000,000 Coins Bounty" },
+    { code: "DIVINE_GOD", divineAll: true, coins: 50000, desc: "Unlock All Divine Cards + 50k Coins" },
+    { code: "LUCKY_777", coins: 77777, desc: "Lucky 7s Super Bonus" },
+    { code: "WELCOME_GENESIS", coins: 25000, desc: "Season 1 Genesis Welcome Pack" }
+  ];
+}
+
+function savePromoCodes(list){
+  localStorage.setItem("cardCollectorPromoCodes", JSON.stringify(list));
+  renderActivePromoCodes();
+}
+
+function renderActivePromoCodes(){
+  const listEl = document.getElementById("activePromoCodesList");
+  if(!listEl) return;
+  const list = getPromoCodes();
+  listEl.innerHTML = list.map(p => `
+    <div style="display:flex;justify-content:space-between;padding:4px 6px;border-bottom:1px solid rgba(255,255,255,0.06)">
+      <b style="color:#fde047;font-family:monospace">${p.code}</b>
+      <span style="color:#94a3b8">${p.desc || (p.coins ? `+${p.coins.toLocaleString()} Coins` : "")}</span>
+    </div>
+  `).join("");
+}
+
+function redeemPromoCode(codeStr, statusElId){
+  const statusEl = document.getElementById(statusElId);
+  const code = (codeStr || "").trim().toUpperCase();
+  if(!code){
+    if(statusEl) statusEl.innerHTML = "<span style='color:#f87171'>Please enter a promo code.</span>";
+    return;
+  }
+
+  const list = getPromoCodes();
+  const match = list.find(p => p.code.toUpperCase() === code);
+
+  if(!match){
+    if(statusEl) statusEl.innerHTML = "<span style='color:#f87171'>Invalid or expired promo code!</span>";
+    if(typeof playChaosSfx === "function") playChaosSfx("hit");
+    return;
+  }
+
+  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+  if(!curAcc.claimedCodes) curAcc.claimedCodes = [];
+  if(curAcc.claimedCodes.includes(code)){
+    if(statusEl) statusEl.innerHTML = "<span style='color:#fb923c'>You already redeemed this code!</span>";
+    return;
+  }
+
+  curAcc.claimedCodes.push(code);
+  let summary = [];
+
+  if(match.coins){
+    if(typeof isInfiniteValue !== "function" || !isInfiniteValue(curAcc.coins)){
+      curAcc.coins = (curAcc.coins || 0) + match.coins;
+    }
+    if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))){
+      coins += match.coins;
+    }
+    summary.push(`+${match.coins.toLocaleString()} Coins`);
+  }
+
+  if(match.divineAll){
+    if(!Array.isArray(curAcc.owned)) curAcc.owned = [];
+    cards.forEach((c, idx) => {
+      if((c.rarity || "").toLowerCase() === "divine" && !curAcc.owned.includes(idx)){
+        curAcc.owned.push(idx);
+      }
+    });
+    if(typeof owned !== "undefined") owned = curAcc.owned;
+    summary.push("All Divine Cards");
+  }
+
+  if(typeof save === "function") save();
+  if(typeof updateDisplay === "function") updateDisplay();
+  if(typeof render === "function") render();
+
+  if(typeof playChaosSfx === "function"){
+    playChaosSfx("triumph");
+    setTimeout(() => playChaosSfx("ascension"), 300);
+  }
+  if(typeof confetti === "function"){
+    confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+  }
+
+  if(statusEl){
+    statusEl.innerHTML = `<span style='color:#34d399'>🎉 CODE REDEEMED! Claimed: <b>${summary.join(", ")}</b></span>`;
+  }
+}
+
+// Wire up God Realm DOM buttons
+function initGodRealmDom(){
+  initGladiatorDuelSimulator();
+  renderActivePromoCodes();
+
+  // Reality Warp Buttons
+  const zgBtn = document.getElementById("toggleZeroGravityBtn");
+  if(zgBtn) zgBtn.onclick = () => applyRealityWarp("zeroGravity");
+
+  const turboBtn = document.getElementById("toggleTurboSpeedBtn");
+  if(turboBtn) turboBtn.onclick = () => applyRealityWarp("turboSpeed");
+
+  const crtBtn = document.getElementById("toggleCrtArcadeBtn");
+  if(crtBtn) crtBtn.onclick = () => applyRealityWarp("crtArcade");
+
+  const mirrorBtn = document.getElementById("toggleMirrorWorldBtn");
+  if(mirrorBtn) mirrorBtn.onclick = () => applyRealityWarp("mirrorWorld");
+
+  const resetWarpBtn = document.getElementById("resetAllRealityWarpsBtn");
+  if(resetWarpBtn) resetWarpBtn.onclick = () => applyRealityWarp("resetAll");
+
+  // Slot Machine
+  const spinSlotBtn = document.getElementById("spinOmniSlotBtn");
+  if(spinSlotBtn) spinSlotBtn.onclick = () => spinOmniSlot(false);
+
+  const forceJackpotBtn = document.getElementById("forceJackpotBtn");
+  if(forceJackpotBtn) forceJackpotBtn.onclick = () => spinOmniSlot(true);
+
+  // Gladiator Sim
+  const runSimBtn = document.getElementById("runGladiatorSimBtn");
+  if(runSimBtn) runSimBtn.onclick = () => runGladiatorDuelSimulation();
+
+  // Instant Cheats
+  document.querySelectorAll(".instantCheatBtn").forEach(btn => {
+    btn.onclick = () => {
+      const cheat = btn.getAttribute("data-cheat");
+      if(cheat === "rich"){
+        if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))) coins += 1000000;
+        const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+        if(curAcc && (typeof isInfiniteValue !== "function" || !isInfiniteValue(curAcc.coins))) curAcc.coins = (curAcc.coins || 0) + 1000000;
+        if(typeof save === "function") save();
+        if(typeof updateDisplay === "function") updateDisplay();
+        if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+        alert("💰 +1,000,000 Coins added to your balance!");
+      } else if(cheat === "divine"){
+        const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+        if(curAcc){
+          if(!Array.isArray(curAcc.owned)) curAcc.owned = [];
+          cards.forEach((c, i) => {
+            if((c.rarity || "").toLowerCase() === "divine" && !curAcc.owned.includes(i)) curAcc.owned.push(i);
+          });
+          if(typeof owned !== "undefined") owned = curAcc.owned;
+          if(typeof save === "function") save();
+          if(typeof render === "function") render();
+          if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+          alert("👑 All Divine Cards Unlocked!");
+        }
+      } else if(cheat === "godArmor"){
+        window._godArmorActive = true;
+        if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+        alert("🛡️ GOD ARMOR ACTIVE! In your next Arena battle, your card will have 99,999 HP!");
+      } else if(cheat === "onePunch"){
+        window._onePunchActive = true;
+        if(typeof playChaosSfx === "function") playChaosSfx("detonation");
+        alert("⚡ ONE PUNCH ACTIVE! In your next Arena attack, your card will deal 99,999 DMG!");
+      }
+    };
+  });
+
+  // Create Promo Code
+  const createCodeBtn = document.getElementById("createPromoCodeBtn");
+  if(createCodeBtn){
+    createCodeBtn.onclick = () => {
+      const codeIn = document.getElementById("customPromoCodeInput");
+      const coinsIn = document.getElementById("customPromoCoinsInput");
+      const cCode = codeIn ? codeIn.value.trim().toUpperCase() : "";
+      const cCoins = parseInt(coinsIn ? coinsIn.value : "25000", 10) || 25000;
+      if(!cCode) return alert("Type a promo code name.");
+
+      const list = getPromoCodes();
+      list.push({ code: cCode, coins: cCoins, desc: `+${cCoins.toLocaleString()} Coins Bonus` });
+      savePromoCodes(list);
+
+      if(codeIn) codeIn.value = "";
+      if(typeof showMarqueeBanner === "function"){
+        showMarqueeBanner(`🎁 NEW PROMO CODE: Use code ${cCode} for +${cCoins.toLocaleString()} FREE COINS!`, false);
+      }
+      alert(`Promo Code '${cCode}' created and broadcasted to realm ticker!`);
+    };
+  }
+
+  const clearCodesBtn = document.getElementById("clearAllPromoCodesBtn");
+  if(clearCodesBtn){
+    clearCodesBtn.onclick = () => {
+      if(confirm("Reset promo codes to default?")){
+        localStorage.removeItem("cardCollectorPromoCodes");
+        renderActivePromoCodes();
+      }
+    };
+  }
+
+  // Redeem Promo Code (in Admin tab)
+  const redeemBtn = document.getElementById("redeemPromoBtn");
+  const redeemIn = document.getElementById("redeemPromoInput");
+  if(redeemBtn){
+    redeemBtn.onclick = () => {
+      redeemPromoCode(redeemIn ? redeemIn.value : "", "redeemPromoStatus");
+      if(redeemIn) redeemIn.value = "";
+    };
+  }
+
+  // Redeem Promo Code (in User Modal)
+  const modalRedeemBtn = document.getElementById("modalRedeemCodeBtn");
+  const modalRedeemIn = document.getElementById("modalRedeemCodeInput");
+  if(modalRedeemBtn){
+    modalRedeemBtn.onclick = () => {
+      redeemPromoCode(modalRedeemIn ? modalRedeemIn.value : "", "modalRedeemCodeStatus");
+      if(modalRedeemIn) modalRedeemIn.value = "";
+    };
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initGodRealmDom();
+});
+
+if(document.readyState === "complete" || document.readyState === "interactive"){
+  setTimeout(() => {
+    initGodRealmDom();
+  }, 120);
 }
