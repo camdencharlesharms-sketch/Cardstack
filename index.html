@@ -340,6 +340,10 @@
             <button id="adminUnlockAllPlayerBtn" style="background:#2563eb">Unlock All for Player</button>
             <button id="adminWipePlayerBtn" style="background:#7f1d1d">Wipe Player Cards</button>
           </div>
+          <div class="adminBtnGroup" style="margin-top:6px">
+            <button id="adminGrantDivineMythicBtn" style="background:linear-gradient(135deg, #f59e0b, #ec4899);color:#000;font-weight:900;font-size:11px">👑 Grant All Divine & Mythics</button>
+            <button id="adminMaxAccountBtn" style="background:linear-gradient(135deg, #10b981, #06b6d4);color:#000;font-weight:900;font-size:11px">💎 Max Out (∞ Coins + 100% Cards)</button>
+          </div>
         </div>
 
         <div class="adminCard">
@@ -571,12 +575,31 @@
 
     <!-- TAB 5: BROADCAST -->
     <div class="admin-tab-content" id="tabBroadcast">
-      <div class="adminCard">
-        <h4>📢 Global News, Leaks & Game Broadcasts</h4>
-        <textarea id="adminLeakInput" class="adminTextarea" placeholder="Type secret leaks, patch notes, or updates to display on the main page..."></textarea>
-        <div class="adminBtnGroup">
-          <button id="adminPostLeakBtn" style="background:#3b82f6">Broadcast</button>
-          <button id="adminClearLeakBtn" style="background:#475569">Delete Announcement</button>
+      <div class="adminGrid">
+        <div class="adminCard">
+          <h4>📢 Global News, Leaks & Game Broadcasts</h4>
+          <textarea id="adminLeakInput" class="adminTextarea" placeholder="Type secret leaks, patch notes, or updates to display on the main page..."></textarea>
+          <div class="adminBtnGroup">
+            <button id="adminPostLeakBtn" style="background:#3b82f6">Broadcast</button>
+            <button id="adminClearLeakBtn" style="background:#475569">Delete Announcement</button>
+          </div>
+        </div>
+
+        <div class="adminCard">
+          <h4>⚡ Instant Screen Marquee & Hype Ticker</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 8px 0">Broadcast an animated glowing cyberpunk banner across the top of all connected players' screens.</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            <button type="button" class="accountBtn hypePresetBtn" data-text="👑 MASTER CAM HAS ENTERED THE REALM!" style="font-size:11px;background:rgba(245,158,11,0.2);color:#fde047;border:1px solid #f59e0b">👑 Cam Entered</button>
+            <button type="button" class="accountBtn hypePresetBtn" data-text="🏆 ARENA TOURNAMENT IS NOW COMMENCING!" style="font-size:11px;background:rgba(16,185,129,0.2);color:#6ee7b7;border:1px solid #10b981">🏆 Tournament</button>
+            <button type="button" class="accountBtn hypePresetBtn" data-text="🔥 10X GOD LUCK IS ACTIVE FOR ALL PACKS!" style="font-size:11px;background:rgba(236,72,153,0.2);color:#f472b6;border:1px solid #ec4899">🔥 10x God Luck</button>
+            <button type="button" class="accountBtn hypePresetBtn" data-text="🚨 EMERGENCY: WORLD BOSS HAS AWOKEN!" style="font-size:11px;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid #ef4444">🚨 World Boss</button>
+            <button type="button" class="accountBtn hypePresetBtn" data-text="🎁 GOLDEN AIRDROP IS DROPPING ACROSS THE REALM!" style="font-size:11px;background:rgba(6,182,212,0.2);color:#67e8f9;border:1px solid #06b6d4">🎁 Airdrop Alert</button>
+          </div>
+          <input id="adminMarqueeInput" class="adminInput" placeholder="Or type custom screen banner announcement..." style="margin-bottom:8px">
+          <div class="adminBtnGroup">
+            <button id="adminBroadcastMarqueeBtn" style="background:linear-gradient(135deg, #06b6d4, #3b82f6);font-weight:900">📢 Broadcast Screen Banner</button>
+            <button id="adminDismissMarqueeBtn" style="background:#475569">Dismiss Banner</button>
+          </div>
         </div>
       </div>
     </div>
@@ -646,11 +669,17 @@
 
         <!-- CARD 4: SYNTH SFX SOUNDBOARD -->
         <div class="adminCard">
-          <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
             <h4>🔊 Master SFX Synth Soundboard</h4>
-            <div style="display:flex;align-items:center;gap:6px">
-              <label style="font-size:11px;color:#94a3b8">Vol:</label>
-              <input type="range" id="chaosSfxVolume" min="0" max="100" value="70" style="width:70px;accent-color:#38bdf8">
+            <div style="display:flex;align-items:center;gap:10px">
+              <label style="font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;cursor:pointer">
+                <input type="checkbox" id="chaosBroadcastSfxToggle" style="accent-color:#10b981;cursor:pointer">
+                <span style="font-weight:700;color:#6ee7b7">📢 Realm Broadcast</span>
+              </label>
+              <div style="display:flex;align-items:center;gap:4px">
+                <label style="font-size:11px;color:#94a3b8">Vol:</label>
+                <input type="range" id="chaosSfxVolume" min="0" max="100" value="70" style="width:60px;accent-color:#38bdf8">
+              </div>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
@@ -688,6 +717,40 @@
             <button id="chaosHealBossBtn" class="accountBtn" style="background:#059669;font-size:11px">💖 Restore Full HP</button>
             <button id="chaosNukeBossBtn" class="accountBtn" style="background:#991b1b;font-size:11px">⚡ Admin 5,000 DMG Strike</button>
           </div>
+        </div>
+
+        <!-- CARD 6: REALM MYSTERY LOOT CRATE AIRDROP -->
+        <div class="adminCard">
+          <h4>🎁 Realm Mystery Loot Crate Airdrop</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 10px 0">
+            Air-drop a floating golden parachute crate onto all players' screens! Anyone who clicks the crate claims 10k-30k coins + a guaranteed random Mythic or Divine card.
+          </p>
+          <div class="adminBtnGroup">
+            <button id="chaosAirdropBtn" style="background:linear-gradient(135deg, #f59e0b, #ea580c);color:#000;font-weight:900;font-size:13px;padding:11px">
+              🚀 Launch Realm Airdrop to All Players
+            </button>
+          </div>
+          <div id="chaosAirdropStatus" style="font-size:11px;color:#cbd5e1;background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:6px;margin-top:8px;min-height:20px">
+            Airdrop ready for launch.
+          </div>
+        </div>
+
+        <!-- CARD 7: REALM WEATHER & ENVIRONMENTAL AURA -->
+        <div class="adminCard">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h4 style="margin:0">🌌 Realm Weather & Environmental Aura</h4>
+            <span id="chaosWeatherBadge" style="font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;background:#475569;color:#fff">CLEAR SKIES</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:8px 0">
+            Cast ambient weather phenomena and glowing particle auras across all connected players' browsers in real time.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="accountBtn chaosWeatherBtn" data-weather="blizzard" style="background:rgba(56,189,248,0.15);border-color:#38bdf8;color:#7dd3fc">❄️ Glacial Blizzard</button>
+            <button class="accountBtn chaosWeatherBtn" data-weather="solar" style="background:rgba(245,158,11,0.15);border-color:#f59e0b;color:#fcd34d">🌋 Solar Ember Storm</button>
+            <button class="accountBtn chaosWeatherBtn" data-weather="cosmic" style="background:rgba(139,92,246,0.15);border-color:#8b5cf6;color:#c084fc">🌌 Cosmic Starfield</button>
+            <button class="accountBtn chaosWeatherBtn" data-weather="matrix" style="background:rgba(16,185,129,0.15);border-color:#10b981;color:#6ee7b7">⚡ Cyber Matrix</button>
+          </div>
+          <button id="chaosWeatherClearBtn" class="accountBtn" style="width:100%;margin-top:8px;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2);color:#cbd5e1">☀️ Reset to Clear Skies</button>
         </div>
 
       </div>
@@ -1030,5 +1093,14 @@
 <script src="js/arena.js?v=3.0"></script>
 <script src="js/presence.js?v=3.0"></script>
 <script src="js/app.js?v=3.0"></script>
+<!-- REALM WEATHER PARTICLES CANVAS -->
+<canvas id="realmWeatherCanvas"></canvas>
+
+<!-- REALM MARQUEE HYPE BANNER -->
+<div id="realmMarqueeBanner"></div>
+
+<!-- REALM AIRDROP CONTAINER -->
+<div id="realmAirdropContainer"></div>
+
 </body>
 </html>

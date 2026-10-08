@@ -285,3 +285,51 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
     - **🛡️ Outer Zone (<25% or >75%)**: **1/2 ATTACK POWER (50% / 0.50x)**! Triggers `🛡️ GLANCE! 1/2 POWER (50%)` and impact audio.
   - **Controls**: Players can hit the animated `⚡ STRIKE!` button, click anywhere directly on the meter bar, or press **SPACEBAR** / **ENTER** on their keyboard to lock in their attack.
   - **Dynamic Combat Feedback**: The battle log displays the exact skill tier achieved along with colored badges and damage delivered.
+
+### 18 New Cards Expansion (Roster Expanded from 37 to 55 Cards)
+- **New Divine Cards (Supreme Pantheon)**:
+  - **Solarius Omnis** (Divine, 230 HP, Attacks: *Supernova Genesis* [76 dmg], *Solar Deity Cataclysm* [102 dmg]) - Primordial Sun God that breathes stars into existence.
+  - **Nyxara** (Divine, 215 HP, Attacks: *Eternal Eclipse* [70 dmg], *Void Rebirth* [96 dmg]) - Queen of the astral void, weaving twilight constellations.
+  - **Aegis Prime** (Divine, 250 HP, Attacks: *Bastion Overload* [65 dmg], *God-Shield Nova* [95 dmg]) - Living adamantine fortress guarding the celestial realms.
+- **New Mythic Cards**:
+  - **Apex Predator** (Mythic, 185 HP, Attacks: *Primal Devour* [55 dmg], *Feral Apocalypse* [82 dmg]) - Colossal cybernetic beast forged from prehistoric extinction DNA.
+  - **Nebula Weaver** (Mythic, 175 HP, Attacks: *Stardust Beam* [52 dmg], *Constellation Warp* [80 dmg]) - Weaves glowing nebulae and black holes.
+  - **Cyber Overlord** (Mythic, 195 HP, Attacks: *System Meltdown* [58 dmg], *Zero-Day Nanostrike* [85 dmg]) - Sentient superintelligence rewriting reality's physics.
+- **New Legendary Cards**:
+  - **Kraken** (Legendary, 160 HP, Attacks: *Tentacle Crush* [42 dmg], *Tsunami Maw* [64 dmg]) - Abyssal terror of the ocean trench.
+  - **Phoenix Prime** (Legendary, 150 HP, Attacks: *Resurrection Flame* [44 dmg], *Blazing Talon* [62 dmg]) - Immortal firebird born from solar flares.
+  - **Glacier King** (Legendary, 170 HP, Attacks: *Absolute Zero* [38 dmg], *Avalanche Crash* [60 dmg]) - Permafrost mountain sovereign.
+- **New Epic Cards**:
+  - **Venom Fang** (Epic, 118 HP, Attacks: *Toxic Needle* [30 dmg], *Viper Dissolution* [48 dmg]) - Deadly serpentine hunter.
+  - **Mirage** (Epic, 110 HP, Attacks: *Illusion Blade* [32 dmg], *Sandstorm Mirage* [47 dmg]) - Desert mystic blade dancer.
+  - **Voltaic Mech** (Epic, 128 HP, Attacks: *Plasma Cannon* [31 dmg], *Overload Rocket* [49 dmg]) - Heavy magnetized lightning battle mech.
+- **New Rare Cards**:
+  - **Shade** (Rare, 92 HP, Attacks: *Dusk Shuriken* [22 dmg], *Shadow Step* [34 dmg]) - Stealth rogue moving through shadows.
+  - **Torrent** (Rare, 96 HP, Attacks: *Hydro Cannon* [21 dmg], *Whirlpool Surge* [33 dmg]) - Tidal water elemental.
+  - **Brimstone** (Rare, 94 HP, Attacks: *Cinder Blast* [23 dmg], *Sulfur Burst* [35 dmg]) - Explosive volcanic warrior.
+- **New Common Cards**:
+  - **Sparx** (Common, 72 HP, Attacks: *Static Jolt* [15 dmg], *Spark Barrage* [23 dmg]) - Hyperactive lightning critter.
+  - **Drift** (Common, 78 HP, Attacks: *Snowball Roll* [14 dmg], *Chilled Gust* [21 dmg]) - Ice spirit sliding across frozen ponds.
+  - **Sprout** (Common, 82 HP, Attacks: *Seed Shot* [13 dmg], *Leaf Cutter* [22 dmg]) - Resilient spring blossom sprite.
+
+### Advanced Admin Panel Suite Features
+- **🎁 Realm Mystery Loot Crate Airdrop System**:
+  - Master Cam and Admins can launch a golden mystery parachute loot crate into the realm with 1 click.
+  - Crate parachutes down into view on **every connected player's screen** simultaneously over PeerJS and BroadcastChannel.
+  - Clicking the crate triggers confetti, ascension fanfare, and grants **15,000 bonus coins + a guaranteed random Mythic or Divine card** added directly to the player's collection.
+- **🌌 Realm Weather & Ambient Environmental Aura Engine**:
+  - Added real-time atmospheric particle engine with 5 switchable modes:
+    - ❄️ **Glacial Blizzard**: Floating glowing snowflakes drifting across screens.
+    - 🌋 **Solar Ember Storm**: Fiery embers rising from the bottom with heat flicker.
+    - 🌌 **Cosmic Starfield**: Twinkling stardust & glowing nebulae.
+    - ⚡ **Cyber Matrix**: Cascading cyan/green digital data streams.
+    - ☀️ **Clear Skies**: Resets the atmospheric backdrop.
+  - Changes broadcast across all connected players' screens in real time.
+- **⚡ Instant Screen Marquee & Hype Ticker**:
+  - High-visibility glowing cyberpunk screen-wide banner marquee displayed across the top of all players' screens with sound fanfare.
+  - Included quick 1-click Hype Presets (*Cam Entered*, *Tournament Commencing*, *10x God Luck*, *World Boss Awoken*, *Airdrop Alert*) plus custom text input.
+- **👑 God Power Collection Shortcuts in Player Manager**:
+  - **Grant All Divine & Mythics**: Instantly grants every Divine and Mythic card in the game to the selected player.
+  - **Max Out Account**: Instantly gives the target account **Infinite Coins** and **100% of all 55+ cards in the game**.
+- **📢 Master Soundboard Realm Broadcaster**:
+  - Added a Realm Broadcast toggle switch to the SFX Soundboard. When enabled, playing any sound effect broadcasts that audio across all connected players' speakers simultaneously.

@@ -67,7 +67,37 @@ const defaultCards = [
 
   // DIVINE
   { name: "Aethelgard", rarity: "divine", hp: 220, attacks: [{name:"Celestial Judgement", dmg:68}, {name:"Omnipresent Wrath", dmg:98}], desc: "The supreme cosmic creator presiding above galaxies.", image: makeSvgArt("#0284c7", "#1e1b4b", "👑", "#facc15", "rgba(56, 189, 248, 0.6)") },
-  { name: "Seraphina", rarity: "divine", hp: 205, attacks: [{name:"Dawn's Radiance", dmg:72}, {name:"Heavenly Exorcism", dmg:94}], desc: "The archangel of creation radiating eternal divine light.", image: makeSvgArt("#065f46", "#022c22", "🕊️", "#fef08a", "rgba(250, 204, 21, 0.6)") }
+  { name: "Seraphina", rarity: "divine", hp: 205, attacks: [{name:"Dawn's Radiance", dmg:72}, {name:"Heavenly Exorcism", dmg:94}], desc: "The archangel of creation radiating eternal divine light.", image: makeSvgArt("#065f46", "#022c22", "🕊️", "#fef08a", "rgba(250, 204, 21, 0.6)") },
+
+  // --- NEW DIVINE EXPANSION ---
+  { name: "Solarius Omnis", rarity: "divine", hp: 230, attacks: [{name:"Supernova Genesis", dmg:76}, {name:"Solar Deity Cataclysm", dmg:102}], desc: "The Primordial Sun God whose radiant heartbeat breathes stars into existence.", image: makeSvgArt("#f59e0b", "#7c2d12", "☀️", "#fef08a", "rgba(245, 158, 11, 0.6)") },
+  { name: "Nyxara", rarity: "divine", hp: 215, attacks: [{name:"Eternal Eclipse", dmg:70}, {name:"Void Rebirth", dmg:96}], desc: "Queen of the boundless astral abyss, weaving constellations in eternal twilight.", image: makeSvgArt("#4c1d95", "#020617", "🌌", "#c084fc", "rgba(192, 132, 252, 0.6)") },
+  { name: "Aegis Prime", rarity: "divine", hp: 250, attacks: [{name:"Bastion Overload", dmg:65}, {name:"God-Shield Nova", dmg:95}], desc: "An impenetrable living fortress of celestial adamantine guarding the heavens.", image: makeSvgArt("#0f766e", "#134e4a", "🛡️", "#2dd4bf", "rgba(45, 212, 191, 0.6)") },
+
+  // --- NEW MYTHIC EXPANSION ---
+  { name: "Apex Predator", rarity: "mythic", hp: 185, attacks: [{name:"Primal Devour", dmg:55}, {name:"Feral Apocalypse", dmg:82}], desc: "A colossal beast fused with cybernetic armor from prehistoric extinction fossils.", image: makeSvgArt("#854d0e", "#1c1917", "🦖", "#fef08a", "rgba(234, 179, 8, 0.5)") },
+  { name: "Nebula Weaver", rarity: "mythic", hp: 175, attacks: [{name:"Stardust Beam", dmg:52}, {name:"Constellation Warp", dmg:80}], desc: "Weaves spinning stardust nebulae into devastating interdimensional portals.", image: makeSvgArt("#701a75", "#1e1b4b", "🪐", "#f472b6", "rgba(244, 114, 182, 0.5)") },
+  { name: "Cyber Overlord", rarity: "mythic", hp: 195, attacks: [{name:"System Meltdown", dmg:58}, {name:"Zero-Day Nanostrike", dmg:85}], desc: "A sentient superintelligence that rewrites the physics and code of reality.", image: makeSvgArt("#0e7490", "#082f49", "👾", "#38bdf8", "rgba(56, 189, 248, 0.5)") },
+
+  // --- NEW LEGENDARY EXPANSION ---
+  { name: "Kraken", rarity: "legendary", hp: 160, attacks: [{name:"Tentacle Crush", dmg:42}, {name:"Tsunami Maw", dmg:64}], desc: "The mythic oceanic leviathan sleeping in the deepest abyssal midnight trench.", image: makeSvgArt("#1e3a8a", "#020617", "🦑", "#60a5fa") },
+  { name: "Phoenix Prime", rarity: "legendary", hp: 150, attacks: [{name:"Resurrection Flame", dmg:44}, {name:"Blazing Talon", dmg:62}], desc: "An immortal firebird burning with the brilliant heat of a newborn solar core.", image: makeSvgArt("#ea580c", "#431407", "🪶", "#fdba74") },
+  { name: "Glacier King", rarity: "legendary", hp: 170, attacks: [{name:"Absolute Zero", dmg:38}, {name:"Avalanche Crash", dmg:60}], desc: "Ancient frost sovereign wielding towering permafrost spires.", image: makeSvgArt("#0284c7", "#0f172a", "❄️", "#bae6fd") },
+
+  // --- NEW EPIC EXPANSION ---
+  { name: "Venom Fang", rarity: "epic", hp: 118, attacks: [{name:"Toxic Needle", dmg:30}, {name:"Viper Dissolution", dmg:48}], desc: "A lethal serpentine hunter striking with armor-melting neurotoxins.", image: makeSvgArt("#15803d", "#052e16", "🐍", "#86efac") },
+  { name: "Mirage", rarity: "epic", hp: 110, attacks: [{name:"Illusion Blade", dmg:32}, {name:"Sandstorm Mirage", dmg:47}], desc: "A desert mystic shifting between shimmer and steel to deceive rivals.", image: makeSvgArt("#ca8a04", "#422006", "🏜️", "#fef08a") },
+  { name: "Voltaic Mech", rarity: "epic", hp: 128, attacks: [{name:"Plasma Cannon", dmg:31}, {name:"Overload Rocket", dmg:49}], desc: "A reinforced bipedal war machine powered by a magnetic lightning generator.", image: makeSvgArt("#475569", "#0f172a", "🦾", "#94a3b8") },
+
+  // --- NEW RARE EXPANSION ---
+  { name: "Shade", rarity: "rare", hp: 92, attacks: [{name:"Dusk Shuriken", dmg:22}, {name:"Shadow Step", dmg:34}], desc: "A stealthy rogue who steps through dusk without making a whisper.", image: makeSvgArt("#334155", "#020617", "👤", "#cbd5e1") },
+  { name: "Torrent", rarity: "rare", hp: 96, attacks: [{name:"Hydro Cannon", dmg:21}, {name:"Whirlpool Surge", dmg:33}], desc: "A swift water elemental capable of summoning high-pressure tidal waves.", image: makeSvgArt("#0284c7", "#075985", "🌊", "#7dd3fc") },
+  { name: "Brimstone", rarity: "rare", hp: 94, attacks: [{name:"Cinder Blast", dmg:23}, {name:"Sulfur Burst", dmg:35}], desc: "A volatile warrior composed of explosive volcanic shards.", image: makeSvgArt("#b91c1c", "#450a0a", "🌋", "#fca5a5") },
+
+  // --- NEW COMMON EXPANSION ---
+  { name: "Sparx", rarity: "common", hp: 72, attacks: [{name:"Static Jolt", dmg:15}, {name:"Spark Barrage", dmg:23}], desc: "An excitable critter buzzing with vibrant static electricity.", image: makeSvgArt("#eab308", "#713f12", "⚡", "#fef08a") },
+  { name: "Drift", rarity: "common", hp: 78, attacks: [{name:"Snowball Roll", dmg:14}, {name:"Chilled Gust", dmg:21}], desc: "A cheerful snow creature sliding gracefully over ice sheets.", image: makeSvgArt("#38bdf8", "#0369a1", "⛄", "#e0f2fe") },
+  { name: "Sprout", rarity: "common", hp: 82, attacks: [{name:"Seed Shot", dmg:13}, {name:"Leaf Cutter", dmg:22}], desc: "A lively green blossom with endless resilience and growth potential.", image: makeSvgArt("#22c55e", "#14532d", "🌱", "#bbf7d0") }
 ];
 
 function getDeletedCardsFromStorage(){

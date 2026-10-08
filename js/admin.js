@@ -1117,6 +1117,68 @@ document.getElementById("adminUnlockAllPlayerBtn").onclick = ()=>{
   alert(`Unlocked all ${cards.length} cards for ${target}!`);
 };
 
+// --- GOD POWER SHORTCUTS (CAM / MASTER ADMIN ONLY) ---
+const grantDivMythBtn = document.getElementById("adminGrantDivineMythicBtn");
+if(grantDivMythBtn){
+  grantDivMythBtn.onclick = () => {
+    if(!isMasterAdmin()) return alert("Only master admin Cam can grant Divine & Mythic cards.");
+    const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+    if(!target) return alert("Type or select a target player username first.");
+    const targetAcc = accounts[target];
+    if(!targetAcc) return alert("Player account not found.");
+    if(!Array.isArray(targetAcc.owned)) targetAcc.owned = [];
+
+    let countAdded = 0;
+    cards.forEach((c, idx) => {
+      const r = (c.rarity || "").toLowerCase();
+      if(r === "divine" || r === "mythic"){
+        if(!targetAcc.owned.includes(idx)){
+          targetAcc.owned.push(idx);
+          countAdded++;
+        }
+      }
+    });
+
+    if(target.toLowerCase() === currentUser.toLowerCase()) owned = targetAcc.owned;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof broadcastAdminActionToTarget === "function"){
+      broadcastAdminActionToTarget(target, { type: "unlock_all" });
+    }
+    refreshAdminPlayerData();
+    render();
+    if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+    alert(`Granted all Divine and Mythic cards to ${target}! (${countAdded} new cards added)`);
+  };
+}
+
+const maxAccBtn = document.getElementById("adminMaxAccountBtn");
+if(maxAccBtn){
+  maxAccBtn.onclick = () => {
+    if(!isMasterAdmin()) return alert("Only master admin Cam can max out accounts.");
+    const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+    if(!target) return alert("Type or select a target player username first.");
+    const targetAcc = accounts[target];
+    if(!targetAcc) return alert("Player account not found.");
+
+    targetAcc.coins = "Infinity";
+    targetAcc.owned = cards.map((_, i) => i);
+    if(target.toLowerCase() === currentUser.toLowerCase()){
+      coins = "Infinity";
+      owned = targetAcc.owned;
+      updateDisplay();
+    }
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof broadcastAdminActionToTarget === "function"){
+      broadcastAdminActionToTarget(target, { type: "infinite_coins" });
+      broadcastAdminActionToTarget(target, { type: "unlock_all" });
+    }
+    refreshAdminPlayerData();
+    render();
+    if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+    alert(`MAXED OUT ACCOUNT for ${target}! Granted ∞ Infinite Coins and 100% of all ${cards.length} cards in the game!`);
+  };
+}
+
 document.getElementById("adminWipePlayerBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only master admin Cam can wipe accounts.");
 
@@ -4425,6 +4487,368 @@ function executeIncomingChaosFx(fxData, sender){
     if(typeof showLiveToast === "function"){
       showLiveToast(`🎰 HIGH-ROLLER CASINO: <b>${fxData.targetUser}</b> won <b>[${fxData.prize}]</b>!`, true);
     }
+  } else if(fxData.type === "airdrop_crate"){
+    spawnAirdropCrateOnScreen(true);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🎁 MYSTERY AIRDROP CRATE parachuted in from <b>${fromName}</b>! Click it to claim!`, true);
+    }
+  } else if(fxData.type === "realm_weather"){
+    setRealmWeather(fxData.weather, true);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🌌 Realm Weather shifted to <b>${(fxData.weather || "Clear").toUpperCase()}</b> by <b>${fromName}</b>!`, true);
+    }
+  } else if(fxData.type === "marquee_banner"){
+    showMarqueeBanner(fxData.text, true);
   }
 }
 window.executeIncomingChaosFx = executeIncomingChaosFx;
+
+/* ========================================================
+   REALM WEATHER, AMBIENT AURA & CHAOS AIRDROP ENGINE
+   ======================================================== */
+
+let currentWeatherMode = "clear";
+let weatherAnimFrame = null;
+let weatherParticles = [];
+
+function initRealmWeather(){
+  const canvas = document.getElementById("realmWeatherCanvas");
+  if(!canvas) return;
+
+  function resizeCanvas(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  const savedWeather = localStorage.getItem("cardCollectorRealmWeather") || "clear";
+  if(savedWeather !== "clear"){
+    setRealmWeather(savedWeather, true);
+  }
+}
+
+function setRealmWeather(weatherMode, isRemote = false){
+  currentWeatherMode = weatherMode || "clear";
+  localStorage.setItem("cardCollectorRealmWeather", currentWeatherMode);
+
+  const badge = document.getElementById("chaosWeatherBadge");
+  if(badge){
+    badge.textContent = currentWeatherMode.toUpperCase();
+    badge.style.background = currentWeatherMode === "clear" ? "#475569" : "#0284c7";
+  }
+
+  const canvas = document.getElementById("realmWeatherCanvas");
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  if(weatherAnimFrame) cancelAnimationFrame(weatherAnimFrame);
+  weatherParticles = [];
+
+  if(currentWeatherMode === "clear"){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if(!isRemote && typeof broadcastChaosFx === "function"){
+      broadcastChaosFx({ type: "realm_weather", weather: "clear" });
+    }
+    return;
+  }
+
+  // Populate particles according to theme
+  const count = currentWeatherMode === "blizzard" ? 75 : (currentWeatherMode === "solar" ? 65 : (currentWeatherMode === "cosmic" ? 80 : 55));
+  for(let i = 0; i < count; i++){
+    weatherParticles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: Math.random() * 3 + 1,
+      speedY: currentWeatherMode === "solar" ? -(Math.random() * 2 + 1) : (Math.random() * 2 + 1),
+      speedX: (Math.random() - 0.5) * 1.5,
+      alpha: Math.random() * 0.7 + 0.3,
+      pulse: Math.random() * 0.05,
+      char: String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96))
+    });
+  }
+
+  function renderWeatherLoop(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for(let p of weatherParticles){
+      if(currentWeatherMode === "blizzard"){
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius * 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(224, 242, 254, ${p.alpha})`;
+        ctx.shadowColor = "#38bdf8";
+        ctx.shadowBlur = 6;
+        ctx.fill();
+
+        p.y += p.speedY;
+        p.x += Math.sin(p.y * 0.02) * 1.2;
+        if(p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
+      }
+      else if(currentWeatherMode === "solar"){
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius * 1.4, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(251, 146, 60, ${p.alpha})`;
+        ctx.shadowColor = "#f59e0b";
+        ctx.shadowBlur = 8;
+        ctx.fill();
+
+        p.y += p.speedY;
+        p.x += Math.sin(p.y * 0.03) * 0.8;
+        p.alpha -= 0.003;
+        if(p.y < -10 || p.alpha <= 0) {
+          p.y = canvas.height + 10;
+          p.x = Math.random() * canvas.width;
+          p.alpha = Math.random() * 0.7 + 0.3;
+        }
+      }
+      else if(currentWeatherMode === "cosmic"){
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(192, 132, 252, ${p.alpha})`;
+        ctx.shadowColor = "#818cf8";
+        ctx.shadowBlur = 10;
+        ctx.fill();
+
+        p.alpha += p.pulse;
+        if(p.alpha > 0.95 || p.alpha < 0.2) p.pulse = -p.pulse;
+        p.x += p.speedX * 0.3;
+        p.y += p.speedY * 0.3;
+        if(p.x < 0) p.x = canvas.width;
+        if(p.x > canvas.width) p.x = 0;
+        if(p.y < 0) p.y = canvas.height;
+        if(p.y > canvas.height) p.y = 0;
+      }
+      else if(currentWeatherMode === "matrix"){
+        ctx.font = "12px monospace";
+        ctx.fillStyle = `rgba(74, 222, 128, ${p.alpha})`;
+        ctx.shadowColor = "#10b981";
+        ctx.shadowBlur = 4;
+        ctx.fillText(p.char, p.x, p.y);
+
+        p.y += p.speedY * 2;
+        if(p.y > canvas.height){
+          p.y = -10;
+          p.x = Math.random() * canvas.width;
+          p.char = String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96));
+        }
+      }
+    }
+
+    weatherAnimFrame = requestAnimationFrame(renderWeatherLoop);
+  }
+
+  weatherAnimFrame = requestAnimationFrame(renderWeatherLoop);
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "realm_weather", weather: currentWeatherMode });
+  }
+}
+
+// Realm Airdrop System
+function triggerRealmAirdrop(isRemote = false){
+  spawnAirdropCrateOnScreen(isRemote);
+
+  const statusEl = document.getElementById("chaosAirdropStatus");
+  if(statusEl){
+    statusEl.innerHTML = "<b style='color:#10b981'>🚀 Airdrop launched across all screens!</b>";
+    setTimeout(() => { statusEl.textContent = "Airdrop ready for launch."; }, 4000);
+  }
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "airdrop_crate" });
+  }
+}
+
+function spawnAirdropCrateOnScreen(isRemote = false){
+  const container = document.getElementById("realmAirdropContainer");
+  if(!container) return;
+
+  if(typeof playChaosSfx === "function") playChaosSfx("warp");
+
+  const crate = document.createElement("div");
+  crate.className = "chaos-airdrop-crate";
+  crate.style.top = "-120px";
+  const leftPct = Math.floor(Math.random() * 60 + 20);
+  crate.style.left = leftPct + "%";
+
+  crate.innerHTML = `
+    <div style="font-size:42px;filter:drop-shadow(0 0 10px #fbbf24)">🪂</div>
+    <div class="chaos-airdrop-box">
+      <span>🎁</span>
+      <span>MYSTERY AIRDROP</span>
+    </div>
+    <div style="font-size:10px;font-weight:900;color:#fde68a;background:rgba(0,0,0,0.65);padding:3px 10px;border-radius:10px;margin-top:5px;box-shadow:0 0 10px rgba(0,0,0,0.5)">
+      ⚡ CLICK TO CLAIM!
+    </div>
+  `;
+
+  container.appendChild(crate);
+
+  // Smooth parachute fall animation
+  let currentY = -120;
+  const targetY = Math.floor(window.innerHeight * 0.35);
+  const fallSpeed = 3.2;
+
+  function fallStep(){
+    if(!crate.parentElement) return;
+    currentY += fallSpeed;
+    crate.style.top = currentY + "px";
+    if(currentY < targetY){
+      requestAnimationFrame(fallStep);
+    }
+  }
+  requestAnimationFrame(fallStep);
+
+  crate.onclick = () => {
+    claimAirdropCrate(crate);
+  };
+
+  // Auto-remove after 25 seconds if unclaimed
+  setTimeout(() => {
+    if(crate.parentElement) crate.remove();
+  }, 25000);
+}
+
+function claimAirdropCrate(crateEl){
+  if(crateEl && crateEl.parentElement) crateEl.remove();
+
+  if(typeof playChaosSfx === "function"){
+    playChaosSfx("triumph");
+    setTimeout(() => playChaosSfx("ascension"), 300);
+  }
+  if(typeof confetti === "function"){
+    confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } });
+  }
+
+  // Grant 15,000 bonus coins + Guaranteed Divine or Mythic card!
+  const bonusCoins = 15000;
+  if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))){
+    coins += bonusCoins;
+  }
+
+  const curAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (accounts && accounts[currentUser]);
+  if(curAcc && (typeof isInfiniteValue !== "function" || !isInfiniteValue(curAcc.coins))){
+    curAcc.coins = (curAcc.coins || 0) + bonusCoins;
+  }
+
+  // Pick high tier card
+  const highTierIndices = [];
+  cards.forEach((c, idx) => {
+    const r = (c.rarity || "").toLowerCase();
+    if(r === "divine" || r === "mythic") highTierIndices.push(idx);
+  });
+
+  let awardedCard = null;
+  if(highTierIndices.length > 0){
+    const userOwned = (curAcc && Array.isArray(curAcc.owned)) ? curAcc.owned : (Array.isArray(owned) ? owned : []);
+    const unownedHigh = highTierIndices.filter(i => !userOwned.includes(i));
+    const chosenIdx = unownedHigh.length > 0
+      ? unownedHigh[Math.floor(Math.random() * unownedHigh.length)]
+      : highTierIndices[Math.floor(Math.random() * highTierIndices.length)];
+
+    if(!userOwned.includes(chosenIdx)){
+      userOwned.push(chosenIdx);
+    }
+    if(curAcc) curAcc.owned = userOwned;
+    if(typeof owned !== "undefined") owned = userOwned;
+    awardedCard = cards[chosenIdx];
+  }
+
+  if(typeof save === "function") save();
+  if(typeof updateDisplay === "function") updateDisplay();
+  if(typeof render === "function") render();
+  if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+
+  const cardText = awardedCard ? `<br><span style="color:#fbbf24;font-size:15px;font-weight:900">${awardedCard.name} (${awardedCard.rarity.toUpperCase()})</span> unlocked!` : "";
+  alert(`🎉 AIRDROP CRATE CLAIMED!\n\n🎁 +15,000 Coins added to your balance!${awardedCard ? `\n👑 Unlocked: ${awardedCard.name} [${awardedCard.rarity.toUpperCase()}]` : ""}`);
+}
+
+// Realm Marquee Banner System
+let marqueeTimeout = null;
+
+function showMarqueeBanner(text, isRemote = false){
+  const banner = document.getElementById("realmMarqueeBanner");
+  if(!banner) return;
+
+  const content = text || "👑 MASTER CAM HAS ENTERED THE REALM!";
+  banner.innerHTML = `
+    <span>⚡</span>
+    <span style="flex:1;text-align:center;text-shadow:0 0 10px #fff">${content}</span>
+    <button type="button" onclick="document.getElementById('realmMarqueeBanner').style.display='none'" style="background:none;border:none;color:#fff;font-weight:900;font-size:16px;cursor:pointer;padding:0 6px">✕</button>
+  `;
+
+  banner.style.display = "flex";
+  if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+
+  if(marqueeTimeout) clearTimeout(marqueeTimeout);
+  marqueeTimeout = setTimeout(() => {
+    banner.style.display = "none";
+  }, 9000);
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "marquee_banner", text: content });
+  }
+}
+
+// Wire up events on DOM ready
+document.addEventListener("DOMContentLoaded", () => {
+  initRealmWeather();
+
+  // Weather buttons
+  document.querySelectorAll(".chaosWeatherBtn").forEach(btn => {
+    btn.onclick = () => {
+      const mode = btn.getAttribute("data-weather");
+      setRealmWeather(mode, false);
+      if(typeof playChaosSfx === "function") playChaosSfx("laser");
+    };
+  });
+
+  const clearWeatherBtn = document.getElementById("chaosWeatherClearBtn");
+  if(clearWeatherBtn){
+    clearWeatherBtn.onclick = () => {
+      setRealmWeather("clear", false);
+      if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+    };
+  }
+
+  // Airdrop button
+  const airdropBtn = document.getElementById("chaosAirdropBtn");
+  if(airdropBtn){
+    airdropBtn.onclick = () => {
+      triggerRealmAirdrop(false);
+    };
+  }
+
+  // Marquee Banner
+  const marqueeBtn = document.getElementById("adminBroadcastMarqueeBtn");
+  const marqueeInput = document.getElementById("adminMarqueeInput");
+  if(marqueeBtn){
+    marqueeBtn.onclick = () => {
+      const txt = marqueeInput ? marqueeInput.value.trim() : "";
+      showMarqueeBanner(txt || "👑 REALM ANNOUNCEMENT FROM MASTER CAM!", false);
+      if(marqueeInput) marqueeInput.value = "";
+    };
+  }
+
+  const dismissMarqueeBtn = document.getElementById("adminDismissMarqueeBtn");
+  if(dismissMarqueeBtn){
+    dismissMarqueeBtn.onclick = () => {
+      const b = document.getElementById("realmMarqueeBanner");
+      if(b) b.style.display = "none";
+    };
+  }
+
+  document.querySelectorAll(".hypePresetBtn").forEach(btn => {
+    btn.onclick = () => {
+      const txt = btn.getAttribute("data-text");
+      if(marqueeInput) marqueeInput.value = txt;
+      showMarqueeBanner(txt, false);
+    };
+  });
+});
+
+if(document.readyState === "complete" || document.readyState === "interactive"){
+  setTimeout(() => {
+    initRealmWeather();
+  }, 100);
+}
