@@ -1305,3 +1305,384 @@ body.turbo-speed-active * {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+
+
+/* ========================================================
+   NEXT-GEN VISUAL UPGRADES: COSMOS, MASTERY & FOIL SHADERS
+   ======================================================== */
+
+/* Smooth Sleek Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 15, 30, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #38bdf8, #818cf8);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #60a5fa, #a855f7);
+}
+
+/* Collection Mastery & Progress HUD */
+.mastery-hud-container {
+  background: linear-gradient(145deg, rgba(17, 24, 48, 0.85) 0%, rgba(10, 14, 28, 0.9) 100%);
+  border: 1px solid rgba(147, 197, 253, 0.25);
+  border-radius: 20px;
+  padding: 18px 22px;
+  margin: 18px 0 24px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+.mastery-hud-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #38bdf8, #a855f7, #f43f5e, #facc15, #38bdf8);
+  background-size: 300% 100%;
+  animation: marqueeGrad 4s linear infinite;
+}
+.mastery-hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.mastery-hud-rank {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mastery-hud-icon {
+  font-size: 22px;
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.6));
+}
+.mastery-hud-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #fff;
+}
+.mastery-hud-tier {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+  text-transform: uppercase;
+}
+.mastery-hud-counter {
+  font-size: 14px;
+  font-weight: 900;
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+.mastery-progress-bar-track {
+  width: 100%;
+  height: 12px;
+  background: rgba(5, 8, 18, 0.8);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.mastery-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #7c3aed, #ec4899, #f59e0b, #38bdf8);
+  background-size: 300% 100%;
+  animation: marqueeGrad 6s linear infinite;
+  border-radius: 999px;
+  position: relative;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 18px rgba(124, 58, 237, 0.6);
+}
+.mastery-progress-bar-shine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: barShine 3s infinite linear;
+}
+@keyframes barShine {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.mastery-rarity-breakdown {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.mastery-chip {
+  flex: 1;
+  min-width: 120px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 11px;
+  font-weight: 800;
+}
+.mastery-chip:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(30, 41, 59, 0.85);
+}
+.mastery-chip.chip-common { border-left: 3px solid #94a3b8; }
+.mastery-chip.chip-rare { border-left: 3px solid #38bdf8; }
+.mastery-chip.chip-epic { border-left: 3px solid #a855f7; }
+.mastery-chip.chip-legendary { border-left: 3px solid #f59e0b; }
+.mastery-chip.chip-mythic { border-left: 3px solid #ec4899; }
+.mastery-chip.chip-divine { border-left: 3px solid #facc15; }
+.mastery-chip.chip-transcendent { border-left: 3px solid #f43f5e; }
+
+/* Physical 3D Booster Pack Wrapper */
+.pack-model {
+  width: 220px;
+  height: 310px;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), inset 0 0 25px rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+.pack-crimp {
+  height: 18px;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.2) 0px, rgba(255,255,255,0.2) 3px, rgba(0,0,0,0.3) 3px, rgba(0,0,0,0.3) 6px);
+  border-top: 1px solid rgba(255,255,255,0.3);
+  border-bottom: 1px solid rgba(0,0,0,0.4);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+}
+.pack-wrapper-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  gap: 8px;
+  flex: 1;
+  position: relative;
+  z-index: 2;
+}
+.pack-wrapper-brand {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+}
+.pack-wrapper-icon {
+  font-size: 64px;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+  animation: packIconFloat 2.5s ease-in-out infinite alternate;
+}
+@keyframes packIconFloat {
+  0% { transform: translateY(0px) scale(1); }
+  100% { transform: translateY(-6px) scale(1.05); }
+}
+.pack-wrapper-title {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+.pack-wrapper-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: #cbd5e1;
+}
+.pack-tear-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #38bdf8, #fff, #38bdf8, transparent);
+  opacity: 0;
+  z-index: 5;
+  box-shadow: 0 0 12px #38bdf8;
+}
+.pack-model.unsealing .pack-tear-line {
+  opacity: 1;
+  animation: packLaserTear 0.6s ease-in-out forwards;
+}
+@keyframes packLaserTear {
+  0% { transform: scaleX(0); opacity: 0; }
+  50% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1.1) translateY(-2px); opacity: 0; }
+}
+
+/* Rarity Anticipation Halos for Facedown Cards */
+.flip-card-wrapper[data-rarity="transcendent"] .flip-card-back {
+  border-color: #f43f5e !important;
+  box-shadow: 0 0 45px rgba(244, 63, 94, 0.85), 0 0 25px rgba(168, 85, 247, 0.7) !important;
+  animation: transcendentAuraPulse 1.8s infinite alternate !important;
+}
+@keyframes transcendentAuraPulse {
+  0% { box-shadow: 0 0 35px rgba(244, 63, 94, 0.7), 0 0 15px rgba(56, 189, 248, 0.5); }
+  100% { box-shadow: 0 0 60px rgba(244, 63, 94, 1), 0 0 35px rgba(250, 204, 21, 0.9); }
+}
+.flip-card-wrapper[data-rarity="divine"] .flip-card-back {
+  border-color: #facc15 !important;
+  box-shadow: 0 0 40px rgba(250, 204, 21, 0.8), 0 0 25px rgba(56, 189, 248, 0.6) !important;
+  animation: divineAuraPulse 2s infinite alternate !important;
+}
+@keyframes divineAuraPulse {
+  0% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.6); }
+  100% { box-shadow: 0 0 50px rgba(56, 189, 248, 0.9), 0 0 30px rgba(250, 204, 21, 0.9); }
+}
+.flip-card-wrapper[data-rarity="mythic"] .flip-card-back {
+  border-color: #ec4899 !important;
+  box-shadow: 0 0 35px rgba(236, 72, 153, 0.7) !important;
+}
+.flip-card-wrapper[data-rarity="legendary"] .flip-card-back {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.65) !important;
+}
+.flip-card-wrapper[data-rarity="epic"] .flip-card-back {
+  border-color: #a855f7 !important;
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.55) !important;
+}
+.flip-card-wrapper[data-rarity="rare"] .flip-card-back {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.45) !important;
+}
+
+/* Locked Card Mystical Runic Cipher */
+.locked-rune-cipher {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.85) 0%, rgba(3, 7, 18, 0.96) 100%);
+  z-index: 3;
+  pointer-events: none;
+}
+.locked-rune-ring {
+  width: 60px;
+  height: 60px;
+  border: 2px dashed rgba(56, 189, 248, 0.35);
+  border-radius: 50%;
+  animation: runeRingSpin 12s linear infinite;
+  position: absolute;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+}
+@keyframes runeRingSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.locked-lock-icon {
+  font-size: 26px;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.5));
+  animation: lockPulse 2.5s ease-in-out infinite alternate;
+}
+@keyframes lockPulse {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+.card.locked:hover .locked-rune-ring {
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.4);
+}
+.card.locked:hover .locked-lock-icon {
+  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.9));
+}
+
+/* 3D Pedestal in Inspection Modal */
+.detail-pedestal-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.detail-card-pedestal {
+  position: absolute;
+  bottom: -24px;
+  width: 240px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.detail-pedestal-ring {
+  position: absolute;
+  border-radius: 50%;
+  transform: rotateX(75deg);
+}
+.detail-pedestal-ring.ring-outer {
+  width: 230px;
+  height: 120px;
+  border: 2px dashed rgba(56, 189, 248, 0.5);
+  animation: runeRingSpin 10s linear infinite;
+}
+.detail-pedestal-ring.ring-inner {
+  width: 170px;
+  height: 90px;
+  border: 2px solid rgba(168, 85, 247, 0.6);
+  animation: runeRingSpin 7s linear infinite reverse;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+}
+.detail-pedestal-glow {
+  position: absolute;
+  width: 140px;
+  height: 50px;
+  background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.45) 0%, transparent 75%);
+  filter: blur(12px);
+}
+.card-auto-orbit {
+  animation: cardAutoOrbitAnim 5s ease-in-out infinite !important;
+}
+@keyframes cardAutoOrbitAnim {
+  0% { transform: perspective(800px) rotateX(10deg) rotateY(-14deg) scale(1.04); }
+  25% { transform: perspective(800px) rotateX(-8deg) rotateY(-10deg) scale(1.05); }
+  50% { transform: perspective(800px) rotateX(-12deg) rotateY(14deg) scale(1.04); }
+  75% { transform: perspective(800px) rotateX(8deg) rotateY(10deg) scale(1.05); }
+  100% { transform: perspective(800px) rotateX(10deg) rotateY(-14deg) scale(1.04); }
+}
+
+/* Cyber Neon Foil */
+.foil-cyber .face {
+  background-image: repeating-linear-gradient(0deg, rgba(6, 182, 212, 0.15) 0px, transparent 2px, transparent 8px), repeating-linear-gradient(90deg, rgba(236, 72, 153, 0.15) 0px, transparent 2px, transparent 8px) !important;
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 35px rgba(6, 182, 212, 0.7), 0 0 20px rgba(236, 72, 153, 0.5) !important;
+}

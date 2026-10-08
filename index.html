@@ -51,8 +51,15 @@
 <div id="packOverlay">
   <div class="anim-pack-container" id="packAnimStage" style="display:flex;flex-direction:column;align-items:center;gap:18px">
     <div id="animPackModel" class="pack-model">
-      <div id="animPackIcon" style="font-size:75px">📦</div>
-      <div id="animPackLabel" style="font-weight:900;text-transform:uppercase;margin-top:10px;font-size:14px;letter-spacing:1px">Common Pack</div>
+      <div class="pack-crimp pack-crimp-top"></div>
+      <div class="pack-wrapper-content">
+        <div class="pack-wrapper-brand">✦ CARDSTACK TCG ✦</div>
+        <div id="animPackIcon" class="pack-wrapper-icon">📦</div>
+        <div id="animPackLabel" class="pack-wrapper-title">Common Pack</div>
+        <div class="pack-wrapper-badge">OFFICIAL BOOSTER</div>
+      </div>
+      <div class="pack-tear-line" id="packTearLine"></div>
+      <div class="pack-crimp pack-crimp-bottom"></div>
     </div>
     <h3 id="packOpeningStatus" style="font-weight:700;color:#94a3b8;margin:0">Unsealing Booster Pack...</h3>
   </div>
@@ -1335,6 +1342,26 @@
     <h2>Collect Legendary Artifacts & Duel AI</h2>
     <p>Summon heroes, mythical beasts, cosmic deities, and all-powerful Divine entities. Every card possesses multiple unique battle attacks with different damage yields to command in the Arena!</p>
     
+    <!-- COLLECTION MASTERY & COMPLETION HUD -->
+    <div class="mastery-hud-container" id="masteryHudContainer">
+      <div class="mastery-hud-header">
+        <div class="mastery-hud-rank">
+          <span class="mastery-hud-icon">🏆</span>
+          <span class="mastery-hud-title">Collection Mastery</span>
+          <span class="mastery-hud-tier" id="masteryTierBadge">Novice Collector</span>
+        </div>
+        <div class="mastery-hud-stats">
+          <span id="masteryProgressText" class="mastery-hud-counter">0 / 210 (0%)</span>
+        </div>
+      </div>
+      <div class="mastery-progress-bar-track">
+        <div class="mastery-progress-bar-fill" id="masteryProgressBarFill" style="width: 0%">
+          <div class="mastery-progress-bar-shine"></div>
+        </div>
+      </div>
+      <div class="mastery-rarity-breakdown" id="masteryRarityBreakdown"></div>
+    </div>
+    
     <div class="pack-grid">
       <div class="pack-card pack-common">
         <div>
@@ -1420,10 +1447,20 @@
     <button id="closeCardDetailBtn" class="accountBtn" style="position:absolute;top:14px;right:14px;font-size:16px;padding:4px 10px;background:rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center">✕</button>
 
     <div style="flex:1;min-width:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;perspective:1000px">
-      <div id="detailCardElement" class="card" style="width:260px;height:420px;cursor:grab">
-        <!-- Rendered dynamically -->
+      <div class="detail-pedestal-wrapper">
+        <div id="detailCardElement" class="card" style="width:260px;height:420px;cursor:grab">
+          <!-- Rendered dynamically -->
+        </div>
+        <div class="detail-card-pedestal">
+          <div class="detail-pedestal-ring ring-outer"></div>
+          <div class="detail-pedestal-ring ring-inner"></div>
+          <div class="detail-pedestal-glow"></div>
+        </div>
       </div>
-      <small style="color:#64748b;margin-top:10px;font-size:11px">✨ Move cursor or swipe to tilt card in 3D</small>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap;justify-content:center">
+        <small style="color:#94a3b8;font-size:11px">✨ Hover to tilt foil</small>
+        <button id="detailOrbitToggleBtn" class="accountBtn" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,0.08);border-radius:20px">🔄 Auto-Orbit</button>
+      </div>
     </div>
 
     <div style="flex:1.4;min-width:280px;display:flex;flex-direction:column;justify-content:space-between">
@@ -1446,6 +1483,7 @@
           <button class="accountBtn detailFoilBtn" data-foil="holo" style="flex:1;font-size:11px;padding:6px 4px">Prism Holo</button>
           <button class="accountBtn detailFoilBtn" data-foil="gold" style="flex:1;font-size:11px;padding:6px 4px">Golden Sun</button>
           <button class="accountBtn detailFoilBtn" data-foil="shadow" style="flex:1;font-size:11px;padding:6px 4px">Void Dark</button>
+          <button class="accountBtn detailFoilBtn" data-foil="cyber" style="flex:1;font-size:11px;padding:6px 4px">Cyber Neon</button>
         </div>
       </div>
 

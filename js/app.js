@@ -401,6 +401,7 @@ function startPackOpening(tierKey){
   results.style.display = "none";
   overlay.classList.add("show");
   status.textContent = "Unsealing Pack Foil...";
+  model.classList.add("unsealing");
   if(typeof playChaosSfx === "function") playChaosSfx("packTear");
 
   setTimeout(()=>{
@@ -522,6 +523,84 @@ document.getElementById("packCollectBtn").onclick = ()=>{
   document.getElementById("packOverlay").classList.remove("show");
 };
 
+
+/* ========================================================
+   COLLECTION MASTERY & COMPLETION HUD SYSTEM
+   ======================================================== */
+function updateMasteryHud(){
+  const container = document.getElementById("masteryHudContainer");
+  if(!container) return;
+  const barFill = document.getElementById("masteryProgressBarFill");
+  const progressText = document.getElementById("masteryProgressText");
+  const rankBadge = document.getElementById("masteryTierBadge");
+  const breakdownContainer = document.getElementById("masteryRarityBreakdown");
+
+  const total = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.length : 210;
+  const ownedCount = (Array.isArray(owned)) ? owned.length : 0;
+  const pct = Math.min(100, Math.round((ownedCount / total) * 100));
+
+  if(barFill) barFill.style.width = pct + "%";
+  if(progressText) progressText.textContent = `${ownedCount} / ${total} (${pct}%)`;
+
+  let rankTitle = "Novice Collector";
+  if(pct >= 100) rankTitle = "👑 Divine Overlord";
+  else if(pct >= 85) rankTitle = "🌌 Astral Custodian";
+  else if(pct >= 65) rankTitle = "👑 Grandmaster";
+  else if(pct >= 45) rankTitle = "🔮 Arcane Archivist";
+  else if(pct >= 25) rankTitle = "⚔️ Adept Summoner";
+  else if(pct >= 10) rankTitle = "🌟 Apprentice";
+
+  if(rankBadge) rankBadge.textContent = rankTitle;
+
+  if(breakdownContainer && typeof cards !== "undefined" && Array.isArray(cards)){
+    const rarityCounts = { common: 0, rare: 0, epic: 0, legendary: 0, mythic: 0, divine: 0, transcendent: 0 };
+    const rarityTotal = { common: 0, rare: 0, epic: 0, legendary: 0, mythic: 0, divine: 0, transcendent: 0 };
+
+    cards.forEach((c, idx) => {
+      const r = (c.rarity || "common").toLowerCase();
+      if(rarityTotal[r] !== undefined) rarityTotal[r]++;
+      if(owned.includes(idx)){
+        if(rarityCounts[r] !== undefined) rarityCounts[r]++;
+      }
+    });
+
+    const rarities = [
+      { key: "common", label: "Common", icon: "🔘", cls: "chip-common", filterKey: "rarity-common" },
+      { key: "rare", label: "Rare", icon: "💎", cls: "chip-rare", filterKey: "rarity-rare" },
+      { key: "epic", label: "Epic", icon: "🔮", cls: "chip-epic", filterKey: "rarity-epic" },
+      { key: "legendary", label: "Legendary", icon: "👑", cls: "chip-legendary", filterKey: "rarity-legendary" },
+      { key: "mythic", label: "Mythic", icon: "🌸", cls: "chip-mythic", filterKey: "rarity-mythic" },
+      { key: "divine", label: "Divine", icon: "⚡", cls: "chip-divine", filterKey: "rarity-divine" },
+      { key: "transcendent", label: "Transcendent", icon: "🌌", cls: "chip-transcendent", filterKey: "rarity-transcendent" }
+    ];
+
+    breakdownContainer.innerHTML = rarities.map(r => {
+      const cCount = rarityCounts[r.key] || 0;
+      const tCount = rarityTotal[r.key] || 0;
+      const rPct = tCount > 0 ? Math.round((cCount / tCount) * 100) : 0;
+      return `
+        <div class="mastery-chip ${r.cls}" data-filter-chip="${r.filterKey}" title="Filter by ${r.label}">
+          <span>${r.icon} ${r.label}</span>
+          <span style="color:#94a3b8;font-size:10px">${cCount}/${tCount} (${rPct}%)</span>
+        </div>
+      `;
+    }).join("");
+
+    if(typeof breakdownContainer.querySelectorAll === "function") breakdownContainer.querySelectorAll(".mastery-chip").forEach(chip => {
+      chip.onclick = () => {
+        const targetFilter = chip.getAttribute("data-filter-chip");
+        document.querySelectorAll("[data-filter]").forEach(b => {
+          b.classList.toggle("active", b.dataset.filter === targetFilter);
+        });
+        filter = targetFilter;
+        render();
+        if(typeof playChaosSfx === "function") playChaosSfx("click");
+      };
+    });
+  }
+}
+window.updateMasteryHud = updateMasteryHud;
+
 function render(){
   document.getElementById("coins").textContent = (typeof formatCoins === "function") ? formatCoins(coins) : ((typeof isInfiniteValue === "function" && isInfiniteValue(coins)) ? "∞" : coins.toLocaleString());
   const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
@@ -639,6 +718,13 @@ function render(){
     const displayedName = has ? c.name : "Unknown Card";
     const displayedDesc = has ? c.desc : "Discover this artifact by opening booster packs.";
 
+    const lockedOverlayHtml = !has ? `
+      <div class="locked-rune-cipher">
+        <div class="locked-rune-ring"></div>
+        <div class="locked-lock-icon">🔒</div>
+      </div>
+    ` : '';
+
     el.innerHTML = `
       <div class="face ${cardFaceRarity}">
         <div class="card-top">
@@ -648,6 +734,7 @@ function render(){
         <div class="card-art-frame">
           <img class="card-art-img" src="${c.image}" alt="${c.name}">
           <div class="card-aura"></div>
+          ${lockedOverlayHtml}
         </div>
         <div class="card-bottom">
           <div class="name">${displayedName}</div>
@@ -680,7 +767,8 @@ function render(){
         if(glint){
           const xPct = Math.round((x / rect.width) * 100);
           const yPct = Math.round((y / rect.height) * 100);
-          glint.style.background = `radial-gradient(circle at ${xPct}% ${yPct}%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.08) 40%, transparent 75%), linear-gradient(${rotY * 12}deg, rgba(255,0,128,0.12), rgba(0,255,255,0.12), rgba(255,255,0,0.12))`;
+          const angle = Math.round(rotY * 12 + 45);
+          glint.style.background = `radial-gradient(circle at ${xPct}% ${yPct}%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 28%, transparent 70%), repeating-linear-gradient(${angle}deg, rgba(255,0,128,0.2) 0%, rgba(0,255,255,0.2) 25%, rgba(255,255,0,0.2) 50%, rgba(255,0,128,0.2) 75%)`;
           glint.style.opacity = "1";
         }
       });
@@ -694,6 +782,7 @@ function render(){
     grid.appendChild(el);
   });
   updateSummonerRankBadge();
+  if(typeof updateMasteryHud === "function") updateMasteryHud();
 
   if(typeof renderArenaCardPicker === "function"){
     renderArenaCardPicker();
@@ -2343,42 +2432,177 @@ function initAmbientCosmosCanvas(){
   const ctx = canvas.getContext("2d");
   if(!ctx) return;
 
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+
   function resize(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
   }
   window.addEventListener("resize", resize);
   resize();
 
+  // Multi-tier Starfield
   const stars = [];
-  for(let i = 0; i < 90; i++){
+  for(let i = 0; i < 140; i++){
     stars.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      radius: Math.random() * 1.5 + 0.4,
-      alpha: Math.random() * 0.7 + 0.2,
-      speedX: (Math.random() - 0.5) * 0.25,
-      speedY: (Math.random() - 0.5) * 0.25
+      x: Math.random() * width,
+      y: Math.random() * height,
+      baseRadius: Math.random() * 1.4 + 0.3,
+      alpha: Math.random() * 0.6 + 0.25,
+      twinkleSpeed: Math.random() * 0.03 + 0.01,
+      twinkleOffset: Math.random() * Math.PI * 2,
+      speedX: (Math.random() - 0.5) * 0.15,
+      speedY: (Math.random() - 0.5) * 0.15,
+      hasFlare: Math.random() > 0.82
     });
   }
 
+  // Drifting Nebula Gas Clouds
+  const nebulae = [
+    { x: width * 0.2, y: height * 0.25, r: 350, color: "rgba(59, 130, 246, 0.08)", vx: 0.1, vy: 0.06 },
+    { x: width * 0.8, y: height * 0.3, r: 420, color: "rgba(168, 85, 247, 0.09)", vx: -0.08, vy: 0.07 },
+    { x: width * 0.5, y: height * 0.75, r: 380, color: "rgba(236, 72, 153, 0.07)", vx: 0.07, vy: -0.09 },
+    { x: width * 0.85, y: height * 0.8, r: 320, color: "rgba(245, 158, 11, 0.06)", vx: -0.06, vy: -0.05 }
+  ];
+
+  // Shooting Stars
+  const shootingStars = [];
+  function spawnShootingStar(){
+    const startX = Math.random() * width * 0.8;
+    const startY = Math.random() * height * 0.4;
+    const length = Math.random() * 120 + 80;
+    const speed = Math.random() * 12 + 10;
+    const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.3;
+    shootingStars.push({
+      x: startX,
+      y: startY,
+      length: length,
+      speed: speed,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: Math.random() * 0.025 + 0.02
+    });
+  }
+  setInterval(spawnShootingStar, 7000);
+
+  // Mouse Stardust Particles
+  const stardust = [];
+  window.addEventListener("pointermove", (e) => {
+    if(stardust.length < 40 && Math.random() > 0.4){
+      stardust.push({
+        x: e.clientX,
+        y: e.clientY,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: (Math.random() - 0.5) * 1.5 - 0.5,
+        radius: Math.random() * 2 + 0.8,
+        life: 1,
+        color: Math.random() > 0.5 ? "rgba(56, 189, 248, " : "rgba(236, 72, 153, "
+      });
+    }
+  });
+
+  let t = 0;
   function loop(){
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    t += 0.016;
+    ctx.clearRect(0, 0, width, height);
+
+    // 1. Draw Nebula Gas
+    nebulae.forEach(n => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if(n.x < -100) n.x = width + 100;
+      if(n.x > width + 100) n.x = -100;
+      if(n.y < -100) n.y = height + 100;
+      if(n.y > height + 100) n.y = -100;
+
+      const grad = ctx.createRadialGradient(n.x, n.y, 10, n.x, n.y, n.r);
+      grad.addColorStop(0, n.color);
+      grad.addColorStop(1, "transparent");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 2. Draw Stars
     stars.forEach(s => {
       s.x += s.speedX;
       s.y += s.speedY;
-      if(s.x < 0) s.x = canvas.width;
-      if(s.x > canvas.width) s.x = 0;
-      if(s.y < 0) s.y = canvas.height;
-      if(s.y > canvas.height) s.y = 0;
+      if(s.x < 0) s.x = width;
+      if(s.x > width) s.x = 0;
+      if(s.y < 0) s.y = height;
+      if(s.y > height) s.y = 0;
+
+      const curAlpha = s.alpha + Math.sin(t * 3 * s.twinkleSpeed + s.twinkleOffset) * 0.25;
+      const alphaClamped = Math.max(0.1, Math.min(1, curAlpha));
 
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(186, 230, 253, ${s.alpha})`;
-      ctx.shadowBlur = 8;
+      ctx.arc(s.x, s.y, s.baseRadius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(224, 242, 254, ${alphaClamped})`;
+      ctx.shadowBlur = s.hasFlare ? 10 : 3;
       ctx.shadowColor = "#38bdf8";
       ctx.fill();
+
+      // Subtle diffraction spike on brightest stars
+      if(s.hasFlare && alphaClamped > 0.65){
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alphaClamped * 0.4})`;
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(s.x - 5, s.y);
+        ctx.lineTo(s.x + 5, s.y);
+        ctx.moveTo(s.x, s.y - 5);
+        ctx.lineTo(s.x, s.y + 5);
+        ctx.stroke();
+      }
     });
+
+    // 3. Draw Shooting Stars
+    for(let i = shootingStars.length - 1; i >= 0; i--){
+      const ss = shootingStars[i];
+      ss.x += ss.vx;
+      ss.y += ss.vy;
+      ss.life -= ss.decay;
+
+      if(ss.life <= 0 || ss.x > width || ss.y > height){
+        shootingStars.splice(i, 1);
+        continue;
+      }
+
+      const grad = ctx.createLinearGradient(ss.x, ss.y, ss.x - ss.vx * 3, ss.y - ss.vy * 3);
+      grad.addColorStop(0, `rgba(255, 255, 255, ${ss.life})`);
+      grad.addColorStop(0.3, `rgba(56, 189, 248, ${ss.life * 0.7})`);
+      grad.addColorStop(1, "transparent");
+
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(ss.x, ss.y);
+      ctx.lineTo(ss.x - ss.vx * 2.5, ss.y - ss.vy * 2.5);
+      ctx.stroke();
+    }
+
+    // 4. Draw Mouse Stardust
+    for(let i = stardust.length - 1; i >= 0; i--){
+      const p = stardust[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.025;
+
+      if(p.life <= 0){
+        stardust.splice(i, 1);
+        continue;
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+      ctx.fillStyle = p.color + (p.life * 0.8) + ")";
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = "#38bdf8";
+      ctx.fill();
+    }
+
     requestAnimationFrame(loop);
   }
   loop();
@@ -2416,6 +2640,23 @@ function initSuperCoolDom(){
       localStorage.setItem("cardCollectorFavChampion", activeDetailCard.name);
       if(typeof playChaosSfx === "function") playChaosSfx("triumph");
       alert(`⚔️ ${activeDetailCard.name} is now designated as your default Arena Champion!`);
+    };
+  }
+
+  const orbitBtn = document.getElementById("detailOrbitToggleBtn");
+  if(orbitBtn){
+    orbitBtn.onclick = () => {
+      const cardEl = document.getElementById("detailCardElement");
+      if(!cardEl) return;
+      cardEl.classList.toggle("card-auto-orbit");
+      orbitBtn.classList.toggle("active");
+      if(cardEl.classList.contains("card-auto-orbit")){
+        orbitBtn.textContent = "⏹ Stop Orbit";
+      } else {
+        orbitBtn.textContent = "🔄 Auto-Orbit";
+        cardEl.style.transform = "";
+      }
+      if(typeof playChaosSfx === "function") playChaosSfx("click");
     };
   }
 
