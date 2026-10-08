@@ -102,6 +102,14 @@ function loadAccount(username){
   } catch(e){}
 
   const userAcc = getUserAccount(username) || accounts[username];
+  if(userAcc && userAcc.banned && !(typeof isCamUsername === "function" && isCamUsername(username))){
+    alert("⛔ This account has been suspended by Master Cam.");
+    currentUser = null;
+    localStorage.removeItem("cardCollectorCurrentUser");
+    updateAccountUI();
+    render();
+    return;
+  }
   if(userAcc){
     owned = (Array.isArray(userAcc.owned) ? userAcc.owned : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
     if(owned.length === 0) owned = [0];
@@ -834,10 +842,62 @@ async function fetchCloudAccounts(){
 }
 window.fetchCloudAccounts = fetchCloudAccounts;
 
+// Delete an account permanently from the Global Cloud Registry
+async function deleteAccountFromCloud(username){
+  if(!username) return;
+  try {
+    const cloudAccs = await fetchCloudAccounts();
+    if(cloudAccs && cloudAccs[username]){
+      delete cloudAccs[username];
+      localStorage.setItem("cardCollectorCloudCache", JSON.stringify(cloudAccs));
+      await fetch(CLOUD_REGISTRY_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "cardstack_global_registry_v1",
+          data: {
+            version: Date.now(),
+            accounts: cloudAccs
+          }
+        })
+      });
+      console.log(`[CloudSync] Account "${username}" purged from cloud registry.`);
+    }
+  } catch(e){
+    console.warn("[CloudSync] Delete error:", e);
+  }
+}
+window.deleteAccountFromCloud = deleteAccountFromCloud;
+
+
 // Safe merge algorithm: never loses cards, coins, or prototype cards
 function mergeAccountData(localAcc, cloudAcc){
   if(!cloudAcc) return localAcc;
   if(!localAcc) return cloudAcc;
+
+  const cloudAdminTime = cloudAcc.lastAdminActionTime || 0;
+  const localAdminTime = localAcc.lastAdminActionTime || 0;
+
+  // Authoritative Admin Override: If cloud version has a newer admin action timestamp,
+  // the cloud version is authoritative (Admin Cam gifted/took cards or coins while player was offline)
+  if(cloudAdminTime > localAdminTime){
+    const isOwnedAll = !!(cloudAcc.ownedAll || (cloudAcc.owned && cloudAcc.owned.length >= 200));
+    return {
+      password: cloudAcc.password || localAcc.password || "",
+      owned: isOwnedAll && typeof cards !== "undefined" && cards.length > 0 ? cards.map((_, i) => i) : (Array.isArray(cloudAcc.owned) ? cloudAcc.owned : [0]),
+      ownedAll: isOwnedAll,
+      coins: cloudAcc.coins !== undefined ? cloudAcc.coins : 100,
+      unreleasedOwned: Array.isArray(cloudAcc.unreleasedOwned) ? cloudAcc.unreleasedOwned : [],
+      googleEmail: cloudAcc.googleEmail || localAcc.googleEmail || "",
+      googleName: cloudAcc.googleName || localAcc.googleName || "",
+      googlePicture: cloudAcc.googlePicture || localAcc.googlePicture || "",
+      hasPlayed: true,
+      banned: !!cloudAcc.banned,
+      lastAdminActionTime: cloudAdminTime,
+      adminRevision: cloudAcc.adminRevision || 1,
+      lastActive: Math.max(localAcc.lastActive || 0, cloudAcc.lastActive || 0, Date.now())
+    };
+  }
 
   const localOwned = Array.isArray(localAcc.owned) ? localAcc.owned : [];
   const cloudOwned = Array.isArray(cloudAcc.owned) ? cloudAcc.owned : [];
@@ -872,13 +932,16 @@ function mergeAccountData(localAcc, cloudAcc){
     googleName,
     googlePicture,
     hasPlayed: true,
+    banned: !!(cloudAcc.banned || localAcc.banned),
+    lastAdminActionTime: Math.max(localAdminTime, cloudAdminTime),
+    adminRevision: Math.max(localAcc.adminRevision || 0, cloudAcc.adminRevision || 0),
     lastActive: Math.max(localAcc.lastActive || 0, cloudAcc.lastActive || 0, Date.now())
   };
 }
 window.mergeAccountData = mergeAccountData;
 
 // Sync an account to the Global Cloud Registry
-function syncAccountToCloud(username, immediate = false){
+function syncAccountToCloud(username, immediate = false, isAuthoritative = false){
   if(!username) return;
   clearTimeout(cloudSyncDebounceTimer);
   const doPush = async () => {
@@ -887,12 +950,25 @@ function syncAccountToCloud(username, immediate = false){
       if(!acc) return;
       const cloudAccs = await fetchCloudAccounts();
       const existingCloudAcc = cloudAccs[username];
-      const merged = mergeAccountData(acc, existingCloudAcc);
-      cloudAccs[username] = merged;
 
-      // Update local account with merged state
-      accounts[username] = merged;
+      let finalAcc;
+      if(isAuthoritative || (acc.lastAdminActionTime && (!existingCloudAcc || (acc.lastAdminActionTime > (existingCloudAcc.lastAdminActionTime || 0))))){
+        finalAcc = {
+          ...(existingCloudAcc || {}),
+          ...acc,
+          lastAdminActionTime: acc.lastAdminActionTime || Date.now(),
+          adminRevision: (acc.adminRevision || (existingCloudAcc && existingCloudAcc.adminRevision ? existingCloudAcc.adminRevision + 1 : 1)),
+          lastModified: Date.now()
+        };
+      } else {
+        finalAcc = mergeAccountData(acc, existingCloudAcc);
+      }
+      cloudAccs[username] = finalAcc;
+
+      // Update local account with merged/authoritative state
+      accounts[username] = finalAcc;
       localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      localStorage.setItem("cardCollectorCloudCache", JSON.stringify(cloudAccs));
 
       await fetch(CLOUD_REGISTRY_URL, {
         method: "PUT",
@@ -911,7 +987,7 @@ function syncAccountToCloud(username, immediate = false){
         broadcastToAllPresencePeers({
           type: "cloud_account_sync",
           user: username,
-          account: merged
+          account: finalAcc
         });
       }
     } catch(err){
@@ -2073,14 +2149,22 @@ setTimeout(() => {
   if(currentUser && typeof fetchCloudAccounts === "function"){
     fetchCloudAccounts().then((cloudAccs) => {
       if(cloudAccs && cloudAccs[currentUser]){
-        const merged = mergeAccountData(accounts[currentUser], cloudAccs[currentUser]);
+        const cloudAcc = cloudAccs[currentUser];
+        const localAcc = accounts[currentUser] || {};
+        const hadAdminOverride = cloudAcc.lastAdminActionTime && cloudAcc.lastAdminActionTime > (localAcc.lastAdminActionTime || 0);
+
+        const merged = mergeAccountData(localAcc, cloudAcc);
         accounts[currentUser] = merged;
         localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
         if(typeof loadAccount === "function") loadAccount(currentUser);
+
+        if(hadAdminOverride && typeof showLiveToast === "function"){
+          showLiveToast("⚡ Account synced with Master Cam administrative updates!", true);
+        }
       }
     }).catch(()=>{});
   }
-}, 2000);
+}, 1500);
 
 
 function touchUserActive(){

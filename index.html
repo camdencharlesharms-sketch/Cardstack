@@ -485,7 +485,7 @@
               <input type="checkbox" id="adminFilterOnlineOnly"> 🟢 Online Only
             </label>
           </div>
-          <div style="max-height:220px;overflow-y:auto">
+          <div style="max-height:260px;overflow-x:auto;overflow-y:auto">
             <table style="width:100%;border-collapse:collapse;font-size:13px">
               <thead>
                 <tr style="text-align:left;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.1)">
@@ -520,6 +520,7 @@
           </div>
           <div class="adminBtnGroup">
             <button id="adminAddPlayerCoinsBtn" style="background:#0284c7">+ Gift Coins</button>
+            <button id="adminDeductPlayerCoinsBtn" style="background:#dc2626">- Take Coins</button>
             <button id="adminGiftInfiniteCoinsBtn" style="background:linear-gradient(135deg, #8b5cf6, #3b82f6);font-weight:800">⚡ Gift ∞ Infinite</button>
             <button id="adminSetPlayerCoinsBtn" style="background:#4f46e5">= Set Exact</button>
             <button id="adminDrainPlayerCoinsBtn" style="background:#b91c1c">Drain to 0</button>
@@ -941,6 +942,132 @@
             <button class="accountBtn chaosWeatherBtn" data-weather="matrix" style="background:rgba(16,185,129,0.15);border-color:#10b981;color:#6ee7b7">⚡ Cyber Matrix</button>
           </div>
           <button id="chaosWeatherClearBtn" class="accountBtn" style="width:100%;margin-top:8px;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2);color:#cbd5e1">☀️ Reset to Clear Skies</button>
+        </div>
+
+        <!-- CARD 8: CHAOS CARD FUSION & MUTATION CHAMBER -->
+        <div class="adminCard" style="grid-column: 1 / -1; border: 1px solid rgba(168, 85, 247, 0.4); background: radial-gradient(ellipse at top, rgba(88, 28, 135, 0.45), rgba(15, 23, 42, 0.95))">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <h4 style="margin:0;color:#c084fc">🧬 Chaos Card Fusion & Mutation Chamber</h4>
+            <span style="font-size:11px;background:rgba(168,85,247,0.25);border:1px solid #a855f7;color:#e9d5ff;padding:3px 10px;border-radius:999px;font-weight:800">ALCHEMIST FORGE</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:6px 0 12px 0">
+            Synthesize two existing cards into a powerful mutated hybrid card with composite dual-elemental attacks, amplified damage multipliers, and unique hybrid artwork.
+          </p>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Primary Catalyst Card:</label>
+              <select id="chaosFusionCardA" class="adminSelect"></select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Secondary Essence Card:</label>
+              <select id="chaosFusionCardB" class="adminSelect"></select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-top:8px;align-items:center">
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Mutation Archetype:</label>
+              <select id="chaosFusionTier" class="adminSelect" style="margin:0">
+                <option value="synergy">⚡ Dual-Synergy (+35% DMG Boost & Hybrid Attacks)</option>
+                <option value="void">🔮 Void Transmutation (Dark Matter Aura & 2x Crit)</option>
+                <option value="omega" selected>👑 Omega Ascension (Transcendent Divine Rarity & 3 Multi-Attacks)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Custom Hybrid Name:</label>
+              <input id="chaosFusionCustomName" class="adminInput" placeholder="Auto-generated if blank..." style="margin:0">
+            </div>
+            <div style="padding-top:16px">
+              <button id="chaosRandomFusionBtn" type="button" class="accountBtn" style="background:#334155;color:#e2e8f0;width:100%;padding:10px;font-size:12px;font-weight:700">🎲 Random Pair</button>
+            </div>
+          </div>
+
+          <!-- Fusion Hologram Preview -->
+          <div id="chaosFusionPreviewBox" style="margin-top:12px;background:rgba(0,0,0,0.45);border:1px dashed rgba(168,85,247,0.5);border-radius:10px;padding:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div id="chaosFusionPreviewThumb" style="width:70px;height:95px;border-radius:8px;border:2px solid #a855f7;background:#0f172a;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 15px rgba(168,85,247,0.5)">🧬</div>
+            <div style="flex:1;min-width:200px">
+              <div id="chaosFusionPreviewName" style="font-weight:900;font-size:15px;color:#f3e8ff">Select two cards to generate fusion matrix...</div>
+              <div id="chaosFusionPreviewRarity" style="font-size:12px;color:#c084fc;font-weight:700">Rarity: Transcendent Mutation</div>
+              <div id="chaosFusionPreviewAttacks" style="font-size:11px;color:#94a3b8;margin-top:4px">Attacks will be synthesized from both parents with synergy multipliers.</div>
+            </div>
+            <div>
+              <button id="chaosIgniteFusionBtn" style="background:linear-gradient(135deg, #a855f7, #6366f1);color:#fff;font-weight:900;padding:12px 20px;font-size:13px;border-radius:8px;box-shadow:0 0 20px rgba(168,85,247,0.6)">
+                ⚡ Ignite Fusion & Claim
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 9: CHAOS LOOT GOBLIN RUSH -->
+        <div class="adminCard">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h4 style="margin:0;color:#fbbf24">💰 Chaos Loot Goblin Rush</h4>
+            <span style="font-size:10px;font-weight:800;background:rgba(245,158,11,0.2);color:#fde68a;padding:2px 8px;border-radius:999px">MINIGAME</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:8px 0">
+            Unleash a frantic Golden Loot Goblin across the screen! Click or tap the goblin to smack coins out of its sack (+250 to +500 coins per tap). Smacking it 10 times triggers a Jackpot Loot Explosion!
+          </p>
+          <div class="adminBtnGroup">
+            <button id="chaosSpawnGoblinBtn" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#000;font-weight:900;font-size:12px;padding:10px">
+              🏃 Unleash Loot Goblin
+            </button>
+            <button id="chaosBroadcastGoblinBtn" style="background:#7c3aed;color:#fff;font-weight:800;font-size:12px;padding:10px">
+              📢 Realm-Wide Goblin Hunt
+            </button>
+          </div>
+          <div id="chaosGoblinStatus" style="font-size:11px;color:#94a3b8;margin-top:8px">
+            Goblin is resting in the treasury dungeon.
+          </div>
+        </div>
+
+        <!-- CARD 10: ZERO-G PHYSICS & SINGULARITY FIELD -->
+        <div class="adminCard">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h4 style="margin:0;color:#38bdf8">🌀 Zero-G Physics & Cosmic Singularity</h4>
+            <span style="font-size:10px;font-weight:800;background:rgba(56,189,248,0.2);color:#bae6fd;padding:2px 8px;border-radius:999px">PHYSICS ANOMALY</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:8px 0">
+            Override the realm gravitational constant. Float interactive card shards in 3D zero-G space, spawn a gravity black hole, or enter bullet-time.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button id="chaosZeroGBtn" class="accountBtn" style="background:rgba(56,189,248,0.15);border-color:#38bdf8;color:#7dd3fc;padding:9px;font-weight:700">🚀 Float Zero-G Cards</button>
+            <button id="chaosSingularityBtn" class="accountBtn" style="background:rgba(168,85,247,0.15);border-color:#a855f7;color:#d8b4fe;padding:9px;font-weight:700">🕳️ Black Hole Vortex</button>
+            <button id="chaosSlomoBtn" class="accountBtn" style="background:rgba(16,185,129,0.15);border-color:#10b981;color:#6ee7b7;padding:9px;font-weight:700">⏳ Matrix Bullet-Time</button>
+            <button id="chaosClearGravityBtn" class="accountBtn" style="background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5;padding:9px;font-weight:700">⏹️ Restore Gravity</button>
+          </div>
+          <div id="chaosGravityStatus" style="font-size:11px;color:#94a3b8;margin-top:8px">
+            Standard Earth gravity (1.0G).
+          </div>
+        </div>
+
+        <!-- CARD 11: CARD POWER OVERDRIVE & FINISHER INFUSION -->
+        <div class="adminCard" style="grid-column: 1 / -1">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h4 style="margin:0;color:#f43f5e">⚡ Card Stat Overdrive & Finisher Infusion</h4>
+            <span style="font-size:10px;font-weight:800;background:rgba(244,63,94,0.2);color:#fecdd3;padding:2px 8px;border-radius:999px">GOD LAB STATS</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:8px 0">
+            Select any card to inject God Mode multipliers into its attack damage, or equip an exclusive 3rd ultimate finisher attack to obliterate opponents in Arena.
+          </p>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;align-items:center">
+            <select id="chaosOverdriveCardSelect" class="adminSelect" style="margin:0"></select>
+            <select id="chaosOverdriveMultiplier" class="adminSelect" style="margin:0">
+              <option value="2">2x DMG Surge</option>
+              <option value="5" selected>5x Chaos Overdrive</option>
+              <option value="10">10x Cosmic Wrath</option>
+              <option value="999">🌌 God Finisher (999 DMG)</option>
+            </select>
+            <button id="chaosApplyOverdriveBtn" style="background:linear-gradient(135deg, #f43f5e, #e11d48);color:#fff;font-weight:900;padding:10px 14px;margin:0">
+              ⚡ Inject Overdrive
+            </button>
+            <button id="chaosResetOverdriveBtn" class="accountBtn" style="background:#334155;color:#94a3b8;padding:10px 14px;margin:0">
+              🔄 Reset Stat Buffs
+            </button>
+          </div>
+          <div id="chaosOverdriveStatus" style="font-size:11px;color:#94a3b8;margin-top:8px">
+            Select a card to inspect attack values and inject overdrive power.
+          </div>
         </div>
 
       </div>

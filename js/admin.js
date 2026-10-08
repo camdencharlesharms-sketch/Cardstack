@@ -244,14 +244,27 @@ function refreshAdminPlayerData(){
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
 
-  if(typeof fetchCloudAccounts === "function" && !window._adminCloudSyncChecked){
-    window._adminCloudSyncChecked = true;
+  const now = Date.now();
+  if(typeof fetchCloudAccounts === "function" && (!window._lastAdminCloudSyncTime || (now - window._lastAdminCloudSyncTime > 12000))){
+    window._lastAdminCloudSyncTime = now;
     fetchCloudAccounts().then(cloudAccs => {
       let changed = false;
       for(const u in cloudAccs){
-        if(u && !accounts[u]){
-          accounts[u] = cloudAccs[u];
+        if(!u) continue;
+        const cloudAcc = cloudAccs[u];
+        const localAcc = accounts[u];
+        if(!localAcc){
+          accounts[u] = cloudAcc;
           changed = true;
+        } else {
+          const cAdminTime = cloudAcc.lastAdminActionTime || 0;
+          const lAdminTime = localAcc.lastAdminActionTime || 0;
+          const cActive = cloudAcc.lastActive || 0;
+          const lActive = localAcc.lastActive || 0;
+          if(cAdminTime > lAdminTime || cActive > lActive){
+            accounts[u] = (typeof mergeAccountData === "function") ? mergeAccountData(localAcc, cloudAcc) : cloudAcc;
+            changed = true;
+          }
         }
       }
       if(changed){
@@ -336,16 +349,24 @@ function refreshAdminPlayerData(){
       selectPlayerInAllAdminDropdowns(name);
     };
     tr.innerHTML = `
-      <td style="padding:8px 6px"><b>${name}</b></td>
+      <td style="padding:8px 6px">
+        <b>${name}</b>
+        ${data.banned ? '<span style="background:#ef4444;color:#fff;font-size:9px;padding:2px 4px;border-radius:4px;font-weight:800;margin-left:4px">BANNED</span>' : ''}
+      </td>
       <td><span style="color:${isMaster ? '#f43f5e' : (isSub ? '#38bdf8' : '#64748b')}">${roleText}</span></td>
       <td>${statusBadge}</td>
       <td>🪙 ${(typeof formatCoins === "function") ? formatCoins(data.coins) : (isInfiniteValue(data.coins) ? "∞" : (data.coins || 0).toLocaleString())}</td>
       <td>${(data.owned || []).length} / ${cards.length}</td>
-      <td>
-        <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#6366f1;color:#fff;margin-right:4px" onclick="adminWhisperPlayerPrompt('${name}')" title="Send direct whisper to player">💬 Whisper</button>
-        <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#059669;color:#fff;margin-right:4px" onclick="quickGiftPlayerCardPrompt('${name}')">🎁 Gift</button>
-        <button type="button" class="accountBtn" style="padding:4px 8px;font-size:11px;background:#0284c7;color:#fff;margin-right:4px" onclick="adminChangePlayerPasswordPrompt('${name}')" title="Change or reset password">🔑 Pass</button>
-        ${!isMaster ? ((typeof isMasterAdmin === "function" && isMasterAdmin()) ? `<button class="accountBtn" style="padding:4px 8px;font-size:11px;color:#f87171" onclick="adminDeleteSingleAccount('${name}')">Delete</button>` : '') : '<span style="color:#94a3b8;font-size:11px">Owner</span>'}
+      <td style="white-space:nowrap">
+        <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#6366f1;color:#fff;margin-right:3px" onclick="adminWhisperPlayerPrompt('${name}')" title="Send direct whisper to player">💬</button>
+        <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#059669;color:#fff;margin-right:3px" onclick="quickGiftPlayerCardPrompt('${name}')" title="Gift a card to this player">🎁 Gift</button>
+        <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#dc2626;color:#fff;margin-right:3px" onclick="quickRevokePlayerCardPrompt('${name}')" title="Take away a card from this player">❌ Take</button>
+        <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#d97706;color:#fff;margin-right:3px" onclick="quickTreasuryPlayerPrompt('${name}')" title="Gift or take away coins">💰 Coins</button>
+        <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#0284c7;color:#fff;margin-right:3px" onclick="adminChangePlayerPasswordPrompt('${name}')" title="Change or reset password">🔑 Pass</button>
+        ${!isMaster ? ((typeof isMasterAdmin === "function" && isMasterAdmin()) ? `
+          <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#334155;color:${data.banned ? '#4ade80' : '#f87171'};margin-right:3px" onclick="adminToggleBanPlayer('${name}')" title="Suspend or unsuspend account">${data.banned ? '🟢 Unban' : '⛔ Ban'}</button>
+          <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;color:#f87171" onclick="adminDeleteSingleAccount('${name}')" title="Delete account across all devices & cloud">Delete</button>
+        ` : '') : '<span style="color:#94a3b8;font-size:11px">Owner</span>'}
       </td>
     `;
     tableBody.appendChild(tr);
@@ -715,10 +736,22 @@ function getTargetPlayer(inputId, selectId){
 
   // Case-insensitive lookup against registered accounts
   const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === rawName.toLowerCase());
-  const name = matchKey || rawName;
+  let name = matchKey || rawName;
 
   if(!accounts[name]){
-    accounts[name] = { password: "", owned: [], coins: 100, hasPlayed: true, lastActive: Date.now() };
+    // Check cloud cache if offline player exists in cloud
+    try {
+      const cloudCache = JSON.parse(localStorage.getItem("cardCollectorCloudCache") || "{}");
+      const cloudMatch = Object.keys(cloudCache).find(k => k.toLowerCase() === rawName.toLowerCase());
+      if(cloudMatch && cloudCache[cloudMatch]){
+        accounts[cloudMatch] = cloudCache[cloudMatch];
+        name = cloudMatch;
+      }
+    } catch(e){}
+  }
+
+  if(!accounts[name]){
+    accounts[name] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   }
   return name;
@@ -1064,15 +1097,17 @@ document.getElementById("adminGiveSkinBtn").onclick = ()=>{
   const alreadyHas = accounts[target].owned.some(x => parseInt(x, 10) === idx);
   if(!alreadyHas){
     accounts[target].owned.push(idx);
+    accounts[target].lastAdminActionTime = Date.now();
+    accounts[target].adminRevision = (accounts[target].adminRevision || 0) + 1;
     if(currentUser && target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-    if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true);
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
     if(typeof broadcastAdminActionToTarget === "function"){
       broadcastAdminActionToTarget(target, { type: "gift_card", cardIndex: idx, card: cards[idx] });
     }
     refreshAdminPlayerData();
     render();
-    alert(`Card "${cards[idx].name}" granted to ${target}.`);
+    alert(`🎁 Card "${cards[idx].name}" granted to ${target} (Synced to Cloud Registry for offline/online delivery).`);
   } else {
     alert(`${target} already possesses this card.`);
   }
@@ -1110,15 +1145,21 @@ document.getElementById("adminTakeSkinBtn").onclick = ()=>{
   if(isNaN(idx)) return alert("Select a valid card to revoke.");
 
   if(accounts[target] && accounts[target].owned){
-    accounts[target].owned = accounts[target].owned.filter(x => x !== idx);
+    if(!accounts[target].owned.some(x => parseInt(x, 10) === idx)){
+      return alert(`${target} does not own card "${cards[idx] ? cards[idx].name : '#' + idx}".`);
+    }
+    accounts[target].owned = accounts[target].owned.filter(x => parseInt(x, 10) !== idx);
+    accounts[target].lastAdminActionTime = Date.now();
+    accounts[target].adminRevision = (accounts[target].adminRevision || 0) + 1;
     if(target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
     if(typeof broadcastAdminActionToTarget === "function"){
       broadcastAdminActionToTarget(target, { type: "revoke_card", cardIndex: idx });
     }
     refreshAdminPlayerData();
     render();
-    alert(`Card revoked from ${target}.`);
+    alert(`Card "${cards[idx] ? cards[idx].name : '#' + idx}" revoked from ${target} (Synced to Cloud Registry even if offline).`);
   }
 };
 
@@ -1128,14 +1169,17 @@ document.getElementById("adminUnlockAllPlayerBtn").onclick = ()=>{
   const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
   if(!target) return alert("Type or select a target player username first.");
   accounts[target].owned = cards.map((_, i) => i);
+  accounts[target].lastAdminActionTime = Date.now();
+  accounts[target].adminRevision = (accounts[target].adminRevision || 0) + 1;
   if(target.toLowerCase() === currentUser.toLowerCase()) owned = accounts[target].owned;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
   if(typeof broadcastAdminActionToTarget === "function"){
     broadcastAdminActionToTarget(target, { type: "unlock_all" });
   }
   refreshAdminPlayerData();
   render();
-  alert(`Unlocked all ${cards.length} cards for ${target}!`);
+  alert(`Unlocked all ${cards.length} cards for ${target} (Synced to Cloud Registry)!`);
 };
 
 // --- GOD POWER SHORTCUTS (CAM / MASTER ADMIN ONLY) ---
@@ -1161,14 +1205,17 @@ if(grantDivMythBtn){
     });
 
     if(target.toLowerCase() === currentUser.toLowerCase()) owned = targetAcc.owned;
+    targetAcc.lastAdminActionTime = Date.now();
+    targetAcc.adminRevision = (targetAcc.adminRevision || 0) + 1;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
     if(typeof broadcastAdminActionToTarget === "function"){
       broadcastAdminActionToTarget(target, { type: "unlock_all" });
     }
     refreshAdminPlayerData();
     render();
     if(typeof playChaosSfx === "function") playChaosSfx("triumph");
-    alert(`Granted all Divine and Mythic cards to ${target}! (${countAdded} new cards added)`);
+    alert(`Granted all Divine and Mythic cards to ${target}! (${countAdded} new cards added - Synced to Cloud)`);
   };
 }
 
@@ -1188,7 +1235,10 @@ if(maxAccBtn){
       owned = targetAcc.owned;
       updateDisplay();
     }
+    targetAcc.lastAdminActionTime = Date.now();
+    targetAcc.adminRevision = (targetAcc.adminRevision || 0) + 1;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
     if(typeof broadcastAdminActionToTarget === "function"){
       broadcastAdminActionToTarget(target, { type: "infinite_coins" });
       broadcastAdminActionToTarget(target, { type: "unlock_all" });
@@ -1196,7 +1246,7 @@ if(maxAccBtn){
     refreshAdminPlayerData();
     render();
     if(typeof playChaosSfx === "function") playChaosSfx("ascension");
-    alert(`MAXED OUT ACCOUNT for ${target}! Granted ∞ Infinite Coins and 100% of all ${cards.length} cards in the game!`);
+    alert(`MAXED OUT ACCOUNT for ${target}! Granted ∞ Infinite Coins and 100% of all ${cards.length} cards in the game (Synced to Cloud Registry)!`);
   };
 }
 
@@ -1205,16 +1255,20 @@ document.getElementById("adminWipePlayerBtn").onclick = ()=>{
 
   const target = getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
   if(!target) return alert("Type or select a target player username first.");
-  if(confirm(`Wipe all unlocked cards for ${target}?`)){
-    accounts[target].owned = [];
-    if(target.toLowerCase() === currentUser.toLowerCase()) owned = [];
+  if(confirm(`Wipe all unlocked cards for ${target} across all devices and cloud?`)){
+    accounts[target].owned = [0];
+    accounts[target].unreleasedOwned = [];
+    accounts[target].lastAdminActionTime = Date.now();
+    accounts[target].adminRevision = (accounts[target].adminRevision || 0) + 1;
+    if(target.toLowerCase() === currentUser.toLowerCase()) owned = [0];
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
     if(typeof broadcastAdminActionToTarget === "function"){
       broadcastAdminActionToTarget(target, { type: "wipe_cards" });
     }
     refreshAdminPlayerData();
     render();
-    alert(`Inventory cleared for ${target}.`);
+    alert(`Inventory cleared for ${target} (Synced to Cloud Registry).`);
   }
 };
 
@@ -1231,7 +1285,10 @@ function giftInfiniteCoinsToTarget(target){
     coins = Infinity;
   }
 
+  accounts[target].lastAdminActionTime = Date.now();
+  accounts[target].adminRevision = (accounts[target].adminRevision || 0) + 1;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
   if(typeof broadcastAdminActionToTarget === "function"){
     broadcastAdminActionToTarget(target, { type: "gift_coins", amount: "Infinity" });
   }
@@ -1239,8 +1296,8 @@ function giftInfiniteCoinsToTarget(target){
   if(typeof confetti === "function") confetti({ particleCount: 90, spread: 75 });
   refreshAdminPlayerData();
   render();
-  if(typeof showLiveToast === "function") showLiveToast(`⚡ Gifted ∞ INFINITE COINS to ${target}!`, true);
-  alert(`⚡ SUCCESS! Gifted ∞ INFINITE COINS to ${target}! They now have unlimited money forever.`);
+  if(typeof showLiveToast === "function") showLiveToast(`⚡ Gifted ∞ INFINITE COINS to ${target}! (Synced to Cloud)`, true);
+  alert(`⚡ SUCCESS! Gifted ∞ INFINITE COINS to ${target}! They now have unlimited money forever across all devices.`);
 }
 
 const quickInfBtn = document.getElementById("adminQuickInfiniteCoinInputBtn");
@@ -1256,6 +1313,43 @@ if(giftInfCoinsBtn){
   giftInfCoinsBtn.onclick = ()=>{
     const target = getTargetPlayer("economyPlayerInput", "economyPlayerSelect");
     giftInfiniteCoinsToTarget(target);
+  };
+}
+
+
+// Deduct / Take Away Coins from Target Player (Online or Offline)
+const deductCoinsBtn = document.getElementById("adminDeductPlayerCoinsBtn");
+if(deductCoinsBtn){
+  deductCoinsBtn.onclick = ()=>{
+    if(!isMasterAdmin()) return alert("Only master admin Cam can deduct coins from players.");
+    const target = getTargetPlayer("economyPlayerInput", "economyPlayerSelect");
+    const rawInput = (document.getElementById("adminPlayerCoinsAmount").value || "").trim();
+    if(!target) return alert("Please type or select a target player username.");
+
+    const amt = parseInt(rawInput, 10);
+    if(isNaN(amt) || amt <= 0) return alert("Enter a valid positive number to deduct.");
+
+    if(!accounts[target]) accounts[target] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+
+    if(isInfiniteValue(accounts[target].coins)){
+      accounts[target].coins = 0;
+    } else {
+      accounts[target].coins = Math.max(0, (accounts[target].coins || 0) - amt);
+    }
+
+    accounts[target].lastAdminActionTime = Date.now();
+    accounts[target].adminRevision = (accounts[target].adminRevision || 0) + 1;
+
+    if(target.toLowerCase() === currentUser.toLowerCase()) coins = accounts[target].coins;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
+    if(typeof broadcastAdminActionToTarget === "function"){
+      broadcastAdminActionToTarget(target, { type: "set_coins", amount: accounts[target].coins });
+    }
+    if(typeof playChaosSfx === "function") playChaosSfx("click");
+    refreshAdminPlayerData();
+    render();
+    alert(`Deducted ${amt.toLocaleString()} coins from ${target}. New balance: ${accounts[target].coins.toLocaleString()} 🪙 (Synced to Cloud Registry).`);
   };
 }
 
@@ -1299,15 +1393,18 @@ document.getElementById("adminAddPlayerCoinsBtn").onclick = ()=>{
   }
 
   accounts[target].coins = (accounts[target].coins || 0) + amt;
+  accounts[target].lastAdminActionTime = Date.now();
+  accounts[target].adminRevision = (accounts[target].adminRevision || 0) + 1;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = accounts[target].coins;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
   if(typeof broadcastAdminActionToTarget === "function"){
     broadcastAdminActionToTarget(target, { type: "gift_coins", amount: amt });
   }
   if(typeof playChaosSfx === "function") playChaosSfx("coins");
   refreshAdminPlayerData();
   render();
-  alert(`Added ${amt.toLocaleString()} coins to ${target}.`);
+  alert(`Added ${amt.toLocaleString()} coins to ${target} (Synced to Cloud Registry).`);
 };
 
 document.getElementById("adminSetPlayerCoinsBtn").onclick = ()=>{
@@ -1323,14 +1420,17 @@ document.getElementById("adminSetPlayerCoinsBtn").onclick = ()=>{
   const amt = parseInt(rawInput, 10);
   if(isNaN(amt) || amt < 0) return alert("Enter a valid non-negative number or 'Infinity' / '∞'.");
   accounts[target].coins = amt;
+  accounts[target].lastAdminActionTime = Date.now();
+  accounts[target].adminRevision = (accounts[target].adminRevision || 0) + 1;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = accounts[target].coins;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
   if(typeof broadcastAdminActionToTarget === "function"){
     broadcastAdminActionToTarget(target, { type: "set_coins", amount: amt });
   }
   refreshAdminPlayerData();
   render();
-  alert(`Set ${target}'s treasury balance to ${amt.toLocaleString()} coins.`);
+  alert(`Set ${target}'s treasury balance to ${amt.toLocaleString()} coins (Synced to Cloud Registry).`);
 };
 
 document.getElementById("adminDrainPlayerCoinsBtn").onclick = ()=>{
@@ -1338,14 +1438,17 @@ document.getElementById("adminDrainPlayerCoinsBtn").onclick = ()=>{
   const target = getTargetPlayer("economyPlayerInput", "economyPlayerSelect");
   if(!target) return alert("Please type or select a target player username.");
   accounts[target].coins = 0;
+  accounts[target].lastAdminActionTime = Date.now();
+  accounts[target].adminRevision = (accounts[target].adminRevision || 0) + 1;
   if(target.toLowerCase() === currentUser.toLowerCase()) coins = 0;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
   if(typeof broadcastAdminActionToTarget === "function"){
     broadcastAdminActionToTarget(target, { type: "set_coins", amount: 0 });
   }
   refreshAdminPlayerData();
   render();
-  alert(`Emptied treasury balance for ${target}.`);
+  alert(`Emptied treasury balance for ${target} to 0 coins (Synced to Cloud Registry).`);
 };
 
 document.getElementById("adminAddSelfCoinsBtn").onclick = ()=>{
@@ -1427,7 +1530,10 @@ window.adminChangePlayerPasswordPrompt = function(username){
   } else {
     accounts[matchKey].password = cleanPass;
   }
+  accounts[matchKey].lastAdminActionTime = Date.now();
+  accounts[matchKey].adminRevision = (accounts[matchKey].adminRevision || 0) + 1;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(matchKey, true, true);
 
   if(matchKey.toLowerCase() === "cam"){
     localStorage.setItem("cardCollectorCamPass", cleanPass);
@@ -1445,14 +1551,18 @@ window.adminChangePlayerPasswordPrompt = function(username){
   }
 };
 
-window.adminDeleteSingleAccount = function(username){
+window.adminDeleteSingleAccount = async function(username){
   if(!isMasterAdmin()) return alert("Only master admin Cam can delete accounts.");
-  if(confirm(`Permanently remove account "${username}"?`)){
+  if(confirm(`Permanently remove account "${username}" across all devices and cloud?`)){
     delete accounts[username];
-    delete subAdminRoles[username];
+    if(subAdminRoles && subAdminRoles[username]) delete subAdminRoles[username];
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
+    if(typeof deleteAccountFromCloud === "function"){
+      await deleteAccountFromCloud(username);
+    }
     refreshAdminPlayerData();
+    alert(`Account "${username}" permanently purged locally and from Cloud Registry.`);
   }
 };
 
@@ -2231,6 +2341,142 @@ window.quickGiftVaultCard = function(cardId){
   }
 };
 
+
+
+// Interactive Quick Actions for Player Row (Online and Offline Management)
+window.quickRevokePlayerCardPrompt = function(name){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can revoke cards.");
+  if(!name) return;
+  selectPlayerInAllAdminDropdowns(name);
+  const acc = accounts[name] || (typeof getUserAccount === "function" ? getUserAccount(name) : null);
+  const ownedList = (acc && Array.isArray(acc.owned)) ? acc.owned : [];
+  const vaultList = (acc && Array.isArray(acc.unreleasedOwned)) ? acc.unreleasedOwned : [];
+
+  if(ownedList.length === 0 && vaultList.length === 0){
+    return alert(`Player [${name}] currently has no unlocked cards to revoke.`);
+  }
+
+  const ownedNames = ownedList.map(idx => `[${idx}] ${cards[idx] ? cards[idx].name : 'Card #' + idx}`).join(", ");
+  const vaultNames = vaultList.join(", ");
+  const summary = (ownedNames ? "Standard Cards: " + ownedNames : "") + (vaultNames ? "\nVault Cards: " + vaultNames : "");
+
+  const chosen = prompt(`❌ Revoke Card from [${name}]:\n\n${summary}\n\nEnter the card index number (e.g. 5) or card name to revoke:`);
+  if(!chosen) return;
+  const clean = chosen.trim();
+
+  // Try numerical index
+  const num = parseInt(clean, 10);
+  if(!isNaN(num) && ownedList.includes(num)){
+    acc.owned = acc.owned.filter(x => x !== num);
+    acc.lastAdminActionTime = Date.now();
+    acc.adminRevision = (acc.adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(name, true, true);
+    refreshAdminPlayerData();
+    render();
+    return alert(`❌ Successfully revoked card [${num}] (${cards[num] ? cards[num].name : 'Card'}) from ${name} (Synced to Cloud)!`);
+  }
+
+  // Try card name match
+  const foundIdx = cards.findIndex(c => c && c.name && c.name.toLowerCase() === clean.toLowerCase());
+  if(foundIdx !== -1 && ownedList.includes(foundIdx)){
+    acc.owned = acc.owned.filter(x => x !== foundIdx);
+    acc.lastAdminActionTime = Date.now();
+    acc.adminRevision = (acc.adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(name, true, true);
+    refreshAdminPlayerData();
+    render();
+    return alert(`❌ Successfully revoked "${cards[foundIdx].name}" from ${name} (Synced to Cloud)!`);
+  }
+
+  // Try vault card
+  if(vaultList.some(v => v.toLowerCase() === clean.toLowerCase())){
+    const matchVault = vaultList.find(v => v.toLowerCase() === clean.toLowerCase());
+    acc.unreleasedOwned = acc.unreleasedOwned.filter(v => v !== matchVault);
+    acc.lastAdminActionTime = Date.now();
+    acc.adminRevision = (acc.adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(name, true, true);
+    refreshAdminPlayerData();
+    render();
+    return alert(`❌ Successfully revoked Vault card "${matchVault}" from ${name} (Synced to Cloud)!`);
+  }
+
+  alert(`Card "${clean}" was not found in ${name}'s collection.`);
+};
+
+window.quickTreasuryPlayerPrompt = function(name){
+  if(!name) return;
+  selectPlayerInAllAdminDropdowns(name);
+  const acc = accounts[name] || (typeof getUserAccount === "function" ? getUserAccount(name) : null);
+  const curCoins = (acc && acc.coins !== undefined) ? acc.coins : 100;
+  const curDisplay = (typeof isInfiniteValue === "function" && isInfiniteValue(curCoins)) ? "∞ Infinite" : curCoins.toLocaleString();
+
+  const input = prompt(`💰 Treasury Operations for [${name}]\nCurrent Balance: ${curDisplay} 🪙\n\nEnter positive number to GIFT (+500), negative number to DEDUCT / TAKE (-200), '0' to DRAIN to 0, '=' and number to SET exact balance (=1000), or 'inf' for ∞ Infinite:`);
+  if(input === null) return;
+  const trimmed = input.trim();
+  if(!trimmed) return;
+
+  if(!accounts[name]){
+    accounts[name] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+  }
+
+  if(trimmed.toLowerCase() === "inf" || trimmed.toLowerCase() === "infinity" || trimmed === "∞"){
+    return giftInfiniteCoinsToTarget(name);
+  }
+
+  if(trimmed.startsWith("=")){
+    const exactVal = parseInt(trimmed.substring(1).trim(), 10);
+    if(isNaN(exactVal) || exactVal < 0) return alert("Invalid exact coin amount.");
+    accounts[name].coins = exactVal;
+  } else if(trimmed === "0"){
+    accounts[name].coins = 0;
+  } else {
+    const delta = parseInt(trimmed, 10);
+    if(isNaN(delta)) return alert("Invalid coin amount.");
+    if(delta < 0){
+      if(isInfiniteValue(accounts[name].coins)) accounts[name].coins = 0;
+      else accounts[name].coins = Math.max(0, (accounts[name].coins || 0) + delta);
+    } else {
+      if(!isInfiniteValue(accounts[name].coins)){
+        accounts[name].coins = (accounts[name].coins || 0) + delta;
+      }
+    }
+  }
+
+  accounts[name].lastAdminActionTime = Date.now();
+  accounts[name].adminRevision = (accounts[name].adminRevision || 0) + 1;
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(name, true, true);
+  refreshAdminPlayerData();
+  render();
+  alert(`💰 Treasury updated for [${name}]! New Balance: ${accounts[name].coins.toLocaleString()} 🪙 (Synced to Cloud Registry)`);
+};
+
+window.adminToggleBanPlayer = function(name){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can suspend/unsuspend players.");
+  if(!name) return;
+  if(name.toLowerCase() === ADMIN_USERNAME.toLowerCase()) return alert("Master Cam cannot be suspended.");
+
+  if(!accounts[name]){
+    accounts[name] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+  }
+  accounts[name].banned = !accounts[name].banned;
+  accounts[name].lastAdminActionTime = Date.now();
+  accounts[name].adminRevision = (accounts[name].adminRevision || 0) + 1;
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(name, true, true);
+
+  if(accounts[name].banned){
+    if(typeof broadcastAdminActionToTarget === "function") broadcastAdminActionToTarget(name, { type: "ban_player" });
+    alert(`⛔ Account [${name}] has been SUSPENDED / BANNED across all devices and cloud.`);
+  } else {
+    if(typeof broadcastAdminActionToTarget === "function") broadcastAdminActionToTarget(name, { type: "unban_player" });
+    alert(`🟢 Account [${name}] has been UNSUSPENDED / UNBANNED.`);
+  }
+  refreshAdminPlayerData();
+};
 
 window.quickGiftPlayerCardPrompt = function(name){
   selectPlayerInAllAdminDropdowns(name);
@@ -4314,7 +4560,567 @@ function initChaosLabPacks(){
   }
 }
 
+
+/* ========================================================
+   CHAOS LAB ADVANCED MODULES: FUSION, GOBLIN, ZERO-G, OVERDRIVE
+   ======================================================== */
+
+// --- 1. CHAOS CARD FUSION & MUTATION CHAMBER ---
+function initChaosFusionUI(){
+  const selectA = document.getElementById("chaosFusionCardA");
+  const selectB = document.getElementById("chaosFusionCardB");
+  if(!selectA || !selectB) return;
+
+  const prevA = selectA.value;
+  const prevB = selectB.value;
+
+  selectA.innerHTML = "";
+  selectB.innerHTML = "";
+
+  cards.forEach((c, idx) => {
+    const optA = document.createElement("option");
+    optA.value = idx.toString();
+    optA.textContent = `[${idx}] ${c.name} (${c.rarity})`;
+    selectA.appendChild(optA);
+
+    const optB = document.createElement("option");
+    optB.value = idx.toString();
+    optB.textContent = `[${idx}] ${c.name} (${c.rarity})`;
+    selectB.appendChild(optB);
+  });
+
+  if(prevA && selectA.querySelector(`option[value="${prevA}"]`)) selectA.value = prevA;
+  else if(cards.length > 0) selectA.value = "0";
+
+  if(prevB && selectB.querySelector(`option[value="${prevB}"]`)) selectB.value = prevB;
+  else if(cards.length > 1) selectB.value = "1";
+
+  updateChaosFusionPreview();
+}
+window.initChaosFusionUI = initChaosFusionUI;
+
+function updateChaosFusionPreview(){
+  const selectA = document.getElementById("chaosFusionCardA");
+  const selectB = document.getElementById("chaosFusionCardB");
+  const tierSelect = document.getElementById("chaosFusionTier");
+  const nameInput = document.getElementById("chaosFusionCustomName");
+
+  const nameEl = document.getElementById("chaosFusionPreviewName");
+  const rarityEl = document.getElementById("chaosFusionPreviewRarity");
+  const attacksEl = document.getElementById("chaosFusionPreviewAttacks");
+  const thumbEl = document.getElementById("chaosFusionPreviewThumb");
+
+  if(!selectA || !selectB || !nameEl) return;
+
+  const idxA = parseInt(selectA.value, 10);
+  const idxB = parseInt(selectB.value, 10);
+  const cardA = cards[idxA];
+  const cardB = cards[idxB];
+
+  if(!cardA || !cardB){
+    nameEl.textContent = "Select two valid cards...";
+    return;
+  }
+
+  const tier = tierSelect ? tierSelect.value : "omega";
+  let targetRarity = "Transcendent";
+  let rarityColor = "#ec4899";
+  let dmgMult = 1.35;
+
+  if(tier === "synergy"){
+    targetRarity = "Legendary";
+    rarityColor = "#fbbf24";
+    dmgMult = 1.35;
+  } else if(tier === "void"){
+    targetRarity = "Mythic";
+    rarityColor = "#a855f7";
+    dmgMult = 1.6;
+  } else {
+    targetRarity = "Transcendent";
+    rarityColor = "#ec4899";
+    dmgMult = 2.0;
+  }
+
+  // Generate hybrid name
+  let hybridName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : "";
+  if(!hybridName){
+    const wordsA = cardA.name.split(" ");
+    const wordsB = cardB.name.split(" ");
+    const prefix = wordsA[0] || cardA.name;
+    const suffix = wordsB[wordsB.length - 1] || cardB.name;
+    const title = tier === "void" ? "Void" : (tier === "omega" ? "Omega" : "Chrono");
+    hybridName = `${title} ${prefix} ${suffix}`;
+  }
+
+  nameEl.textContent = hybridName;
+  rarityEl.textContent = `Rarity: ${targetRarity} Mutation (Tier: ${tier.toUpperCase()})`;
+  rarityEl.style.color = rarityColor;
+
+  const atkA = (cardA.attacks && cardA.attacks[0]) ? cardA.attacks[0] : { name: "Strike", dmg: 50 };
+  const atkB = (cardB.attacks && cardB.attacks[0]) ? cardB.attacks[0] : { name: "Surge", dmg: 60 };
+
+  const boostedDmgA = Math.round((parseInt(atkA.dmg, 10) || 50) * dmgMult);
+  const boostedDmgB = Math.round((parseInt(atkB.dmg, 10) || 60) * dmgMult);
+  const ultimateDmg = Math.round((boostedDmgA + boostedDmgB) * 1.2);
+
+  attacksEl.innerHTML = `
+    <b style="color:#67e8f9">1. ${atkA.name}</b> (${boostedDmgA} DMG) • 
+    <b style="color:#f472b6">2. ${atkB.name}</b> (${boostedDmgB} DMG) • 
+    <b style="color:#fde047">3. ${tier.toUpperCase()} NOVA</b> (${ultimateDmg} DMG)
+  `;
+
+  if(thumbEl){
+    thumbEl.innerHTML = tier === "void" ? "🔮" : (tier === "omega" ? "👑" : "⚡");
+    thumbEl.style.borderColor = rarityColor;
+    thumbEl.style.boxShadow = `0 0 20px ${rarityColor}`;
+  }
+}
+window.updateChaosFusionPreview = updateChaosFusionPreview;
+
+function igniteChaosFusion(){
+  const selectA = document.getElementById("chaosFusionCardA");
+  const selectB = document.getElementById("chaosFusionCardB");
+  const tierSelect = document.getElementById("chaosFusionTier");
+  const nameInput = document.getElementById("chaosFusionCustomName");
+
+  const idxA = parseInt(selectA.value, 10);
+  const idxB = parseInt(selectB.value, 10);
+  const cardA = cards[idxA];
+  const cardB = cards[idxB];
+  if(!cardA || !cardB) return alert("Select two valid cards to fuse.");
+
+  const tier = tierSelect ? tierSelect.value : "omega";
+  let targetRarity = "Transcendent";
+  let dmgMult = 2.0;
+
+  if(tier === "synergy"){
+    targetRarity = "Legendary";
+    dmgMult = 1.35;
+  } else if(tier === "void"){
+    targetRarity = "Mythic";
+    dmgMult = 1.6;
+  } else {
+    targetRarity = "Transcendent";
+    dmgMult = 2.0;
+  }
+
+  let hybridName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : "";
+  if(!hybridName){
+    const wordsA = cardA.name.split(" ");
+    const wordsB = cardB.name.split(" ");
+    const prefix = wordsA[0] || cardA.name;
+    const suffix = wordsB[wordsB.length - 1] || cardB.name;
+    const title = tier === "void" ? "Void" : (tier === "omega" ? "Omega" : "Chrono");
+    hybridName = `${title} ${prefix} ${suffix}`;
+  }
+
+  const atkA = (cardA.attacks && cardA.attacks[0]) ? cardA.attacks[0] : { name: "Strike", dmg: 50 };
+  const atkB = (cardB.attacks && cardB.attacks[0]) ? cardB.attacks[0] : { name: "Surge", dmg: 60 };
+  const boostedDmgA = Math.round((parseInt(atkA.dmg, 10) || 50) * dmgMult);
+  const boostedDmgB = Math.round((parseInt(atkB.dmg, 10) || 60) * dmgMult);
+  const ultimateDmg = Math.round((boostedDmgA + boostedDmgB) * 1.2);
+
+  // Generate hybrid SVG artwork
+  const hybridColorA = tier === "void" ? "#8b5cf6" : "#06b6d4";
+  const hybridColorB = tier === "void" ? "#3b0764" : "#ec4899";
+  const hybridSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400"><defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${hybridColorA}" stop-opacity="0.9"/><stop offset="100%" stop-color="${hybridColorB}" stop-opacity="0.3"/></radialGradient></defs><rect width="300" height="400" fill="#090d16"/><circle cx="150" cy="200" r="110" fill="url(%23g)"/><polygon points="150,80 185,150 260,160 205,215 220,290 150,250 80,290 95,215 40,160 115,150" fill="none" stroke="#fff" stroke-width="4"/><text x="150" y="340" fill="%23fff" font-family="sans-serif" font-size="20" font-weight="900" text-anchor="middle">${encodeURIComponent(hybridName)}</text></svg>`;
+
+  const newCard = {
+    name: hybridName,
+    rarity: targetRarity,
+    image: hybridSvg,
+    attacks: [
+      { name: `${cardA.name.split(" ")[0]} Surge`, dmg: boostedDmgA },
+      { name: `${cardB.name.split(" ")[0]} Blast`, dmg: boostedDmgB },
+      { name: `${tier.toUpperCase()} OBLITERATION`, dmg: ultimateDmg }
+    ]
+  };
+
+  cards.push(newCard);
+  const newIndex = cards.length - 1;
+
+  if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+
+  // Unlock for current user
+  if(currentUser && accounts[currentUser]){
+    if(!Array.isArray(accounts[currentUser].owned)) accounts[currentUser].owned = [];
+    if(!accounts[currentUser].owned.includes(newIndex)){
+      accounts[currentUser].owned.push(newIndex);
+    }
+    accounts[currentUser].lastAdminActionTime = Date.now();
+    accounts[currentUser].adminRevision = (accounts[currentUser].adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    owned = accounts[currentUser].owned;
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(currentUser, true, true);
+  } else {
+    if(!owned.includes(newIndex)) owned.push(newIndex);
+    save();
+  }
+
+  playChaosSfx("laser");
+  setTimeout(() => playChaosSfx("ascension"), 250);
+  if(typeof confetti === "function") confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+
+  render();
+  refreshAdminPlayerData();
+  initChaosFusionUI();
+  initChaosOverdriveUI();
+  if(typeof initCardSelect === "function") initCardSelect();
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🧬 CHAOS FUSION COMPLETE: <b>${hybridName}</b> (${targetRarity}) has been synthesized and added to your binder!`, true);
+  }
+  alert(`⚡ CHAOS FUSION COMPLETE!\n\nCard: "${hybridName}" (${targetRarity})\nAttacks: 3 Synergized Attacks up to ${ultimateDmg} DMG!\n\nThis card is now in your collection and available in Arena battles!`);
+}
+window.igniteChaosFusion = igniteChaosFusion;
+
+// --- 2. CHAOS LOOT GOBLIN RUSH ---
+let goblinMoveTimer = null;
+let goblinHp = 10;
+
+function spawnChaosLootGoblin(isRemote = false){
+  let el = document.getElementById("chaosLootGoblin");
+  if(el) el.remove();
+  clearInterval(goblinMoveTimer);
+
+  goblinHp = 10;
+  el = document.createElement("div");
+  el.id = "chaosLootGoblin";
+  el.innerHTML = `
+    <div class="goblin-hp-bar"><div class="goblin-hp-fill" id="goblinHpFill"></div></div>
+    <div class="goblin-body">👺</div>
+    <div class="goblin-sack">💰</div>
+  `;
+  document.body.appendChild(el);
+
+  const moveGoblin = () => {
+    const maxX = window.innerWidth - 90;
+    const maxY = window.innerHeight - 90;
+    const randX = Math.floor(Math.random() * (maxX - 40)) + 20;
+    const randY = Math.floor(Math.random() * (maxY - 120)) + 60;
+    el.style.left = randX + "px";
+    el.style.top = randY + "px";
+  };
+  moveGoblin();
+  goblinMoveTimer = setInterval(moveGoblin, 750);
+
+  el.onclick = (e) => {
+    e.stopPropagation();
+    goblinHp--;
+    playChaosSfx("coins");
+
+    const reward = Math.floor(Math.random() * 250) + 250;
+    if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))){
+      coins += reward;
+    }
+    if(currentUser && accounts[currentUser] && (typeof isInfiniteValue !== "function" || !isInfiniteValue(accounts[currentUser].coins))){
+      accounts[currentUser].coins = (accounts[currentUser].coins || 0) + reward;
+    }
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+
+    // Floating text
+    const pop = document.createElement("div");
+    pop.className = "goblin-coin-popup";
+    pop.textContent = `+${reward} 🪙`;
+    pop.style.left = e.clientX + "px";
+    pop.style.top = (e.clientY - 20) + "px";
+    document.body.appendChild(pop);
+    setTimeout(() => pop.remove(), 800);
+
+    const fill = document.getElementById("goblinHpFill");
+    if(fill) fill.style.width = `${(goblinHp / 10) * 100}%`;
+
+    if(goblinHp <= 0){
+      clearInterval(goblinMoveTimer);
+      el.remove();
+      playChaosSfx("triumph");
+      if(typeof confetti === "function") confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
+
+      const jackpot = 5000;
+      if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))){
+        coins += jackpot;
+      }
+      if(currentUser && accounts[currentUser] && (typeof isInfiniteValue !== "function" || !isInfiniteValue(accounts[currentUser].coins))){
+        accounts[currentUser].coins = (accounts[currentUser].coins || 0) + jackpot;
+      }
+
+      // Unlock a random unowned card
+      let unlockedCardName = "";
+      if(Array.isArray(cards) && cards.length > 0){
+        const unownedIndices = cards.map((_, i) => i).filter(i => !owned.includes(i));
+        if(unownedIndices.length > 0){
+          const awardIdx = unownedIndices[Math.floor(Math.random() * unownedIndices.length)];
+          owned.push(awardIdx);
+          if(currentUser && accounts[currentUser]){
+            accounts[currentUser].owned = owned;
+          }
+          unlockedCardName = cards[awardIdx].name;
+        }
+      }
+      if(typeof save === "function") save();
+      if(typeof render === "function") render();
+
+      const bonusMsg = unlockedCardName ? ` and unlocked card "${unlockedCardName}"!` : "!";
+      if(typeof showLiveToast === "function"){
+        showLiveToast(`🎉 JACKPOT! You defeated the Loot Goblin for +${jackpot.toLocaleString()} Coins${bonusMsg}`, true);
+      }
+    }
+  };
+
+  const statusEl = document.getElementById("chaosGoblinStatus");
+  if(statusEl) statusEl.textContent = "🏃 Loot Goblin is active on screen! Click it to snatch coins!";
+
+  // Auto disappear after 18 seconds if not clicked down
+  setTimeout(() => {
+    const existing = document.getElementById("chaosLootGoblin");
+    if(existing){
+      clearInterval(goblinMoveTimer);
+      existing.remove();
+      if(statusEl) statusEl.textContent = "Goblin escaped back into the treasury dungeon.";
+    }
+  }, 18000);
+}
+window.spawnChaosLootGoblin = spawnChaosLootGoblin;
+
+// --- 3. ZERO-G PHYSICS & SINGULARITY FIELD ---
+let zeroGAnimId = null;
+let zeroGCardsList = [];
+
+function launchChaosZeroG(isRemote = false){
+  clearChaosPhysics(true);
+  playChaosSfx("warp");
+
+  const numCards = 16;
+  const cardsContainer = [];
+
+  for(let i = 0; i < numCards; i++){
+    const cardEl = document.createElement("div");
+    cardEl.className = "chaos-zero-g-card";
+    const sampleCard = cards[i % cards.length] || { name: "Cosmic", rarity: "Mythic" };
+    cardEl.innerHTML = `
+      <div style="font-size:16px">🃏</div>
+      <div style="font-size:9px;font-weight:900;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%">${sampleCard.name}</div>
+      <div style="font-size:8px;color:#38bdf8">${sampleCard.rarity}</div>
+    `;
+
+    const x = Math.random() * (window.innerWidth - 80);
+    const y = Math.random() * (window.innerHeight - 100);
+    const vx = (Math.random() - 0.5) * 4;
+    const vy = (Math.random() - 0.5) * 4;
+    const rot = Math.random() * 360;
+    const vrot = (Math.random() - 0.5) * 2;
+
+    document.body.appendChild(cardEl);
+    cardsContainer.push({ el: cardEl, x, y, vx, vy, rot, vrot });
+  }
+
+  zeroGCardsList = cardsContainer;
+
+  function updatePhysics(){
+    const vortex = document.getElementById("chaosSingularityVortex");
+    const vCenter = vortex ? { x: window.innerWidth / 2, y: window.innerHeight / 2 } : null;
+
+    zeroGCardsList.forEach(c => {
+      if(vCenter){
+        // Singularity gravitational pull
+        const dx = vCenter.x - c.x;
+        const dy = vCenter.y - c.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = Math.min(8, 250 / dist);
+        c.vx += (dx / dist) * force * 0.1;
+        c.vy += (dy / dist) * force * 0.1;
+        c.vrot += 0.2;
+      }
+
+      c.x += c.vx;
+      c.y += c.vy;
+      c.rot += c.vrot;
+
+      // Bounce off screen boundaries
+      if(c.x < 10){ c.x = 10; c.vx = Math.abs(c.vx); }
+      if(c.x > window.innerWidth - 70){ c.x = window.innerWidth - 70; c.vx = -Math.abs(c.vx); }
+      if(c.y < 10){ c.y = 10; c.vy = Math.abs(c.vy); }
+      if(c.y > window.innerHeight - 95){ c.y = window.innerHeight - 95; c.vy = -Math.abs(c.vy); }
+
+      c.el.style.transform = `translate(${c.x}px, ${c.y}px) rotate(${c.rot}deg)`;
+    });
+
+    zeroGAnimId = requestAnimationFrame(updatePhysics);
+  }
+
+  zeroGAnimId = requestAnimationFrame(updatePhysics);
+
+  const gravStatus = document.getElementById("chaosGravityStatus");
+  if(gravStatus) gravStatus.textContent = `🚀 Zero-G Anti-Gravity active (${numCards} drifting cards).`;
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "zero_g" });
+  }
+}
+window.launchChaosZeroG = launchChaosZeroG;
+
+function spawnChaosSingularity(isRemote = false){
+  let vortex = document.getElementById("chaosSingularityVortex");
+  if(vortex){
+    vortex.remove();
+    playChaosSfx("warp");
+    return;
+  }
+  vortex = document.createElement("div");
+  vortex.id = "chaosSingularityVortex";
+  document.body.appendChild(vortex);
+  playChaosSfx("detonation");
+
+  // If zero-G is not running, start it so singularity has cards to pull!
+  if(zeroGCardsList.length === 0){
+    launchChaosZeroG(true);
+  }
+
+  const gravStatus = document.getElementById("chaosGravityStatus");
+  if(gravStatus) gravStatus.textContent = "🕳️ Cosmic Singularity Black Hole active in screen center!";
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "singularity" });
+  }
+}
+window.spawnChaosSingularity = spawnChaosSingularity;
+
+function toggleMatrixSlomo(isRemote = false){
+  const active = document.body.classList.toggle("matrix-slomo-active");
+  playChaosSfx("laser");
+  const gravStatus = document.getElementById("chaosGravityStatus");
+  if(gravStatus) gravStatus.textContent = active ? "⏳ Matrix Bullet-Time engaged (0.3x time speed)." : "Normal time speed.";
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "slomo", active });
+  }
+}
+window.toggleMatrixSlomo = toggleMatrixSlomo;
+
+function clearChaosPhysics(isRemote = false){
+  if(zeroGAnimId) cancelAnimationFrame(zeroGAnimId);
+  zeroGAnimId = null;
+  zeroGCardsList.forEach(c => {
+    if(c.el) c.el.remove();
+  });
+  zeroGCardsList = [];
+
+  const vortex = document.getElementById("chaosSingularityVortex");
+  if(vortex) vortex.remove();
+
+  document.body.classList.remove("matrix-slomo-active");
+
+  const gravStatus = document.getElementById("chaosGravityStatus");
+  if(gravStatus) gravStatus.textContent = "Standard Earth gravity (1.0G).";
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "clear_physics" });
+  }
+}
+window.clearChaosPhysics = clearChaosPhysics;
+
+// --- 4. CARD POWER OVERDRIVE & STAT MUTATOR ---
+function initChaosOverdriveUI(){
+  const select = document.getElementById("chaosOverdriveCardSelect");
+  if(!select) return;
+  const prevVal = select.value;
+  select.innerHTML = "";
+
+  cards.forEach((c, idx) => {
+    const opt = document.createElement("option");
+    opt.value = idx.toString();
+    const atks = (c.attacks || []).map(a => `${a.name} (${a.dmg})`).join(", ");
+    opt.textContent = `[${idx}] ${c.name} (${c.rarity}) - ${atks}`;
+    select.appendChild(opt);
+  });
+
+  if(prevVal && select.querySelector(`option[value="${prevVal}"]`)) select.value = prevVal;
+  updateChaosOverdriveStatus();
+}
+window.initChaosOverdriveUI = initChaosOverdriveUI;
+
+function updateChaosOverdriveStatus(){
+  const select = document.getElementById("chaosOverdriveCardSelect");
+  const statusEl = document.getElementById("chaosOverdriveStatus");
+  if(!select || !statusEl) return;
+  const idx = parseInt(select.value, 10);
+  const card = cards[idx];
+  if(!card){
+    statusEl.textContent = "Select a card to inspect stats.";
+    return;
+  }
+  const atks = (card.attacks || []).map(a => `<b style="color:#67e8f9">${a.name}</b> (${a.dmg} DMG)`).join(" • ");
+  statusEl.innerHTML = `Current Stats for <b>${card.name}</b>: ${atks}`;
+}
+window.updateChaosOverdriveStatus = updateChaosOverdriveStatus;
+
+function applyChaosOverdrive(){
+  const select = document.getElementById("chaosOverdriveCardSelect");
+  const multSelect = document.getElementById("chaosOverdriveMultiplier");
+  if(!select || !multSelect) return;
+  const idx = parseInt(select.value, 10);
+  const card = cards[idx];
+  if(!card) return alert("Select a valid card.");
+
+  const mult = parseInt(multSelect.value, 10) || 5;
+
+  if(!card.originalAttacks){
+    card.originalAttacks = JSON.parse(JSON.stringify(card.attacks || []));
+  }
+
+  if(mult === 999){
+    // God Finisher
+    card.attacks = [
+      ...(card.originalAttacks || []),
+      { name: "🌌 Supernova Obliteration", dmg: 999 }
+    ];
+  } else {
+    card.attacks = (card.originalAttacks || card.attacks).map(a => ({
+      name: a.name,
+      dmg: Math.round((parseInt(a.dmg, 10) || 50) * mult)
+    }));
+  }
+
+  if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+  playChaosSfx("laser");
+  setTimeout(() => playChaosSfx("detonation"), 200);
+
+  render();
+  initChaosOverdriveUI();
+  updateChaosOverdriveStatus();
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`⚡ Overdrive injected into <b>${card.name}</b>! Attacks boosted to massive power!`, true);
+  }
+  alert(`⚡ Overdrive injected into "${card.name}"!\n\nNew Attack Stats:\n${card.attacks.map(a => `- ${a.name}: ${a.dmg} DMG`).join("\n")}`);
+}
+window.applyChaosOverdrive = applyChaosOverdrive;
+
+function resetChaosOverdrive(){
+  const select = document.getElementById("chaosOverdriveCardSelect");
+  if(!select) return;
+  const idx = parseInt(select.value, 10);
+  const card = cards[idx];
+  if(!card) return;
+
+  if(card.originalAttacks){
+    card.attacks = JSON.parse(JSON.stringify(card.originalAttacks));
+    delete card.originalAttacks;
+    if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+    render();
+    initChaosOverdriveUI();
+    updateChaosOverdriveStatus();
+    alert(`Reset stats for "${card.name}" to standard balance.`);
+  } else {
+    alert(`Card "${card.name}" already has standard base stats.`);
+  }
+}
+window.resetChaosOverdrive = resetChaosOverdrive;
+
 function initChaosLabUI(){
+  initChaosFusionUI();
+  initChaosOverdriveUI();
   initChaosLabPacks();
   refreshAdminPlayerData();
   updateChaosBossAdminControls();
@@ -4365,6 +5171,72 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const nukeBtn = document.getElementById("chaosNukeBossBtn");
   if(nukeBtn) nukeBtn.onclick = () => nukeWorldBoss();
+
+  // Chaos Card Fusion & Mutation Chamber Listeners
+  const fusionCardA = document.getElementById("chaosFusionCardA");
+  const fusionCardB = document.getElementById("chaosFusionCardB");
+  const fusionTier = document.getElementById("chaosFusionTier");
+  const fusionName = document.getElementById("chaosFusionCustomName");
+  if(fusionCardA) fusionCardA.onchange = updateChaosFusionPreview;
+  if(fusionCardB) fusionCardB.onchange = updateChaosFusionPreview;
+  if(fusionTier) fusionTier.onchange = updateChaosFusionPreview;
+  if(fusionName) fusionName.oninput = updateChaosFusionPreview;
+
+  const randFusionBtn = document.getElementById("chaosRandomFusionBtn");
+  if(randFusionBtn){
+    randFusionBtn.onclick = () => {
+      if(cards.length < 2) return;
+      const idxA = Math.floor(Math.random() * cards.length);
+      let idxB = Math.floor(Math.random() * cards.length);
+      while(idxB === idxA && cards.length > 1){
+        idxB = Math.floor(Math.random() * cards.length);
+      }
+      if(fusionCardA) fusionCardA.value = idxA.toString();
+      if(fusionCardB) fusionCardB.value = idxB.toString();
+      updateChaosFusionPreview();
+    };
+  }
+
+  const igniteFusionBtn = document.getElementById("chaosIgniteFusionBtn");
+  if(igniteFusionBtn) igniteFusionBtn.onclick = igniteChaosFusion;
+
+  // Chaos Loot Goblin Listeners
+  const spawnGoblinBtn = document.getElementById("chaosSpawnGoblinBtn");
+  if(spawnGoblinBtn) spawnGoblinBtn.onclick = () => spawnChaosLootGoblin();
+
+  const bcastGoblinBtn = document.getElementById("chaosBroadcastGoblinBtn");
+  if(bcastGoblinBtn){
+    bcastGoblinBtn.onclick = () => {
+      spawnChaosLootGoblin();
+      if(typeof broadcastChaosFx === "function"){
+        broadcastChaosFx({ type: "spawn_goblin" });
+      }
+      alert("🏃 Chaos Loot Goblin unleashed across the realm to all players!");
+    };
+  }
+
+  // Zero-G & Physics Listeners
+  const zeroGBtn = document.getElementById("chaosZeroGBtn");
+  if(zeroGBtn) zeroGBtn.onclick = () => launchChaosZeroG();
+
+  const singularityBtn = document.getElementById("chaosSingularityBtn");
+  if(singularityBtn) singularityBtn.onclick = () => spawnChaosSingularity();
+
+  const slomoBtn = document.getElementById("chaosSlomoBtn");
+  if(slomoBtn) slomoBtn.onclick = () => toggleMatrixSlomo();
+
+  const clearGravBtn = document.getElementById("chaosClearGravityBtn");
+  if(clearGravBtn) clearGravBtn.onclick = () => clearChaosPhysics();
+
+  // Overdrive Stat Mutator Listeners
+  const odCardSelect = document.getElementById("chaosOverdriveCardSelect");
+  if(odCardSelect) odCardSelect.onchange = updateChaosOverdriveStatus;
+
+  const applyOdBtn = document.getElementById("chaosApplyOverdriveBtn");
+  if(applyOdBtn) applyOdBtn.onclick = applyChaosOverdrive;
+
+  const resetOdBtn = document.getElementById("chaosResetOverdriveBtn");
+  if(resetOdBtn) resetOdBtn.onclick = resetChaosOverdrive;
 
   document.querySelectorAll(".chaosSoundBtn").forEach(btn => {
     btn.onclick = () => {
@@ -4547,6 +5419,19 @@ function executeIncomingChaosFx(fxData, sender){
     launchTimedFlashEvent(fxData.eventType, fxData.durationSec, fxData.displayName, true);
   } else if(fxData.type === "cancel_flash_event"){
     cancelTimedFlashEvent(true);
+  } else if(fxData.type === "spawn_goblin"){
+    spawnChaosLootGoblin(true);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🏃 CHAOS LOOT GOBLIN spawned by <b>${fromName}</b>! Click it to snatch coins!`, true);
+    }
+  } else if(fxData.type === "zero_g"){
+    launchChaosZeroG(true);
+  } else if(fxData.type === "singularity"){
+    spawnChaosSingularity(true);
+  } else if(fxData.type === "slomo"){
+    toggleMatrixSlomo(true);
+  } else if(fxData.type === "clear_physics"){
+    clearChaosPhysics(true);
   }
 }
 window.executeIncomingChaosFx = executeIncomingChaosFx;
