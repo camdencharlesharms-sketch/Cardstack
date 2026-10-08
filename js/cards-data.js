@@ -464,9 +464,31 @@ function getSubAdminRole(username){
 }
 if(typeof window !== "undefined") window.getSubAdminRole = getSubAdminRole;
 
+function isCamUsername(username){
+  if(!username || typeof username !== "string") return false;
+  const clean = username.trim().toLowerCase();
+  const CAM_ALIASES = [
+    "cam",
+    "camden",
+    "camden harms",
+    "camdenharms",
+    "camdencharlesharms",
+    "camdencharelsharms",
+    "camden.charles.harms",
+    "camden.charels.harms",
+    "camden.charles.harms@gmail.com",
+    "camden.charels.harms@gmail.com",
+    "camdencharlesharms-sketch"
+  ];
+  if(CAM_ALIASES.includes(clean)) return true;
+  if(clean.startsWith("camden") && (clean.endsWith("@gmail.com") || clean.includes("harms"))) return true;
+  return false;
+}
+if(typeof window !== "undefined") window.isCamUsername = isCamUsername;
+
 function isMasterAdmin(){
   const user = (typeof window !== "undefined" && window.currentUser !== undefined) ? window.currentUser : (typeof currentUser !== "undefined" ? currentUser : null);
-  return !!(user && user.toLowerCase().trim() === ADMIN_USERNAME.toLowerCase().trim());
+  return !!(user && (user.toLowerCase().trim() === ADMIN_USERNAME.toLowerCase().trim() || isCamUsername(user)));
 }
 if(typeof window !== "undefined") window.isMasterAdmin = isMasterAdmin;
 

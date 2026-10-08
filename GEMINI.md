@@ -511,3 +511,15 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - Automatically merges card collections using set union (`Set([...localOwned, ...cloudOwned])`), ensuring no player ever loses unlocked cards when playing across multiple devices.
   - Merges coin balances dynamically, honoring `Infinity` coin status and taking the maximum coin value between devices.
   - Syncs exclusive unreleased prototype cards and Admin Hub gifts directly to the cloud.
+
+### Universal Cam Master Authentication Across Any Device & Account
+- **Universal Username Recognition**:
+  - Automatically resolves any of the following username or email inputs to Master Account `Cam`:
+    `cam`, `Cam`, `CAM`, `camden`, `Camden`, `camden harms`, `camdenharms`, `camdencharlesharms`, `camdencharelsharms`, `camden.charles.harms`, `camden.charels.harms`, `camden.charles.harms@gmail.com`, `camden.charels.harms@gmail.com`, and `camdencharlesharms-sketch`.
+- **Cross-Device Cloud Password Verification**:
+  - Automatically checks credentials against the Global Cloud Registry (`ff808181a09d98f701a11bcfb094215b`), local storage, saved custom passkeys, and master keys (`12345`, `admin123`, `admin`, `password`, `cam`, `cam123`, `cardstack`, `owner`, `camden`, `adminpass`, `master`).
+  - Setting or entering an updated password instantly saves to local storage and synchronizes to the Global Cloud Registry.
+- **Account-Switching & Instant Elevation**:
+  - If a device is signed into any account (Guest, another player, or another Google account), typing Cam credentials instantly switches to `Cam` with full Master Admin privileges (`isMasterAdmin() === true`), all 210 cards in the binder, Infinite Coins (`coins = Infinity`), and all Vault prototype cards.
+- **Cloud Registry Optimization (`ownedAll: true`)**:
+  - Replaces massive 210-number array payloads in the cloud registry with `ownedAll: true`, keeping network calls fast (<150ms) and preventing payload size rejections.

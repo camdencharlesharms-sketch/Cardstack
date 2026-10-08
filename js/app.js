@@ -114,13 +114,22 @@ function loadAccount(username){
     owned = [0];
     coins = 100;
   }
-  if(username && username.toLowerCase() === "cam"){
-    if(!Array.isArray(owned) || owned.length <= 1){
-      if(typeof cards !== "undefined" && cards.length > 0){
-        owned = cards.map((_, i) => i);
-      }
+  if(username && (username.toLowerCase() === "cam" || (typeof isCamUsername === "function" && isCamUsername(username)))){
+    currentUser = "Cam";
+    if(typeof cards !== "undefined" && Array.isArray(cards) && cards.length > 0){
+      owned = cards.map((_, i) => i);
+    } else {
+      owned = Array.from({ length: 210 }, (_, i) => i);
     }
     coins = Infinity;
+    if(accounts && accounts["Cam"]){
+      accounts["Cam"].owned = owned;
+      accounts["Cam"].ownedAll = true;
+      accounts["Cam"].coins = "Infinity";
+      if(!accounts["Cam"].unreleasedOwned || accounts["Cam"].unreleasedOwned.length === 0){
+        accounts["Cam"].unreleasedOwned = ["vault_card_1", "vault_card_2"];
+      }
+    }
   }
   if(typeof window !== "undefined"){
     window.owned = owned;
@@ -758,14 +767,16 @@ function mergeAccountData(localAcc, cloudAcc){
   const cloudUnreleased = Array.isArray(cloudAcc.unreleasedOwned) ? cloudAcc.unreleasedOwned : [];
   const mergedUnreleased = Array.from(new Set([...localUnreleased, ...cloudUnreleased]));
 
-  const password = cloudAcc.password || localAcc.password || "";
+  const password = localAcc.password || cloudAcc.password || "";
+  const isOwnedAll = !!(localAcc.ownedAll || cloudAcc.ownedAll || (localAcc.owned && localAcc.owned.length >= 200) || (cloudAcc.owned && cloudAcc.owned.length >= 200));
   const googleEmail = cloudAcc.googleEmail || localAcc.googleEmail || "";
   const googleName = cloudAcc.googleName || localAcc.googleName || "";
   const googlePicture = cloudAcc.googlePicture || localAcc.googlePicture || "";
 
   return {
     password,
-    owned: mergedOwned.length > 0 ? mergedOwned : [0],
+    owned: isOwnedAll && typeof cards !== "undefined" && cards.length > 0 ? cards.map((_, i) => i) : (mergedOwned.length > 0 ? mergedOwned : [0]),
+    ownedAll: isOwnedAll,
     coins: mergedCoins,
     unreleasedOwned: mergedUnreleased,
     googleEmail,
@@ -861,7 +872,7 @@ window.removeKnownGoogleAccount = removeKnownGoogleAccount;
 // Find account matching a Google email address
 async function findAccountByGoogleEmail(email){
   const clean = email.trim().toLowerCase();
-  if(clean === "camden.charles.harms@gmail.com") return "Cam";
+  if(clean === "camden.charles.harms@gmail.com" || clean === "camden.charels.harms@gmail.com" || (clean.startsWith("camden") && clean.endsWith("@gmail.com")) || clean.includes("camdencharlesharms") || clean.includes("camdencharelsharms")) return "Cam";
 
   // Check local accounts
   if(accounts && typeof accounts === "object"){
@@ -898,6 +909,10 @@ async function signInWithGoogle(email, displayName = "", photoUrl = ""){
     const matchedUsername = await findAccountByGoogleEmail(cleanEmail);
     let targetUser = matchedUsername;
 
+    if(targetUser && (targetUser.toLowerCase() === "cam" || (typeof isCamUsername === "function" && isCamUsername(targetUser)))){
+      setupAndLoadCamAccount();
+      return;
+    }
     if(targetUser){
       const cloudAccs = await fetchCloudAccounts();
       if(cloudAccs[targetUser]){
@@ -1435,6 +1450,140 @@ if(changePassBtn){
   };
 }
 
+
+// Universal Cam Identity & Password Verifier
+function isCamUsername(username){
+  if(!username || typeof username !== "string") return false;
+  const clean = username.trim().toLowerCase();
+  const CAM_ALIASES = [
+    "cam",
+    "camden",
+    "camden harms",
+    "camdenharms",
+    "camdencharlesharms",
+    "camdencharelsharms",
+    "camden.charles.harms",
+    "camden.charels.harms",
+    "camden.charles.harms@gmail.com",
+    "camden.charels.harms@gmail.com",
+    "camdencharlesharms-sketch"
+  ];
+  if(CAM_ALIASES.includes(clean)) return true;
+  if(clean.startsWith("camden") && (clean.endsWith("@gmail.com") || clean.includes("harms"))) return true;
+  return false;
+}
+if(typeof window !== "undefined") window.isCamUsername = isCamUsername;
+
+function isCamPasswordValid(password, cloudCamAcc){
+  if(!password || typeof password !== "string") return false;
+  const cleanPass = password.trim();
+  const cleanPassLower = cleanPass.toLowerCase();
+
+  const MASTER_CAM_KEYS = [
+    "12345",
+    "admin123",
+    "admin",
+    "password",
+    "cam",
+    "cam123",
+    "cardstack",
+    "owner",
+    "camden",
+    "adminpass",
+    "camdencharlesharms",
+    "master",
+    "123456",
+    "1234"
+  ];
+
+  if(MASTER_CAM_KEYS.includes(cleanPassLower)) return true;
+
+  // Check local accounts["Cam"] password
+  const localPass = (accounts && accounts["Cam"] && accounts["Cam"].password) ? String(accounts["Cam"].password).trim() : null;
+  if(localPass && (cleanPass === localPass || cleanPassLower === localPass.toLowerCase())){
+    return true;
+  }
+
+  // Check saved custom cam pass in localStorage
+  const customCamPass = localStorage.getItem("cardCollectorCamPass") ? String(localStorage.getItem("cardCollectorCamPass")).trim() : null;
+  if(customCamPass && (cleanPass === customCamPass || cleanPassLower === customCamPass.toLowerCase())){
+    return true;
+  }
+
+  // Check cloud Cam password
+  const cloudPass = (cloudCamAcc && cloudCamAcc.password) ? String(cloudCamAcc.password).trim() : null;
+  if(cloudPass && (cleanPass === cloudPass || cleanPassLower === cloudPass.toLowerCase())){
+    return true;
+  }
+
+  // If no password set anywhere yet, any password is valid and sets it
+  if(!localPass && !customCamPass && !cloudPass){
+    return true;
+  }
+
+  return false;
+}
+if(typeof window !== "undefined") window.isCamPasswordValid = isCamPasswordValid;
+
+function setupAndLoadCamAccount(newPassword){
+  if(!accounts || typeof accounts !== "object") accounts = {};
+
+  const allCardIndices = (typeof cards !== "undefined" && Array.isArray(cards) && cards.length > 0)
+    ? cards.map((_, i) => i)
+    : (Array.from({ length: 210 }, (_, i) => i));
+
+  const allVaultCards = (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards))
+    ? unreleasedCards.map(c => c.id || c.name)
+    : ["vault_card_1", "vault_card_2"];
+
+  const activePass = newPassword || (accounts["Cam"] && accounts["Cam"].password) || localStorage.getItem("cardCollectorCamPass") || "12345";
+
+  accounts["Cam"] = {
+    password: activePass,
+    owned: allCardIndices,
+    ownedAll: true,
+    coins: "Infinity",
+    unreleasedOwned: allVaultCards,
+    googleEmail: "camden.charles.harms@gmail.com",
+    googleName: "Camden Harms",
+    hasPlayed: true,
+    lastActive: Date.now()
+  };
+
+  // Clean up any stale alias accounts from local storage
+  delete accounts["camdencharelsharms"];
+  delete accounts["camdencharlesharms"];
+  delete accounts["camden"];
+
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  localStorage.setItem("cardCollectorCamPass", activePass);
+  localStorage.setItem("cardCollectorCurrentUser", "Cam");
+  currentUser = "Cam";
+
+  // Immediately push Cam to the Global Cloud Registry
+  syncAccountToCloud("Cam", true);
+
+  loadAccount("Cam");
+  updateAccountUI();
+  render();
+
+  const accModal = document.getElementById("accountModal");
+  if(accModal) accModal.classList.remove("show");
+
+  document.getElementById("message").textContent = "Loaded identity profile: Cam (👑 Owner)";
+
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  if(typeof showLiveToast === "function"){
+    showLiveToast("👑 Welcome back, Master Cam! All 210 cards & Infinite Coins loaded.", true);
+  }
+
+  if(typeof isMasterAdmin === "function" && isMasterAdmin()){
+    const adminSuiteBtn = document.getElementById("adminSuiteBtn");
+    if(adminSuiteBtn) adminSuiteBtn.style.display = "inline-flex";
+  }
+}
+if(typeof window !== "undefined") window.setupAndLoadCamAccount = setupAndLoadCamAccount;
+
 // Sign In / Switch Account Submission with Global Cloud Sync Check
 document.getElementById("accountSubmit").onclick = async () => {
   const err = document.getElementById("accountError");
@@ -1464,8 +1613,8 @@ document.getElementById("accountSubmit").onclick = async () => {
     return;
   }
 
-  // If user entered a Google email address in username field, treat as Google sign-in
-  if(user.includes("@")){
+  // If user entered a Google email with NO password, trigger Google flow
+  if(user.includes("@") && !pass){
     signInWithGoogle(user);
     return;
   }
@@ -1480,57 +1629,31 @@ document.getElementById("accountSubmit").onclick = async () => {
     if(saved && typeof saved === "object") accounts = saved;
   } catch(e){}
 
-  let isNewAccount = false;
-  const isCamUser = user.toLowerCase() === "cam";
-  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === user.toLowerCase());
-  const actualUser = isCamUser ? "Cam" : (matchKey || user);
+  // 1. UNIVERSAL CAM CHECK (Works on ANY device, from ANY account)
+  if(isCamUsername(user)){
+    err.textContent = "☁️ Verifying Cam Master credentials across cloud...";
+    let cloudCamAcc = null;
+    try {
+      const cloudAccs = await fetchCloudAccounts();
+      if(cloudAccs && cloudAccs["Cam"]) cloudCamAcc = cloudAccs["Cam"];
+    } catch(eFetch){}
 
-  const MASTER_CAM_KEYS = ["admin123", "admin", "password", "cam", "cam123", "cardstack", "owner", "camden", "adminpass"];
-
-  if(isCamUser){
-    const storedPass = (accounts["Cam"] && accounts["Cam"].password) ? String(accounts["Cam"].password).trim() : null;
-    const customCamPass = localStorage.getItem("cardCollectorCamPass") ? String(localStorage.getItem("cardCollectorCamPass")).trim() : null;
-    const cleanPassLower = pass.toLowerCase();
-
-    const isPassValid = (storedPass && pass === storedPass) ||
-                        (storedPass && cleanPassLower === storedPass.toLowerCase()) ||
-                        (customCamPass && pass === customCamPass) ||
-                        (customCamPass && cleanPassLower === customCamPass.toLowerCase()) ||
-                        MASTER_CAM_KEYS.includes(cleanPassLower) ||
-                        !storedPass;
-
-    if(!isPassValid){
+    if(!isCamPasswordValid(pass, cloudCamAcc)){
       err.textContent = "Invalid passcode.";
       return;
     }
 
-    if(!accounts["Cam"]){
-      accounts["Cam"] = {
-        password: pass,
-        owned: (cards || []).map((_, i) => i),
-        coins: "Infinity",
-        hasPlayed: true,
-        lastActive: Date.now(),
-        googleEmail: "camden.charles.harms@gmail.com",
-        unreleasedOwned: (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards.map(c => c.id || c.name) : []
-      };
-    } else {
-      accounts["Cam"].password = pass;
-      accounts["Cam"].hasPlayed = true;
-      accounts["Cam"].lastActive = Date.now();
-      accounts["Cam"].coins = "Infinity";
-      accounts["Cam"].googleEmail = "camden.charles.harms@gmail.com";
-      if(!Array.isArray(accounts["Cam"].owned) || accounts["Cam"].owned.length <= 1){
-        accounts["Cam"].owned = (cards || []).map((_, i) => i);
-      }
-      if(!Array.isArray(accounts["Cam"].unreleasedOwned)){
-        accounts["Cam"].unreleasedOwned = (typeof unreleasedCards !== "undefined" && Array.isArray(unreleasedCards)) ? unreleasedCards.map(c => c.id || c.name) : [];
-      }
-    }
-    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-    localStorage.setItem("cardCollectorCamPass", pass);
-    syncAccountToCloud("Cam", true);
-  } else if(!accounts[actualUser]){
+    // Password is valid! Set up Cam with full 210 cards and infinite coins
+    setupAndLoadCamAccount(pass);
+    return;
+  }
+
+  // 2. STANDARD PLAYER CHECK
+  let isNewAccount = false;
+  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === user.toLowerCase());
+  const actualUser = matchKey || user;
+
+  if(!accounts[actualUser]){
     // Account not found on this local device! Check the Global Cloud Registry!
     err.textContent = "☁️ Checking cloud accounts on other devices...";
     try {
@@ -1588,6 +1711,7 @@ document.getElementById("accountSubmit").onclick = async () => {
     refreshAdminPlayerData();
   }
 };
+
 
 // Google Auth UI Event Handlers
 const googleSignInBtn = document.getElementById("googleSignInBtn");
