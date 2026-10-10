@@ -1846,3 +1846,88 @@ body.turbo-speed-active * {
   filter: contrast(1.15) brightness(0.9) hue-rotate(90deg) !important;
   transition: filter 0.5s ease-out;
 }
+
+/* ========================================================
+   CHAOS LAB EXPANSION: TITAN FORGE, GAUNTLET, SHADERS & PACK
+   ======================================================== */
+
+/* Interactive Falling Gold Coins */
+.chaos-falling-coin {
+  position: fixed;
+  font-size: 26px;
+  cursor: pointer;
+  user-select: none;
+  z-index: 99995;
+  filter: drop-shadow(0 0 10px #f59e0b);
+  animation: coinDropAnim 6s linear forwards, coinWobble 0.6s ease-in-out infinite alternate;
+  transition: transform 0.15s ease-out;
+}
+.chaos-falling-coin:hover {
+  transform: scale(1.3);
+}
+@keyframes coinDropAnim {
+  0% { top: -40px; opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 105vh; opacity: 0; }
+}
+@keyframes coinWobble {
+  0% { transform: rotate(-15deg); }
+  100% { transform: rotate(15deg); }
+}
+
+/* Screen Shaders */
+body.shader-cyber-neon {
+  filter: contrast(1.18) saturate(1.6) brightness(1.02) !important;
+  box-shadow: inset 0 0 100px rgba(6, 182, 212, 0.4), inset 0 0 150px rgba(236, 72, 153, 0.3) !important;
+}
+
+body.shader-blood-moon {
+  filter: contrast(1.2) sepia(0.65) hue-rotate(320deg) saturate(2.2) !important;
+  box-shadow: inset 0 0 120px rgba(220, 38, 38, 0.65), inset 0 0 40px #000 !important;
+}
+
+body.shader-vhs-retro {
+  filter: contrast(1.1) brightness(1.05) saturate(1.3) !important;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 3px) !important;
+  text-shadow: 1px 0 #ef4444, -1px 0 #3b82f6;
+}
+
+body.shader-prismatic {
+  filter: contrast(1.08) hue-rotate(60deg) saturate(1.5) !important;
+  animation: chromaticPulse 8s infinite alternate ease-in-out;
+}
+@keyframes chromaticPulse {
+  0% { filter: contrast(1.08) hue-rotate(0deg) saturate(1.5); }
+  50% { filter: contrast(1.15) hue-rotate(180deg) saturate(1.8); }
+  100% { filter: contrast(1.08) hue-rotate(360deg) saturate(1.5); }
+}
+
+/* Instant God Pack Mini Card */
+.instant-god-card {
+  flex: 0 0 110px;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 8px;
+  border: 2px solid #f59e0b;
+  padding: 6px;
+  text-align: center;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+  position: relative;
+  user-select: none;
+  animation: popInCard 0.35s ease-out;
+}
+.instant-god-card.transcendent {
+  border-color: #ec4899;
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.6);
+}
+.instant-god-card.divine {
+  border-color: #f59e0b;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+}
+.instant-god-card.mythic {
+  border-color: #a855f7;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
+}
+@keyframes popInCard {
+  0% { opacity: 0; transform: scale(0.6) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}

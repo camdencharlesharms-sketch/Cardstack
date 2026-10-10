@@ -810,6 +810,7 @@
             <button id="chaosConfettiStormBtn" class="accountBtn" style="background:#ec4899;padding:9px;font-size:12px;font-weight:700">🎉 Mega Confetti</button>
             <button id="chaosEmpGlitchBtn" class="accountBtn" style="background:#ef4444;padding:9px;font-size:12px;font-weight:700">💥 Nuclear EMP Shake</button>
             <button id="chaosDiscoModeBtn" class="accountBtn" style="background:#06b6d4;padding:9px;font-size:12px;font-weight:700">🌈 Rainbow Disco Aura</button>
+            <button id="chaosCoinRainBtn" class="accountBtn" style="background:#eab308;padding:9px;font-size:12px;font-weight:700;grid-column:1/-1;color:#000">🪙 Interactive Coin Shower</button>
           </div>
           <div id="chaosFxStatus" style="font-size:11px;color:#cbd5e1;background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:6px;min-height:22px;display:flex;align-items:center">
             Ready to broadcast visual phenomena.
@@ -1067,6 +1068,179 @@
           </div>
           <div id="chaosOverdriveStatus" style="font-size:11px;color:#94a3b8;margin-top:8px">
             Select a card to inspect attack values and inject overdrive power.
+          </div>
+        </div>
+
+        <!-- CARD 12: MYTHIC CHAOS TITAN GENERATOR -->
+        <div class="adminCard" style="grid-column: 1 / -1; border: 1px solid rgba(236, 72, 153, 0.45); background: radial-gradient(ellipse at top, rgba(131, 24, 67, 0.4), rgba(15, 23, 42, 0.95))">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <h4 style="margin:0;color:#f472b6">🐉 Mythic Chaos Titan Generator</h4>
+            <span style="font-size:11px;background:rgba(236,72,153,0.25);border:1px solid #ec4899;color:#fbcfe8;padding:3px 10px;border-radius:999px;font-weight:800">PRIMORDIAL FORGE</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:6px 0 12px 0">
+            Synthesize an omnipotent mythical god beast with custom primal element, high vitality, and 3 devastating cosmic attacks. Once forged, claims directly into your binder and Arena deck.
+          </p>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Element & Domain:</label>
+              <select id="chaosTitanElement" class="adminSelect" style="margin:0">
+                <option value="solar">🔥 Solar Nether (Hellfire & Blaze)</option>
+                <option value="cosmic" selected>⚡ Cosmic Thunder (Plasma Storm & Supernova)</option>
+                <option value="void">🔮 Void Abyssal (Dark Matter & Event Horizon)</option>
+                <option value="gaia">🌿 Primordial Gaia (Earthquake & Titan Wrath)</option>
+                <option value="cryo">❄️ Glacial Cryo (Absolute Zero & Cataclysm)</option>
+                <option value="omni">👑 Omni Chaos (Genesis & Divine Retribution)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Titan Archetype:</label>
+              <select id="chaosTitanArchetype" class="adminSelect" style="margin:0">
+                <option value="Wyrm">🐉 Primordial Wyrm</option>
+                <option value="Phoenix">🦅 Solar Phoenix</option>
+                <option value="Behemoth" selected>🦣 Cataclysmic Behemoth</option>
+                <option value="Sovereign">👑 Cosmic Sovereign</option>
+                <option value="Leviathan">🐋 Abyssal Leviathan</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Titan Name (Optional):</label>
+              <input id="chaosTitanNameInput" class="adminInput" placeholder="Auto-generated if blank..." style="margin:0">
+            </div>
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Rarity Tier:</label>
+              <select id="chaosTitanRarity" class="adminSelect" style="margin:0">
+                <option value="transcendent" selected>✨ Transcendent (Divine Aura)</option>
+                <option value="divine">👑 Divine (Gold Shimmer)</option>
+                <option value="mythic">🔮 Mythic (Violet Radiance)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Titan Preview Box -->
+          <div id="chaosTitanPreviewBox" style="margin-top:12px;background:rgba(0,0,0,0.45);border:1px dashed rgba(236,72,153,0.5);border-radius:10px;padding:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div id="chaosTitanPreviewThumb" style="width:75px;height:105px;border-radius:8px;border:2px solid #ec4899;background:#0f172a;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 0 15px rgba(236,72,153,0.5)">⚡</div>
+            <div style="flex:1;min-width:220px">
+              <div id="chaosTitanPreviewName" style="font-weight:900;font-size:16px;color:#fff">Thunder Behemoth of the Stars</div>
+              <div id="chaosTitanPreviewMeta" style="font-size:12px;color:#f472b6;font-weight:700">Rarity: Transcendent • HP: 220</div>
+              <div id="chaosTitanPreviewAttacks" style="font-size:11px;color:#cbd5e1;margin-top:4px">
+                1. Plasma Spark (65 DMG) • 2. Thunderstorm (110 DMG) • 3. Supernova Blast (240 DMG)
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button id="chaosRandomTitanBtn" type="button" class="accountBtn" style="background:#334155;color:#e2e8f0;padding:10px 14px;font-size:12px;font-weight:700">🎲 Randomize</button>
+              <button id="chaosForgeTitanBtn" style="background:linear-gradient(135deg, #ec4899, #be185d);color:#fff;font-weight:900;padding:10px 20px;font-size:13px;border-radius:8px;box-shadow:0 0 20px rgba(236,72,153,0.6)">
+                👑 Forge & Claim Titan Card
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 13: COLOSSEUM BOSS RUSH GAUNTLET -->
+        <div class="adminCard" style="grid-column: 1 / -1; border: 1px solid rgba(59, 130, 246, 0.45)">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <h4 style="margin:0;color:#60a5fa">⚔️ Colosseum Boss Rush Gauntlet</h4>
+            <span style="font-size:11px;background:rgba(59,130,246,0.25);border:1px solid #3b82f6;color:#bfdbfe;padding:3px 10px;border-radius:999px;font-weight:800">COMBAT MINIGAME</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:6px 0 10px 0">
+            Pick your strongest card and test its mettle through 5 relentless waves of Chaos Monsters. Conquer all 5 stages to claim +10,000 Coins and a guaranteed high-rarity card reward!
+          </p>
+
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:center">
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Select Gladiator Champion:</label>
+              <select id="chaosGauntletChampionSelect" class="adminSelect" style="margin:0"></select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:#cbd5e1;font-weight:700">Combat Speed:</label>
+              <select id="chaosGauntletSpeedSelect" class="adminSelect" style="margin:0">
+                <option value="600">Normal (600ms)</option>
+                <option value="250" selected>Turbo (250ms)</option>
+                <option value="0">⚡ Instant Sim</option>
+              </select>
+            </div>
+            <div style="padding-top:16px">
+              <button id="chaosStartGauntletBtn" style="background:linear-gradient(135deg, #2563eb, #1d4ed8);color:#fff;font-weight:900;width:100%;padding:10px;font-size:13px;border-radius:8px">
+                ⚔️ Start Boss Rush
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Gauntlet Arena Viewport -->
+          <div id="chaosGauntletArenaBox" style="display:none;margin-top:12px;background:rgba(0,0,0,0.5);border:1px solid rgba(59,130,246,0.3);border-radius:10px;padding:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span id="chaosGauntletStageBadge" style="font-size:12px;font-weight:900;color:#fde047;background:rgba(234,179,8,0.2);padding:2px 8px;border-radius:6px">WAVE 1 / 5</span>
+              <span id="chaosGauntletOpponentTitle" style="font-size:13px;font-weight:800;color:#f87171">Shadow Stalker</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+              <!-- Player Fighter -->
+              <div style="background:rgba(15,23,42,0.8);border:1px solid #3b82f6;border-radius:8px;padding:8px">
+                <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:#93c5fd">
+                  <span id="chaosGauntletHeroName">Champion</span>
+                  <span id="chaosGauntletHeroHpText">100 / 100 HP</span>
+                </div>
+                <div style="height:10px;background:#1e293b;border-radius:5px;overflow:hidden;margin-top:4px">
+                  <div id="chaosGauntletHeroHpBar" style="height:100%;width:100%;background:linear-gradient(90deg, #3b82f6, #60a5fa);transition:width 0.2s"></div>
+                </div>
+              </div>
+
+              <!-- Enemy Fighter -->
+              <div style="background:rgba(15,23,42,0.8);border:1px solid #ef4444;border-radius:8px;padding:8px">
+                <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:#fca5a5">
+                  <span id="chaosGauntletEnemyName">Enemy Boss</span>
+                  <span id="chaosGauntletEnemyHpText">200 / 200 HP</span>
+                </div>
+                <div style="height:10px;background:#1e293b;border-radius:5px;overflow:hidden;margin-top:4px">
+                  <div id="chaosGauntletEnemyHpBar" style="height:100%;width:100%;background:linear-gradient(90deg, #ef4444, #f87171);transition:width 0.2s"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Log -->
+            <div id="chaosGauntletCombatLog" style="height:90px;overflow-y:auto;background:rgba(0,0,0,0.4);border-radius:6px;padding:8px;font-family:monospace;font-size:11px;color:#cbd5e1;line-height:1.4"></div>
+          </div>
+        </div>
+
+        <!-- CARD 14: PRISMATIC REALITY SHADERS & ATMOSPHERE -->
+        <div class="adminCard">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h4 style="margin:0;color:#c084fc">🔮 Prismatic Reality Shaders</h4>
+            <span id="chaosShaderBadge" style="font-size:10px;font-weight:800;background:rgba(168,85,247,0.2);color:#e9d5ff;padding:2px 8px;border-radius:999px">STANDARD</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:8px 0">
+            Engage visual screen post-processing filters across the entire browser client in real time.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="accountBtn chaosShaderBtn" data-shader="neon" style="background:rgba(6,182,212,0.15);border-color:#06b6d4;color:#67e8f9;padding:9px;font-weight:700">🌆 Cyber Neon</button>
+            <button class="accountBtn chaosShaderBtn" data-shader="blood" style="background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5;padding:9px;font-weight:700">🩸 Blood Moon</button>
+            <button class="accountBtn chaosShaderBtn" data-shader="vhs" style="background:rgba(234,179,8,0.15);border-color:#eab308;color:#fde047;padding:9px;font-weight:700">📼 Retro VHS</button>
+            <button class="accountBtn chaosShaderBtn" data-shader="chroma" style="background:rgba(236,72,153,0.15);border-color:#ec4899;color:#fbcfe8;padding:9px;font-weight:700">🌈 Chroma Shift</button>
+          </div>
+          <button id="chaosClearShadersBtn" class="accountBtn" style="width:100%;margin-top:8px;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2);color:#cbd5e1">☀️ Reset Normal Atmosphere</button>
+        </div>
+
+        <!-- CARD 15: INSTANT CHAOS DIVINE PACK UNPACKER -->
+        <div class="adminCard">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h4 style="margin:0;color:#fde047">📦 Instant Chaos Divine Pack</h4>
+            <span style="font-size:10px;font-weight:800;background:rgba(245,158,11,0.2);color:#fef08a;padding:2px 8px;border-radius:999px">100% GOD TIER</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:8px 0">
+            Instantly burst open a 5-card God Pack with 100% guaranteed Divine, Mythic, or Transcendent cards. Auto-adds unowned cards + 2,500 bonus coins!
+          </p>
+          <div style="display:flex;gap:8px">
+            <select id="chaosInstantPackTheme" class="adminSelect" style="flex:1;margin:0">
+              <option value="divine">👑 All-Divine Celestial Pack</option>
+              <option value="mythic">🔮 Void & Mythic Dominator</option>
+              <option value="transcendent">✨ Transcendent Chaos Gods</option>
+            </select>
+            <button id="chaosInstantPackBtn" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#000;font-weight:900;padding:9px 14px;border-radius:8px">
+              ⚡ Open Pack
+            </button>
+          </div>
+          <div id="chaosInstantPackResults" style="display:none;margin-top:10px;background:rgba(0,0,0,0.4);border-radius:8px;padding:8px">
+            <div id="chaosInstantPackCardsRow" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px"></div>
           </div>
         </div>
 

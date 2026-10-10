@@ -542,3 +542,19 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 - **💰 Chaos Loot Goblin Rush**: Spawns an interactive Golden Loot Goblin that scrambles across the screen. Players tap or click the goblin to knock out coins (+250 to +500 coins per tap with floating particle numbers). Striking the goblin 10 times triggers a Jackpot Loot Explosion (+5,000 coins + random card unlock). Broadcastable across the entire realm network.
 - **🌀 Zero-G Physics & Cosmic Singularity**: Simulates real 3D zero-gravity physics on screen. Unleashes 16 drifting card shards with velocity, momentum, and boundary bounce mechanics. Spawns a swirling cosmic black hole singularity at the center of the viewport that pulls all cards and particles inward. Supports Matrix Bullet-Time slomo.
 - **⚡ Card Stat Overdrive & Finisher Infusion**: Injects custom God Mode damage multipliers (2x, 5x, 10x) into any selected card, or equips the ultimate `🌌 Supernova Obliteration (999 DMG)` finisher for Arena battles.
+- **🐉 Mythic Chaos Titan Generator (Primordial Forge)**: Auto-synthesizes an apex mythical god beast across 6 primordial domains (🔥 Solar Nether, ⚡ Cosmic Thunder, 🔮 Void Abyssal, 🌿 Primordial Gaia, ❄️ Glacial Cryo, 👑 Omni Chaos) and 5 archetypes (Wyrm, Phoenix, Behemoth, Sovereign, Leviathan). Forges custom elemental SVG vector artwork, high vitality (up to 240 HP), and 3 devastating cosmic attacks (up to 310 DMG). Instantly claims directly into the creator's collection and Arena roster with full network synchronization.
+- **⚔️ Colosseum Boss Rush Gauntlet (Live Survival Minigame)**: Rapid-fire 5-wave gauntlet pitting any champion card against Chaos Monsters:
+  1. 🐺 *Shadow Stalker* (180 HP)
+  2. 🐲 *Nether Drake* (320 HP)
+  3. 🗿 *Colossus Golem* (500 HP)
+  4. 🌌 *Void Archon* (750 HP)
+  5. 👑 *Chaos Overlord* (1,100 HP)
+  Features interactive health bars, critical strike calculations, real-time action combat log, configurable speeds (Normal, Turbo, Instant Sim), incremental wave coin rewards, and a Grand Champion bounty (+10,000 Coins + high-tier card discovery).
+- **🔮 Prismatic Reality Shaders & Atmosphere**: Instant full-screen post-processing shader toggles:
+  - 🌆 **Cyber Neon Glow** (`.shader-cyber-neon`): Boosts saturation, deepens dark levels, and projects electric cyan/magenta luminescences.
+  - 🩸 **Blood Moon Eclipse** (`.shader-blood-moon`): Ominous sepia-crimson lunar atmosphere with dark vignette.
+  - 📼 **Retro VHS Tape** (`.shader-vhs-retro`): Authentic CRT scanlines with phosphor glow and horizontal line jitter.
+  - 🌈 **Chroma Shift** (`.shader-prismatic`): Dynamic rainbow chromatic aberration cycling across all UI surfaces.
+  - Broadcastable over PeerJS mesh and BroadcastChannel to shift the visual theme across all connected player screens.
+- **📦 Instant Chaos Divine Booster Pack Unboxer**: Opens an exclusive 5-card God Pack with 100% guaranteed Divine, Mythic, or Transcendent cards and +2,500 bonus coins. Displays cards in an animated holographic showcase and automatically unlocks missing cards into the player's binder.
+- **🪙 Interactive Falling Coin Shower**: Summons a cascading shower of 28 floating golden coins across the screen. Players tap or click falling coins to catch them, yielding +150 to +500 coins per catch with audio effects and floating particle feedback.

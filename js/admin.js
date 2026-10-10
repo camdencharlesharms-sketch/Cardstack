@@ -5118,7 +5118,599 @@ function resetChaosOverdrive(){
 }
 window.resetChaosOverdrive = resetChaosOverdrive;
 
+
+// --- 5. INTERACTIVE FALLING COIN SHOWER ---
+let activeCoinShowerTimers = [];
+
+function triggerInteractiveCoinShower(isRemote = false){
+  activeCoinShowerTimers.forEach(t => clearTimeout(t));
+  activeCoinShowerTimers = [];
+
+  playChaosSfx("coins");
+  const count = 28;
+
+  for(let i = 0; i < count; i++){
+    const timer = setTimeout(() => {
+      const coin = document.createElement("div");
+      coin.className = "chaos-falling-coin";
+      coin.textContent = "🪙";
+      const startX = Math.floor(Math.random() * (window.innerWidth - 60)) + 15;
+      coin.style.left = startX + "px";
+      coin.style.animationDuration = (Math.random() * 2.5 + 4.5) + "s";
+      document.body.appendChild(coin);
+
+      coin.onclick = (e) => {
+        e.stopPropagation();
+        playChaosSfx("coins");
+        const reward = Math.floor(Math.random() * 350) + 150;
+        if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))){
+          coins += reward;
+        }
+        if(currentUser && accounts[currentUser] && (typeof isInfiniteValue !== "function" || !isInfiniteValue(accounts[currentUser].coins))){
+          accounts[currentUser].coins = (accounts[currentUser].coins || 0) + reward;
+        }
+        if(typeof save === "function") save();
+        if(typeof render === "function") render();
+
+        // Popup
+        const pop = document.createElement("div");
+        pop.className = "goblin-coin-popup";
+        pop.textContent = `+${reward} 🪙`;
+        pop.style.left = e.clientX + "px";
+        pop.style.top = (e.clientY - 20) + "px";
+        document.body.appendChild(pop);
+        setTimeout(() => pop.remove(), 700);
+
+        coin.remove();
+      };
+
+      setTimeout(() => {
+        if(coin.parentElement) coin.remove();
+      }, 7000);
+    }, i * 200);
+
+    activeCoinShowerTimers.push(timer);
+  }
+
+  const statusEl = document.getElementById("chaosFxStatus");
+  if(statusEl) statusEl.textContent = "🪙 Falling Golden Coin Shower active! Catch falling coins!";
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "coin_shower" });
+  }
+}
+window.triggerInteractiveCoinShower = triggerInteractiveCoinShower;
+
+// --- 6. MYTHIC CHAOS TITAN GENERATOR ---
+const TITAN_DATA = {
+  solar: {
+    icon: "🔥",
+    c1: "#ea580c",
+    c2: "#431407",
+    accent: "#fed7aa",
+    glow: "rgba(251,146,60,0.5)",
+    attacks: [
+      { name: "Solar Flare", dmg: 65 },
+      { name: "Hellfire Nova", dmg: 120 },
+      { name: "Supernova Cataclysm", dmg: 260 }
+    ]
+  },
+  cosmic: {
+    icon: "⚡",
+    c1: "#eab308",
+    c2: "#713f12",
+    accent: "#fef08a",
+    glow: "rgba(253,224,71,0.5)",
+    attacks: [
+      { name: "Plasma Spark", dmg: 70 },
+      { name: "Thunder Vortex", dmg: 125 },
+      { name: "Cosmic Hyperbeam", dmg: 275 }
+    ]
+  },
+  void: {
+    icon: "🔮",
+    c1: "#8b5cf6",
+    c2: "#3b0764",
+    accent: "#ddd6fe",
+    glow: "rgba(168,85,247,0.5)",
+    attacks: [
+      { name: "Dark Shard", dmg: 75 },
+      { name: "Event Horizon", dmg: 130 },
+      { name: "Singularity Oblivion", dmg: 285 }
+    ]
+  },
+  gaia: {
+    icon: "🌿",
+    c1: "#10b981",
+    c2: "#064e3b",
+    accent: "#a7f3d0",
+    glow: "rgba(52,211,153,0.5)",
+    attacks: [
+      { name: "Verdant Cleave", dmg: 65 },
+      { name: "Tectonic Rupture", dmg: 115 },
+      { name: "Titan Gaia Wrath", dmg: 250 }
+    ]
+  },
+  cryo: {
+    icon: "❄️",
+    c1: "#38bdf8",
+    c2: "#0c4a6e",
+    accent: "#bae6fd",
+    glow: "rgba(56,189,248,0.5)",
+    attacks: [
+      { name: "Glacial Shard", dmg: 65 },
+      { name: "Blizzard Howl", dmg: 120 },
+      { name: "Absolute Zero Extinction", dmg: 270 }
+    ]
+  },
+  omni: {
+    icon: "👑",
+    c1: "#ec4899",
+    c2: "#4a044e",
+    accent: "#fbcfe8",
+    glow: "rgba(244,114,182,0.5)",
+    attacks: [
+      { name: "Chaos Rift", dmg: 80 },
+      { name: "Divine Retribution", dmg: 140 },
+      { name: "Genesis Extinction", dmg: 310 }
+    ]
+  }
+};
+
+function initChaosTitanForgeUI(){
+  updateChaosTitanPreview();
+}
+window.initChaosTitanForgeUI = initChaosTitanForgeUI;
+
+function updateChaosTitanPreview(){
+  const elemSelect = document.getElementById("chaosTitanElement");
+  const archSelect = document.getElementById("chaosTitanArchetype");
+  const nameInput = document.getElementById("chaosTitanNameInput");
+  const rarSelect = document.getElementById("chaosTitanRarity");
+
+  const nameEl = document.getElementById("chaosTitanPreviewName");
+  const metaEl = document.getElementById("chaosTitanPreviewMeta");
+  const atksEl = document.getElementById("chaosTitanPreviewAttacks");
+  const thumbEl = document.getElementById("chaosTitanPreviewThumb");
+
+  if(!elemSelect || !nameEl) return;
+
+  const elemKey = elemSelect.value || "cosmic";
+  const arch = archSelect ? archSelect.value : "Behemoth";
+  const rarity = rarSelect ? rarSelect.value : "transcendent";
+  const tInfo = TITAN_DATA[elemKey] || TITAN_DATA.cosmic;
+
+  let displayName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : "";
+  if(!displayName){
+    const elemNames = {
+      solar: "Solar Ignis",
+      cosmic: "Astra Chronos",
+      void: "Void Abyssal",
+      gaia: "Gaia Terra",
+      cryo: "Glacial Boreas",
+      omni: "Omni Genesis"
+    };
+    displayName = `${elemNames[elemKey] || "Chaos"} ${arch}`;
+  }
+
+  const hp = rarity === "transcendent" ? 240 : (rarity === "divine" ? 200 : 175);
+  nameEl.textContent = displayName;
+  if(metaEl) metaEl.textContent = `Rarity: ${rarity.toUpperCase()} • Vitality: ${hp} HP • Element: ${elemKey.toUpperCase()}`;
+
+  if(atksEl){
+    atksEl.innerHTML = tInfo.attacks.map((a, i) => `
+      <span style="display:inline-block;margin-right:8px">
+        <b>${i + 1}. ${a.name}</b> (${a.dmg} DMG)
+      </span>
+    `).join(" • ");
+  }
+
+  if(thumbEl){
+    thumbEl.innerHTML = tInfo.icon;
+    thumbEl.style.borderColor = tInfo.c1;
+    thumbEl.style.boxShadow = `0 0 20px ${tInfo.glow}`;
+  }
+}
+window.updateChaosTitanPreview = updateChaosTitanPreview;
+
+function randomizeChaosTitan(){
+  const elements = ["solar", "cosmic", "void", "gaia", "cryo", "omni"];
+  const archetypes = ["Wyrm", "Phoenix", "Behemoth", "Sovereign", "Leviathan"];
+  const prefixes = ["Astra", "Omega", "Chronos", "Vortex", "Solarius", "Zul'Gurub", "Ignis", "Nox", "Zephyrion", "Dread"];
+
+  const elemSelect = document.getElementById("chaosTitanElement");
+  const archSelect = document.getElementById("chaosTitanArchetype");
+  const nameInput = document.getElementById("chaosTitanNameInput");
+
+  if(elemSelect) elemSelect.value = elements[Math.floor(Math.random() * elements.length)];
+  if(archSelect) archSelect.value = archetypes[Math.floor(Math.random() * archetypes.length)];
+  if(nameInput){
+    const p = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const a = archSelect ? archSelect.value : "Behemoth";
+    nameInput.value = `${p} the ${a}`;
+  }
+  updateChaosTitanPreview();
+}
+window.randomizeChaosTitan = randomizeChaosTitan;
+
+function forgeChaosTitanCard(){
+  const elemSelect = document.getElementById("chaosTitanElement");
+  const archSelect = document.getElementById("chaosTitanArchetype");
+  const nameInput = document.getElementById("chaosTitanNameInput");
+  const rarSelect = document.getElementById("chaosTitanRarity");
+
+  const elemKey = elemSelect ? elemSelect.value : "cosmic";
+  const arch = archSelect ? archSelect.value : "Behemoth";
+  const rarity = rarSelect ? rarSelect.value : "transcendent";
+  const tInfo = TITAN_DATA[elemKey] || TITAN_DATA.cosmic;
+
+  let displayName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : "";
+  if(!displayName){
+    const elemNames = {
+      solar: "Solar Ignis",
+      cosmic: "Astra Chronos",
+      void: "Void Abyssal",
+      gaia: "Gaia Terra",
+      cryo: "Glacial Boreas",
+      omni: "Omni Genesis"
+    };
+    displayName = `${elemNames[elemKey] || "Chaos"} ${arch}`;
+  }
+
+  const hp = rarity === "transcendent" ? 240 : (rarity === "divine" ? 200 : 175);
+  const imageSvg = (typeof makeSvgArt === "function") 
+    ? makeSvgArt(tInfo.c1, tInfo.c2, tInfo.icon, tInfo.accent, tInfo.glow)
+    : "";
+
+  const newCard = {
+    name: displayName,
+    rarity: rarity,
+    hp: hp,
+    attacks: JSON.parse(JSON.stringify(tInfo.attacks)),
+    desc: `A primordial ${rarity} titan summoned directly from the Chaos Forge.`,
+    image: imageSvg
+  };
+
+  cards.push(newCard);
+  const newIdx = cards.length - 1;
+
+  if(typeof saveCustomCardsToStorage === "function") saveCustomCardsToStorage();
+
+  // Unlock for current user
+  if(currentUser && accounts[currentUser]){
+    if(!Array.isArray(accounts[currentUser].owned)) accounts[currentUser].owned = [];
+    if(!accounts[currentUser].owned.includes(newIdx)){
+      accounts[currentUser].owned.push(newIdx);
+    }
+    accounts[currentUser].lastAdminActionTime = Date.now();
+    accounts[currentUser].adminRevision = (accounts[currentUser].adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    owned = accounts[currentUser].owned;
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(currentUser, true, true);
+  } else {
+    if(!owned.includes(newIdx)) owned.push(newIdx);
+    save();
+  }
+
+  playChaosSfx("ascension");
+  setTimeout(() => playChaosSfx("detonation"), 300);
+  if(typeof confetti === "function") confetti({ particleCount: 140, spread: 85, origin: { y: 0.6 } });
+
+  render();
+  refreshAdminPlayerData();
+  initChaosFusionUI();
+  initChaosOverdriveUI();
+  initChaosGauntletUI();
+  if(typeof initCardSelect === "function") initCardSelect();
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`👑 PRIMORDIAL TITAN FORGED: <b>${displayName}</b> (${rarity.toUpperCase()}) added to your binder!`, true);
+  }
+  alert(`👑 TITAN FORGED SUCCESSFULLY!\n\nCard: "${displayName}" (${rarity})\nVitality: ${hp} HP\nAttacks: 3 Primordial Moves up to ${tInfo.attacks[2].dmg} DMG!\n\nUnlocked in your collection and available immediately in Arena!`);
+}
+window.forgeChaosTitanCard = forgeChaosTitanCard;
+
+// --- 7. COLOSSEUM BOSS RUSH GAUNTLET ---
+const GAUNTLET_WAVES = [
+  { name: "Shadow Stalker", icon: "🐺", hp: 180, minDmg: 20, maxDmg: 32, coinReward: 500 },
+  { name: "Nether Drake", icon: "🐲", hp: 320, minDmg: 30, maxDmg: 48, coinReward: 1000 },
+  { name: "Colossus Golem", icon: "🗿", hp: 500, minDmg: 40, maxDmg: 62, coinReward: 1500 },
+  { name: "Void Archon", icon: "🌌", hp: 750, minDmg: 55, maxDmg: 80, coinReward: 2500 },
+  { name: "Chaos Overlord", icon: "👑", hp: 1100, minDmg: 75, maxDmg: 110, coinReward: 10000 }
+];
+
+let isGauntletRunning = false;
+
+function initChaosGauntletUI(){
+  const select = document.getElementById("chaosGauntletChampionSelect");
+  if(!select) return;
+  const prevVal = select.value;
+  select.innerHTML = "";
+
+  const pool = (Array.isArray(owned) && owned.length > 0)
+    ? owned.map(i => ({ idx: i, card: cards[i] })).filter(item => item.card)
+    : cards.map((c, i) => ({ idx: i, card: c }));
+
+  pool.forEach(item => {
+    const opt = document.createElement("option");
+    opt.value = item.idx.toString();
+    const maxAtk = Math.max(...(item.card.attacks || [{ dmg: 30 }]).map(a => parseInt(a.dmg, 10) || 30));
+    opt.textContent = `${item.card.name} (${item.card.rarity}) - Top Atk: ${maxAtk} DMG`;
+    select.appendChild(opt);
+  });
+
+  if(prevVal && select.querySelector(`option[value="${prevVal}"]`)){
+    select.value = prevVal;
+  }
+}
+window.initChaosGauntletUI = initChaosGauntletUI;
+
+async function runChaosBossRushGauntlet(){
+  if(isGauntletRunning) return;
+  const select = document.getElementById("chaosGauntletChampionSelect");
+  const speedSelect = document.getElementById("chaosGauntletSpeedSelect");
+  const arenaBox = document.getElementById("chaosGauntletArenaBox");
+  const logEl = document.getElementById("chaosGauntletCombatLog");
+  const stageBadge = document.getElementById("chaosGauntletStageBadge");
+  const oppTitle = document.getElementById("chaosGauntletOpponentTitle");
+
+  const heroNameEl = document.getElementById("chaosGauntletHeroName");
+  const heroHpText = document.getElementById("chaosGauntletHeroHpText");
+  const heroHpBar = document.getElementById("chaosGauntletHeroHpBar");
+
+  const enemyNameEl = document.getElementById("chaosGauntletEnemyName");
+  const enemyHpText = document.getElementById("chaosGauntletEnemyHpText");
+  const enemyHpBar = document.getElementById("chaosGauntletEnemyHpBar");
+
+  if(!select) return;
+  const champIdx = parseInt(select.value, 10);
+  const champ = cards[champIdx] || cards[0];
+  if(!champ) return alert("Select a valid champion card.");
+
+  const delayMs = parseInt(speedSelect ? speedSelect.value : "250", 10);
+  isGauntletRunning = true;
+  arenaBox.style.display = "block";
+  logEl.innerHTML = `<div style="color:#fbbf24">⚔️ Gauntlet initiated with champion ${champ.name}!</div>`;
+
+  const heroMaxHp = (champ.hp || 100) * 4; // Scaled for boss rush
+  let heroCurrentHp = heroMaxHp;
+  heroNameEl.textContent = champ.name;
+
+  const wait = (ms) => new Promise(res => setTimeout(res, ms));
+
+  for(let waveIdx = 0; waveIdx < GAUNTLET_WAVES.length; waveIdx++){
+    const wave = GAUNTLET_WAVES[waveIdx];
+    let enemyCurrentHp = wave.hp;
+    const enemyMaxHp = wave.hp;
+
+    stageBadge.textContent = `WAVE ${waveIdx + 1} / 5`;
+    oppTitle.textContent = `${wave.icon} ${wave.name}`;
+    enemyNameEl.textContent = `${wave.icon} ${wave.name}`;
+
+    logEl.innerHTML += `<div style="color:#f472b6;font-weight:700;margin-top:4px">--- WAVE ${waveIdx + 1}: ${wave.name} emerges! ---</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+
+    while(enemyCurrentHp > 0 && heroCurrentHp > 0){
+      // Hero attack
+      const atkPool = (champ.attacks && champ.attacks.length > 0) ? champ.attacks : [{ name: "Strike", dmg: 40 }];
+      const chosenAtk = atkPool[Math.floor(Math.random() * atkPool.length)];
+      const isCrit = Math.random() < 0.25;
+      const baseDmg = parseInt(chosenAtk.dmg, 10) || 40;
+      const dmgDealt = Math.round(isCrit ? baseDmg * 1.8 : baseDmg);
+
+      enemyCurrentHp = Math.max(0, enemyCurrentHp - dmgDealt);
+      const enemyPct = Math.round((enemyCurrentHp / enemyMaxHp) * 100);
+      enemyHpBar.style.width = enemyPct + "%";
+      enemyHpText.textContent = `${enemyCurrentHp} / ${enemyMaxHp} HP`;
+
+      const critTag = isCrit ? '<b style="color:#fde047"> [CRIT!]</b>' : '';
+      logEl.innerHTML += `<div>${champ.name} used <b>${chosenAtk.name}</b> for <span style="color:#67e8f9">${dmgDealt} DMG</span>${critTag}!</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+
+      if(delayMs > 0) await wait(delayMs);
+
+      if(enemyCurrentHp <= 0) break;
+
+      // Enemy counter-attack
+      const enemyDmg = Math.floor(Math.random() * (wave.maxDmg - wave.minDmg + 1)) + wave.minDmg;
+      heroCurrentHp = Math.max(0, heroCurrentHp - enemyDmg);
+      const heroPct = Math.round((heroCurrentHp / heroMaxHp) * 100);
+      heroHpBar.style.width = heroPct + "%";
+      heroHpText.textContent = `${heroCurrentHp} / ${heroMaxHp} HP`;
+
+      logEl.innerHTML += `<div>${wave.name} hit back for <span style="color:#f87171">${enemyDmg} DMG</span>!</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+
+      if(delayMs > 0) await wait(delayMs);
+    }
+
+    if(heroCurrentHp <= 0){
+      playChaosSfx("detonation");
+      logEl.innerHTML += `<div style="color:#ef4444;font-weight:900;margin-top:6px">❌ DEFEAT: ${champ.name} was overwhelmed on Wave ${waveIdx + 1}!</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+      isGauntletRunning = false;
+      alert(`❌ GAUNTLET DEFEAT!\n\n${champ.name} fell in Wave ${waveIdx + 1} to ${wave.name}. Buff your card or choose another gladiator!`);
+      return;
+    }
+
+    // Stage Victory
+    playChaosSfx("coins");
+    if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))){
+      coins += wave.coinReward;
+    }
+    if(currentUser && accounts[currentUser] && (typeof isInfiniteValue !== "function" || !isInfiniteValue(accounts[currentUser].coins))){
+      accounts[currentUser].coins = (accounts[currentUser].coins || 0) + wave.coinReward;
+    }
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+
+    logEl.innerHTML += `<div style="color:#10b981;font-weight:800">✅ Wave ${waveIdx + 1} Cleared! +${wave.coinReward.toLocaleString()} Coins looted!</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+
+    // Small heal between waves
+    heroCurrentHp = Math.min(heroMaxHp, heroCurrentHp + Math.round(heroMaxHp * 0.35));
+    const healedPct = Math.round((heroCurrentHp / heroMaxHp) * 100);
+    heroHpBar.style.width = healedPct + "%";
+    heroHpText.textContent = `${heroCurrentHp} / ${heroMaxHp} HP (Restored)`;
+
+    if(delayMs > 0) await wait(delayMs * 1.5);
+  }
+
+  // GRAND VICTORY!
+  isGauntletRunning = false;
+  playChaosSfx("triumph");
+  setTimeout(() => playChaosSfx("ascension"), 300);
+  if(typeof confetti === "function") confetti({ particleCount: 180, spread: 100, origin: { y: 0.5 } });
+
+  // Unlock an unowned high-tier card
+  let bonusCardName = "";
+  if(Array.isArray(cards) && cards.length > 0){
+    const eligible = cards.map((c, i) => ({ c, i })).filter(item => !owned.includes(item.i) && ["mythic", "divine", "transcendent", "legendary"].includes((item.c.rarity || "").toLowerCase()));
+    if(eligible.length > 0){
+      const picked = eligible[Math.floor(Math.random() * eligible.length)];
+      owned.push(picked.i);
+      if(currentUser && accounts[currentUser]) accounts[currentUser].owned = owned;
+      bonusCardName = picked.c.name;
+    }
+  }
+  if(typeof save === "function") save();
+  if(typeof render === "function") render();
+
+  logEl.innerHTML += `<div style="color:#fbbf24;font-size:13px;font-weight:900;margin-top:6px">👑 GRAND CHAMPION! All 5 waves conquered!</div>`;
+  logEl.scrollTop = logEl.scrollHeight;
+
+  const cardBonusMsg = bonusCardName ? ` and unlocked card "${bonusCardName}"!` : "!";
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`👑 COLOSSEUM GAUNTLET CONQUERED! ${champ.name} cleared all 5 waves for +10,000 Coins${cardBonusMsg}`, true);
+  }
+  alert(`👑 GAUNTLET VICTORY!\n\n${champ.name} has obliterated all 5 waves of Chaos Fiends!\n\nTotal Bounty: +10,000 Coins awarded${cardBonusMsg}`);
+}
+window.runChaosBossRushGauntlet = runChaosBossRushGauntlet;
+
+// --- 8. PRISMATIC REALITY SHADERS & ATMOSPHERE ---
+function setChaosShader(shaderKey, isRemote = false){
+  document.body.classList.remove("shader-cyber-neon", "shader-blood-moon", "shader-vhs-retro", "shader-prismatic");
+  const badge = document.getElementById("chaosShaderBadge");
+
+  if(shaderKey === "neon"){
+    document.body.classList.add("shader-cyber-neon");
+    if(badge) badge.textContent = "CYBER NEON";
+  } else if(shaderKey === "blood"){
+    document.body.classList.add("shader-blood-moon");
+    if(badge) badge.textContent = "BLOOD MOON";
+  } else if(shaderKey === "vhs"){
+    document.body.classList.add("shader-vhs-retro");
+    if(badge) badge.textContent = "RETRO VHS";
+  } else if(shaderKey === "chroma"){
+    document.body.classList.add("shader-prismatic");
+    if(badge) badge.textContent = "CHROMA SHIFT";
+  }
+
+  playChaosSfx("warp");
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "shader", shader: shaderKey });
+  }
+}
+window.setChaosShader = setChaosShader;
+
+function clearChaosShaders(isRemote = false){
+  document.body.classList.remove("shader-cyber-neon", "shader-blood-moon", "shader-vhs-retro", "shader-prismatic");
+  const badge = document.getElementById("chaosShaderBadge");
+  if(badge) badge.textContent = "STANDARD";
+  playChaosSfx("laser");
+
+  if(!isRemote && typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "clear_shaders" });
+  }
+}
+window.clearChaosShaders = clearChaosShaders;
+
+// --- 9. INSTANT CHAOS DIVINE BOOSTER PACK ---
+function openInstantChaosGodPack(){
+  const themeSelect = document.getElementById("chaosInstantPackTheme");
+  const resultsBox = document.getElementById("chaosInstantPackResults");
+  const cardsRow = document.getElementById("chaosInstantPackCardsRow");
+  if(!themeSelect || !resultsBox || !cardsRow) return;
+
+  const theme = themeSelect.value || "divine";
+  playChaosSfx("warp");
+  setTimeout(() => playChaosSfx("ascension"), 250);
+
+  // Find matching cards in collection or fallback
+  let candidates = cards.map((c, i) => ({ c, i })).filter(item => {
+    const r = (item.c.rarity || "").toLowerCase();
+    if(theme === "divine") return r === "divine";
+    if(theme === "mythic") return r === "mythic";
+    if(theme === "transcendent") return r === "transcendent" || r === "divine";
+    return true;
+  });
+
+  if(candidates.length < 5){
+    candidates = cards.map((c, i) => ({ c, i }));
+  }
+
+  // Shuffle and pick 5
+  const picked = [];
+  for(let i = 0; i < 5; i++){
+    const choice = candidates[Math.floor(Math.random() * candidates.length)];
+    picked.push(choice);
+  }
+
+  // Display in card row
+  cardsRow.innerHTML = "";
+  picked.forEach(item => {
+    const cardEl = document.createElement("div");
+    cardEl.className = `instant-god-card ${(item.c.rarity || "divine").toLowerCase()}`;
+    const topAtk = (item.c.attacks && item.c.attacks[0]) ? item.c.attacks[0].dmg : 50;
+    cardEl.innerHTML = `
+      <div style="font-size:24px">${item.c.rarity === "divine" ? "👑" : (item.c.rarity === "transcendent" ? "✨" : "🔮")}</div>
+      <div style="font-size:10px;font-weight:900;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:4px 0">${item.c.name}</div>
+      <div style="font-size:8px;font-weight:800;color:#fde047;text-transform:uppercase">${item.c.rarity}</div>
+      <div style="font-size:9px;color:#94a3b8;margin-top:2px">${topAtk} DMG</div>
+    `;
+    cardsRow.appendChild(cardEl);
+
+    // Auto unlock if unowned
+    if(!owned.includes(item.i)){
+      owned.push(item.i);
+    }
+  });
+
+  resultsBox.style.display = "block";
+
+  // Award bonus coins
+  const bonusCoins = 2500;
+  if(typeof coins !== "undefined" && (typeof isInfiniteValue !== "function" || !isInfiniteValue(coins))){
+    coins += bonusCoins;
+  }
+  if(currentUser && accounts[currentUser]){
+    accounts[currentUser].owned = owned;
+    if(typeof isInfiniteValue !== "function" || !isInfiniteValue(accounts[currentUser].coins)){
+      accounts[currentUser].coins = (accounts[currentUser].coins || 0) + bonusCoins;
+    }
+    accounts[currentUser].lastAdminActionTime = Date.now();
+    accounts[currentUser].adminRevision = (accounts[currentUser].adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(currentUser, true, true);
+  } else {
+    save();
+  }
+
+  if(typeof confetti === "function") confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+  render();
+  refreshAdminPlayerData();
+  initChaosGauntletUI();
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`📦 GOD PACK OPENED! 5 Legendary cards revealed & +2,500 bonus coins claimed!`, true);
+  }
+}
+window.openInstantChaosGodPack = openInstantChaosGodPack;
+
 function initChaosLabUI(){
+  initChaosTitanForgeUI();
+  initChaosGauntletUI();
   initChaosFusionUI();
   initChaosOverdriveUI();
   initChaosLabPacks();
@@ -5237,6 +5829,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const resetOdBtn = document.getElementById("chaosResetOverdriveBtn");
   if(resetOdBtn) resetOdBtn.onclick = resetChaosOverdrive;
+  // Coin Rain Listener
+  const coinRainBtn = document.getElementById("chaosCoinRainBtn");
+  if(coinRainBtn) coinRainBtn.onclick = () => triggerInteractiveCoinShower();
+
+  // Titan Forge Listeners
+  const titanElem = document.getElementById("chaosTitanElement");
+  const titanArch = document.getElementById("chaosTitanArchetype");
+  const titanName = document.getElementById("chaosTitanNameInput");
+  const titanRar = document.getElementById("chaosTitanRarity");
+  if(titanElem) titanElem.onchange = updateChaosTitanPreview;
+  if(titanArch) titanArch.onchange = updateChaosTitanPreview;
+  if(titanName) titanName.oninput = updateChaosTitanPreview;
+  if(titanRar) titanRar.onchange = updateChaosTitanPreview;
+
+  const randTitanBtn = document.getElementById("chaosRandomTitanBtn");
+  if(randTitanBtn) randTitanBtn.onclick = randomizeChaosTitan;
+
+  const forgeTitanBtn = document.getElementById("chaosForgeTitanBtn");
+  if(forgeTitanBtn) forgeTitanBtn.onclick = forgeChaosTitanCard;
+
+  // Boss Rush Gauntlet Listener
+  const startGauntletBtn = document.getElementById("chaosStartGauntletBtn");
+  if(startGauntletBtn) startGauntletBtn.onclick = runChaosBossRushGauntlet;
+
+  // Shaders Listeners
+  document.querySelectorAll(".chaosShaderBtn").forEach(btn => {
+    btn.onclick = () => {
+      const shader = btn.getAttribute("data-shader");
+      setChaosShader(shader);
+    };
+  });
+  const clearShadersBtn = document.getElementById("chaosClearShadersBtn");
+  if(clearShadersBtn) clearShadersBtn.onclick = clearChaosShaders;
+
+  // Instant God Pack Listener
+  const instantPackBtn = document.getElementById("chaosInstantPackBtn");
+  if(instantPackBtn) instantPackBtn.onclick = openInstantChaosGodPack;
+
 
   document.querySelectorAll(".chaosSoundBtn").forEach(btn => {
     btn.onclick = () => {
@@ -5432,6 +6062,18 @@ function executeIncomingChaosFx(fxData, sender){
     toggleMatrixSlomo(true);
   } else if(fxData.type === "clear_physics"){
     clearChaosPhysics(true);
+  } else if(fxData.type === "coin_shower"){
+    triggerInteractiveCoinShower(true);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🪙 Falling Coin Shower unleashed by <b>${fromName}</b>! Catch the falling coins!`, true);
+    }
+  } else if(fxData.type === "shader"){
+    setChaosShader(fxData.shader, true);
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`🔮 Realm visual atmosphere shifted to <b>${(fxData.shader || "").toUpperCase()}</b> by <b>${fromName}</b>!`, true);
+    }
+  } else if(fxData.type === "clear_shaders"){
+    clearChaosShaders(true);
   }
 }
 window.executeIncomingChaosFx = executeIncomingChaosFx;
