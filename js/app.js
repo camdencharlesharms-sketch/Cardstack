@@ -830,7 +830,13 @@ function render(){
     : (isCam && accounts["Cam"] && Array.isArray(accounts["Cam"].unreleasedOwned) ? accounts["Cam"].unreleasedOwned : []);
 
   // Ensure owned standard cards match user account
-  if(userAcc && Array.isArray(userAcc.owned)){
+  if(isCam || (userAcc && userAcc.ownedAll)){
+    if(typeof cards !== "undefined" && Array.isArray(cards) && cards.length > 0){
+      owned = cards.map((_, i) => i);
+      if(userAcc) userAcc.owned = owned;
+      if(typeof window !== "undefined") window.owned = owned;
+    }
+  } else if(userAcc && Array.isArray(userAcc.owned)){
     owned = userAcc.owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
     if(typeof window !== "undefined") window.owned = owned;
   }
@@ -946,8 +952,6 @@ function render(){
           : '<span style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 GIFTED VAULT</span>') 
       : "";
 
-    const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
-    const userAcc = (myUser && accounts && accounts[myUser]) ? accounts[myUser] : null;
     const cardKey = isUnrel ? c.id : (c.id || c.name);
     const enchantKey = (userAcc && userAcc.cardEnchantments && userAcc.cardEnchantments[cardKey]) || null;
     const enchantBadge = (has && enchantKey && ENCHANT_META[enchantKey]) 
