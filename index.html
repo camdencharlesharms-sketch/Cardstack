@@ -540,9 +540,15 @@
         <div class="adminCard">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <h4 style="margin:0">👥 Active Players</h4>
-            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:5px;cursor:pointer">
-              <input type="checkbox" id="adminFilterOnlineOnly"> 🟢 Online Only
-            </label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <select id="adminPlayerStatusFilter" class="adminSelect" style="padding:2px 6px;font-size:11px;margin:0;min-width:115px;background:#0f172a;color:#cbd5e1;border:1px solid rgba(255,255,255,0.15)">
+                <option value="all">All Accounts</option>
+                <option value="online">🟢 Online Only</option>
+                <option value="away">🟡 Away Only</option>
+                <option value="offline">⚪ Offline Only</option>
+                <option value="banned">⛔ Banned Only</option>
+              </select>
+            </div>
           </div>
           <div style="max-height:260px;overflow-x:auto;overflow-y:auto">
             <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -1795,6 +1801,8 @@
     <button data-filter="rarity-mythic">Mythic</button>
     <button data-filter="rarity-divine">Divine</button>
     <button data-filter="rarity-transcendent" style="background:linear-gradient(135deg,rgba(244,63,94,0.3),rgba(168,85,247,0.3));border-color:#f43f5e">🌌 Transcendent</button>
+    <button data-filter="foil-gold" style="background:linear-gradient(135deg,rgba(251,191,36,0.2),rgba(217,119,6,0.25));border-color:#fbbf24;color:#fde68a">✨ Gold</button>
+    <button data-filter="foil-rainbow" style="background:linear-gradient(135deg,rgba(236,72,153,0.25),rgba(168,85,247,0.25),rgba(59,130,246,0.25));border-color:#f472b6;color:#fdf2f8">🌈 Rainbow</button>
     <button id="resetBtn" style="margin-left:auto;color:#ef4444">Reset Collection</button>
   </div>
 

@@ -859,6 +859,29 @@ function handleIncomingAdminDispatch(actionData, targetUser){
     return;
   }
 
+  if(actionData.type === "gift_foil"){
+    if(myUser && accounts && accounts[myUser]){
+      if(Array.isArray(actionData.goldCards)){
+        accounts[myUser].goldCards = actionData.goldCards;
+        if(typeof goldCards !== "undefined") window.goldCards = actionData.goldCards;
+      }
+      if(Array.isArray(actionData.rainbowCards)){
+        accounts[myUser].rainbowCards = actionData.rainbowCards;
+        if(typeof rainbowCards !== "undefined") window.rainbowCards = actionData.rainbowCards;
+      }
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    }
+    if(typeof confetti === "function"){
+      confetti({ particleCount: 70, spread: 80, colors: ["#fbbf24", "#f43f5e", "#a855f7", "#3b82f6"] });
+    }
+    if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+    if(typeof showLiveToast === "function"){
+      showLiveToast("✨ <b>NEW FOIL UPGRADE!</b> Master Cam granted you special Gold / Rainbow card editions!", true);
+    }
+    if(typeof render === "function") render();
+    return;
+  }
+
   if(actionData.type === "sync_player_full_state"){
     let changed = false;
     // 1. Sync custom cards

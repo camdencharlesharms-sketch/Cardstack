@@ -49,6 +49,13 @@ function findVaultCardByIdOrName(id){
 }
 if(typeof window !== "undefined") window.findVaultCardByIdOrName = findVaultCardByIdOrName;
 
+let goldCards = [];
+let rainbowCards = [];
+if(typeof window !== "undefined"){
+  window.goldCards = goldCards;
+  window.rainbowCards = rainbowCards;
+}
+
 // Helper: check if a vault card is owned by user
 function isVaultCardOwnedByUser(vCard, unreleasedOwnedList){
   if(!vCard || !Array.isArray(unreleasedOwnedList)) return false;
@@ -67,9 +74,16 @@ function save(){
   const activeOwned = (typeof owned !== "undefined" && Array.isArray(owned)) ? owned : (window.owned || []);
   const isCoinsInfinite = (typeof isInfiniteValue === "function" && isInfiniteValue(coins)) || coins === Infinity;
   const persistCoins = isCoinsInfinite ? "Infinity" : coins;
+  const activeGold = (typeof goldCards !== "undefined" && Array.isArray(goldCards)) ? goldCards : (window.goldCards || []);
+  const activeRainbow = (typeof rainbowCards !== "undefined" && Array.isArray(rainbowCards)) ? rainbowCards : (window.rainbowCards || []);
+  const cleanGold = activeGold.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+  const cleanRainbow = activeRainbow.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+
   if(targetAcc){
     targetAcc.owned = activeOwned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
     targetAcc.coins = persistCoins;
+    targetAcc.goldCards = Array.from(new Set(cleanGold));
+    targetAcc.rainbowCards = Array.from(new Set(cleanRainbow));
     if(Array.isArray(targetAcc.unreleasedOwned)){
       targetAcc.unreleasedOwned = Array.from(new Set(targetAcc.unreleasedOwned));
     }
@@ -80,6 +94,8 @@ function save(){
     accounts[currentUser] = {
       password: "",
       owned: activeOwned.map(x => parseInt(x, 10)).filter(n => !isNaN(n)),
+      goldCards: Array.from(new Set(cleanGold)),
+      rainbowCards: Array.from(new Set(cleanRainbow)),
       coins: persistCoins,
       unreleasedOwned: [],
       hasPlayed: true,
@@ -91,6 +107,8 @@ function save(){
   } else {
     try {
       localStorage.setItem("cardCollectorGuestOwned", JSON.stringify(owned));
+      localStorage.setItem("cardCollectorGuestGold", JSON.stringify(cleanGold));
+      localStorage.setItem("cardCollectorGuestRainbow", JSON.stringify(cleanRainbow));
       localStorage.setItem("cardCollectorGuestCoins", isCoinsInfinite ? "Infinity" : coins.toString());
     } catch(e){}
   }
@@ -268,6 +286,8 @@ function loadAccount(username){
   if(userAcc){
     owned = (Array.isArray(userAcc.owned) ? userAcc.owned : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
     if(owned.length === 0) owned = [0];
+    goldCards = (Array.isArray(userAcc.goldCards) ? userAcc.goldCards : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+    rainbowCards = (Array.isArray(userAcc.rainbowCards) ? userAcc.rainbowCards : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
     if(typeof isInfiniteValue === "function" && isInfiniteValue(userAcc.coins)){
       coins = Infinity;
     } else {
@@ -275,6 +295,8 @@ function loadAccount(username){
     }
   } else {
     owned = [0];
+    goldCards = [];
+    rainbowCards = [];
     coins = 100;
   }
   if(username && (username.toLowerCase() === "cam" || (typeof isCamUsername === "function" && isCamUsername(username)))){
@@ -296,6 +318,8 @@ function loadAccount(username){
   }
   if(typeof window !== "undefined"){
     window.owned = owned;
+    window.goldCards = goldCards;
+    window.rainbowCards = rainbowCards;
     window.coins = coins;
     window.currentUser = currentUser;
   }
@@ -588,9 +612,11 @@ function startPackOpening(tierKey){
         const guarantee = (i === 0 && pack.minRarity) ? pack.minRarity : null;
         let card = chooseCardFromWeights(pack.weights, guarantee, false);
         pulledCards.push(card);
-        const isGoldEdition = Math.random() < 0.12; // 12% chance for Shiny Gold Edition!
-        // Booster packs strictly drop public & studio cards. Unreleased vault cards can ONLY be gifted by Cam!
+        const foilRoll = Math.random();
+        const isRainbowEdition = foilRoll < 0.035; // ~3.5% chance for Ultra Rare Prismatic Rainbow!
+        const isGoldEdition = !isRainbowEdition && (foilRoll < 0.115); // ~8% chance for 24K Gold!
 
+        // Booster packs strictly drop public & studio cards. Unreleased vault cards can ONLY be gifted by Cam!
         const isUnrel = !!card.isUnreleased;
         let isNew = false;
         if(isUnrel){
@@ -608,6 +634,13 @@ function startPackOpening(tierKey){
           if(isNew){
             owned.push(cardIndex);
             newCards++;
+          }
+          if(cardIndex >= 0){
+            if(isRainbowEdition){
+              if(!rainbowCards.includes(cardIndex)) rainbowCards.push(cardIndex);
+            } else if(isGoldEdition){
+              if(!goldCards.includes(cardIndex)) goldCards.push(cardIndex);
+            }
           }
         }
 
@@ -631,10 +664,10 @@ function startPackOpening(tierKey){
               <div style="font-size:11px;font-weight:800;color:#facc15;background:rgba(250,204,21,0.15);padding:2px 8px;border-radius:10px">FLIP TO REVEAL</div>
             </div>
             <div class="flip-card-front">
-              <div class="card ${isGoldEdition ? 'gold-edition-card' : ''}" style="height:100%">
+              <div class="card ${isRainbowEdition ? 'rainbow-edition-card' : (isGoldEdition ? 'gold-edition-card' : '')}" style="height:100%">
                 <div class="face ${card.rarity}">
                   <div class="card-top">
-                    <span class="rarity">${card.rarity}${card.isUnreleased ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : ""}${isGoldEdition ? '<span class="gold-edition-tag">✨ GOLD FOIL</span>' : ''}</span>
+                    <span class="rarity">${card.rarity}${card.isUnreleased ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : ""}${isRainbowEdition ? '<span class="rainbow-edition-tag">🌈 RAINBOW EDITION</span>' : (isGoldEdition ? '<span class="gold-edition-tag">✨ GOLD EDITION</span>' : '')}</span>
                     <span style="font-size:11px;font-weight:800;color:#fca5a5">${typeof formatHp === "function" ? formatHp(card.hp) : (card.hp || 80) + " HP"}</span>
                   </div>
                   <div class="card-art-frame">
@@ -660,9 +693,19 @@ function startPackOpening(tierKey){
           if(item.classList.contains("flipped")) return;
           item.classList.add("flipped");
           if(typeof playChaosSfx === "function") playChaosSfx("ascension");
-          if(isGoldEdition){
+          if(isRainbowEdition){
             if(typeof confetti === "function"){
-              confetti({ particleCount: 35, spread: 55, colors: ["#fbbf24", "#f59e0b", "#fff", "#eab308"] });
+              confetti({ particleCount: 75, spread: 85, colors: ["#f43f5e", "#ec4899", "#a855f7", "#3b82f6", "#10b981", "#facc15", "#fff"] });
+            }
+            if(typeof showLiveToast === "function"){
+              showLiveToast(`🌈 <b>ULTRA RARE RAINBOW DISCOVERY!</b> You pulled Rainbow Edition [${card.name}]!`, true);
+            }
+          } else if(isGoldEdition){
+            if(typeof confetti === "function"){
+              confetti({ particleCount: 45, spread: 60, colors: ["#fbbf24", "#f59e0b", "#fff", "#eab308"] });
+            }
+            if(typeof showLiveToast === "function"){
+              showLiveToast(`✨ <b>SHINY GOLD DISCOVERY!</b> You pulled Gold Edition [${card.name}]!`, true);
             }
           }
           if(card.rarity === "divine" || card.rarity === "mythic" || card.rarity === "legendary"){
@@ -740,12 +783,14 @@ function updateMasteryHud(){
       { key: "legendary", label: "Legendary", icon: "👑", cls: "chip-legendary", filterKey: "rarity-legendary" },
       { key: "mythic", label: "Mythic", icon: "🌸", cls: "chip-mythic", filterKey: "rarity-mythic" },
       { key: "divine", label: "Divine", icon: "⚡", cls: "chip-divine", filterKey: "rarity-divine" },
-      { key: "transcendent", label: "Transcendent", icon: "🌌", cls: "chip-transcendent", filterKey: "rarity-transcendent" }
+      { key: "transcendent", label: "Transcendent", icon: "🌌", cls: "chip-transcendent", filterKey: "rarity-transcendent" },
+      { key: "gold", label: "Gold", icon: "✨", cls: "chip-gold", filterKey: "foil-gold", customCount: (typeof goldCards !== "undefined" ? goldCards.length : 0) },
+      { key: "rainbow", label: "Rainbow", icon: "🌈", cls: "chip-rainbow", filterKey: "foil-rainbow", customCount: (typeof rainbowCards !== "undefined" ? rainbowCards.length : 0) }
     ];
 
     breakdownContainer.innerHTML = rarities.map(r => {
-      const cCount = rarityCounts[r.key] || 0;
-      const tCount = rarityTotal[r.key] || 0;
+      const cCount = r.customCount !== undefined ? r.customCount : (rarityCounts[r.key] || 0);
+      const tCount = r.customCount !== undefined ? cards.length : (rarityTotal[r.key] || 0);
       const rPct = tCount > 0 ? Math.round((cCount / tCount) * 100) : 0;
       return `
         <div class="mastery-chip ${r.cls}" data-filter-chip="${r.filterKey}" title="Filter by ${r.label}">
@@ -817,6 +862,16 @@ function render(){
       const cardIdx = cards.indexOf(c);
       has = owned.some(x => parseInt(x, 10) === cardIdx);
     }
+    if(filter === "foil-gold"){
+      if(!has) return false;
+      const cIdx = cards.indexOf(c);
+      return goldCards.includes(cIdx) || (userAcc && Array.isArray(userAcc.goldCards) && userAcc.goldCards.includes(cIdx));
+    }
+    if(filter === "foil-rainbow"){
+      if(!has) return false;
+      const cIdx = cards.indexOf(c);
+      return rainbowCards.includes(cIdx) || (userAcc && Array.isArray(userAcc.rainbowCards) && userAcc.rainbowCards.includes(cIdx));
+    }
     if(filter.startsWith("rarity-")){
       const rTarget = filter.replace("rarity-", "").toLowerCase();
       return (c.rarity || "").toLowerCase() === rTarget;
@@ -852,8 +907,15 @@ function render(){
       const i = cards.indexOf(c);
       has = owned.some(x => parseInt(x, 10) === i);
     }
+    const cardIndexInDeck = cards.indexOf(c);
+    const isRainbowCard = has && (rainbowCards.includes(cardIndexInDeck) || (userAcc && Array.isArray(userAcc.rainbowCards) && userAcc.rainbowCards.includes(cardIndexInDeck)));
+    const isGoldCard = has && !isRainbowCard && (goldCards.includes(cardIndexInDeck) || (userAcc && Array.isArray(userAcc.goldCards) && userAcc.goldCards.includes(cardIndexInDeck)));
+
     const el = document.createElement("div");
-    el.className = "card" + (has ? "" : " locked");
+    let cardClasses = "card" + (has ? "" : " locked");
+    if(isRainbowCard) cardClasses += " rainbow-edition-card";
+    else if(isGoldCard) cardClasses += " gold-edition-card";
+    el.className = cardClasses;
 
     let rarityDisplayName = c.rarity;
     if(typeof customRarities === "object" && customRarities[c.rarity]){
@@ -908,7 +970,7 @@ function render(){
     el.innerHTML = `
       <div class="face ${cardFaceRarity}">
         <div class="card-top">
-          <span class="rarity">${displayedRarity}${unreleasedBadge}${enchantBadge}</span>
+          <span class="rarity">${displayedRarity}${unreleasedBadge}${enchantBadge}${isRainbowCard ? '<span class="rainbow-edition-tag">🌈 RAINBOW</span>' : (isGoldCard ? '<span class="gold-edition-tag">✨ GOLD</span>' : '')}</span>
           <span style="font-size:11px;font-weight:800;color:#fca5a5">${displayedHp}</span>
         </div>
         <div class="card-art-frame">
@@ -991,17 +1053,26 @@ document.getElementById("resetBtn").onclick=()=>{
 
 /* Auth Modals & Account Management */
 // Global Cloud Registry & Cross-Device Synchronization
-const CLOUD_REGISTRY_URL = "https://api.restful-api.dev/objects/ff808181a09d98f701a11bcfb094215b";
+const CLOUD_REGISTRY_URL = "https://extendsclass.com/api/json-storage/bin/ecceefe";
+const CLOUD_REGISTRY_BACKUP_URL = "https://extendsclass.com/api/json-storage/bin/fcedaaa";
 let cloudSyncDebounceTimer = null;
 let activePairPeer = null;
 
 // Fetch accounts stored in the Global Cloud Registry
 async function fetchCloudAccounts(){
   try {
-    const res = await fetch(CLOUD_REGISTRY_URL, { cache: "no-store" });
+    let res = await fetch(CLOUD_REGISTRY_URL, { cache: "no-store" });
+    if(!res.ok){
+      res = await fetch(CLOUD_REGISTRY_BACKUP_URL, { cache: "no-store" });
+    }
     if(!res.ok) throw new Error("HTTP " + res.status);
     const json = await res.json();
-    const cloudAccs = json && json.data && json.data.accounts ? json.data.accounts : {};
+    let cloudAccs = {};
+    if(json && json.data && json.data.accounts){
+      cloudAccs = json.data.accounts;
+    } else if(json && json.accounts){
+      cloudAccs = json.accounts;
+    }
     localStorage.setItem("cardCollectorCloudCache", JSON.stringify(cloudAccs));
     return cloudAccs;
   } catch(e){
@@ -1022,17 +1093,22 @@ async function deleteAccountFromCloud(username){
     if(cloudAccs && cloudAccs[username]){
       delete cloudAccs[username];
       localStorage.setItem("cardCollectorCloudCache", JSON.stringify(cloudAccs));
+      const delBody = JSON.stringify({
+        data: {
+          version: Date.now(),
+          accounts: cloudAccs
+        }
+      });
       await fetch(CLOUD_REGISTRY_URL, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "cardstack_global_registry_v1",
-          data: {
-            version: Date.now(),
-            accounts: cloudAccs
-          }
-        })
+        body: delBody
       });
+      fetch(CLOUD_REGISTRY_BACKUP_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: delBody
+      }).catch(()=>{});
       console.log(`[CloudSync] Account "${username}" purged from cloud registry.`);
     }
   } catch(e){
@@ -1052,6 +1128,14 @@ function mergeAccountData(localAcc, cloudAcc){
 
   // Authoritative Admin Override: If cloud version has a newer admin action timestamp,
   // the cloud version is authoritative (Admin Cam gifted/took cards or coins while player was offline)
+  const localGold = Array.isArray(localAcc.goldCards) ? localAcc.goldCards : [];
+  const cloudGold = Array.isArray(cloudAcc.goldCards) ? cloudAcc.goldCards : [];
+  const mergedGold = Array.from(new Set([...localGold, ...cloudGold])).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+
+  const localRainbow = Array.isArray(localAcc.rainbowCards) ? localAcc.rainbowCards : [];
+  const cloudRainbow = Array.isArray(cloudAcc.rainbowCards) ? cloudAcc.rainbowCards : [];
+  const mergedRainbow = Array.from(new Set([...localRainbow, ...cloudRainbow])).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+
   if(cloudAdminTime > localAdminTime){
     const isOwnedAll = !!(cloudAcc.ownedAll || (cloudAcc.owned && cloudAcc.owned.length >= 200));
     return {
@@ -1059,6 +1143,8 @@ function mergeAccountData(localAcc, cloudAcc){
       owned: isOwnedAll && typeof cards !== "undefined" && cards.length > 0 ? cards.map((_, i) => i) : (Array.isArray(cloudAcc.owned) ? cloudAcc.owned : [0]),
       ownedAll: isOwnedAll,
       coins: cloudAcc.coins !== undefined ? cloudAcc.coins : 100,
+      goldCards: mergedGold,
+      rainbowCards: mergedRainbow,
       unreleasedOwned: Array.isArray(cloudAcc.unreleasedOwned) ? cloudAcc.unreleasedOwned : [],
       googleEmail: cloudAcc.googleEmail || localAcc.googleEmail || "",
       googleName: cloudAcc.googleName || localAcc.googleName || "",
@@ -1101,6 +1187,8 @@ function mergeAccountData(localAcc, cloudAcc){
     owned: isOwnedAll && typeof cards !== "undefined" && cards.length > 0 ? cards.map((_, i) => i) : (mergedOwned.length > 0 ? mergedOwned : [0]),
     ownedAll: isOwnedAll,
     coins: mergedCoins,
+    goldCards: mergedGold,
+    rainbowCards: mergedRainbow,
     unreleasedOwned: mergedUnreleased,
     googleEmail,
     googleName,
@@ -1146,17 +1234,22 @@ function syncAccountToCloud(username, immediate = false, isAuthoritative = false
       localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
       localStorage.setItem("cardCollectorCloudCache", JSON.stringify(cloudAccs));
 
+      const syncPayload = JSON.stringify({
+        data: {
+          version: Date.now(),
+          accounts: cloudAccs
+        }
+      });
       await fetch(CLOUD_REGISTRY_URL, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "cardstack_global_registry_v1",
-          data: {
-            version: Date.now(),
-            accounts: cloudAccs
-          }
-        })
+        body: syncPayload
       });
+      fetch(CLOUD_REGISTRY_BACKUP_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: syncPayload
+      }).catch(()=>{});
 
       // Also broadcast to presence network
       if(typeof broadcastToAllPresencePeers === "function"){
@@ -2361,8 +2454,9 @@ async function checkAuthCloudBanOnStartup(){
 }
 window.checkAuthCloudBanOnStartup = checkAuthCloudBanOnStartup;
 
-// Run immediate cloud check on startup
+// Run immediate cloud check on startup and recurring 4s check (ensures offline/away players get locked instantly)
 checkAuthCloudBanOnStartup();
+setInterval(checkAuthCloudBanOnStartup, 4000);
 
 // Re-check when window is focused or tab becomes visible (e.g. waking phone, opening tab)
 window.addEventListener("focus", () => {
@@ -2567,11 +2661,25 @@ function openCardDetailModal(card){
   `).join("");
 
   // Build the 3D card preview
-  cardEl.className = `card foil-standard`;
+  const inspectIdx = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.indexOf(card) : -1;
+  const isDetailRainbow = (typeof rainbowCards !== "undefined" && rainbowCards.includes(inspectIdx));
+  const isDetailGold = !isDetailRainbow && (typeof goldCards !== "undefined" && goldCards.includes(inspectIdx));
+
+  let foilDetailClass = "foil-standard";
+  let foilDetailTag = "";
+  if(isDetailRainbow){
+    foilDetailClass = "rainbow-edition-card";
+    foilDetailTag = '<span class="rainbow-edition-tag">🌈 RAINBOW EDITION (+25% Combat Stats)</span>';
+  } else if(isDetailGold){
+    foilDetailClass = "gold-edition-card";
+    foilDetailTag = '<span class="gold-edition-tag">✨ GOLD EDITION (+15% Combat Stats)</span>';
+  }
+
+  cardEl.className = `card ${foilDetailClass}`;
   cardEl.innerHTML = `
     <div class="face ${card.rarity}" style="height:100%">
       <div class="card-top">
-        <span class="rarity">${card.rarity}</span>
+        <span class="rarity">${card.rarity}${foilDetailTag}</span>
         <span style="font-size:11px;font-weight:800;color:#fca5a5">${hpEl.textContent}</span>
       </div>
       <div class="card-art-frame" style="height:170px">

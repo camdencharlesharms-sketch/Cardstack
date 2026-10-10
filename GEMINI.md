@@ -284,6 +284,41 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - Pack Opening Logic: When a player holds infinite coins, booster pack costs are bypassed without deduction, providing unlimited pack openings.
   - P2P Synchronization: Infinite coin gifts broadcast seamlessly across PeerJS and local BroadcastChannels with live celebratory toast banners and victory fanfare.
 
+
+### Rainbow & Gold Foil Edition Card System
+- **✨ 24K Gold Foil Edition**:
+  - Pull rate in booster packs: ~8% chance per card.
+  - Visuals: Specular metallic 24K gold glowing border (`@keyframes goldFoilGleam`), glistening foil overlay, and `✨ GOLD EDITION` badge.
+  - Gameplay: +15% HP & +15% Attack DMG multiplier in Arena battles against AI and multiplayer opponents.
+- **🌈 Prismatic Rainbow Edition (Secret Rare)**:
+  - Pull rate in booster packs: ~3.5% chance per card (ultra-rare).
+  - Visuals: Prismatic animated holographic border (`@keyframes rainbowFoilGlare`), shifting multi-hue iridescent glare, and `🌈 RAINBOW EDITION` badge.
+  - Gameplay: +25% HP & +25% Attack DMG multiplier in Arena battles, accompanied by celestial glissando fanfare and 7-color confetti.
+- **Foil Persistence & Account Synchronization**:
+  - Tracked per player account in `goldCards` and `rainbowCards` arrays.
+  - Supported in `mergeAccountData` and `syncAccountToCloud` with zero loss of cards or foil status.
+- **Binder & HUD Integration**:
+  - Collection binder filter buttons: `✨ Gold` (shows only cards owned in Gold) and `🌈 Rainbow` (shows only cards owned in Rainbow).
+  - Mastery HUD chips display live progress counters for both Gold and Rainbow editions.
+  - 3D Holographic Card Inspector modal renders animated 3D foil shaders and displays combat stat multiplier bonuses.
+- **Admin Hub Foil Studio**:
+  - In `#tabPlayers`, every player row includes a `✨ Foil` button (`adminFoilPrompt`).
+  - Master Cam can gift random or specific Gold/Rainbow cards, or upgrade all cards to Gold or Rainbow across all devices.
+
+### Offline & Away Player Management & Real-Time Global Cloud Bans
+- **High-Availability Cloud Registry**:
+  - Switched from restrictive quota-capped endpoints to high-availability, CORS-enabled endpoints on ExtendsClass:
+    - Primary: `https://extendsclass.com/api/json-storage/bin/ecceefe`
+    - Backup: `https://extendsclass.com/api/json-storage/bin/fcedaaa`
+  - Eliminates the 50-request daily limit of restful-api.dev, allowing unrestricted cloud account syncing and remote bans.
+- **4-Second Real-Time Suspension Poll**:
+  - `checkAuthCloudBanOnStartup` executes on startup and repeats on `setInterval(..., 4000)`.
+  - Ensures away players (idle > 75s or tab running in the background) and offline players are locked out within 4 seconds of Cam issuing a ban.
+- **Player Accounts Filter & Status Selector**:
+  - Added status selector dropdown `#adminPlayerStatusFilter` to the Player Accounts table in `#tabPlayers`.
+  - Filter by `All Accounts`, `🟢 Online Only`, `🟡 Away Only`, `⚪ Offline Only`, or `⛔ Banned Only`.
+  - Master Cam can ban any player directly by clicking `⛔ Ban` in the table or typing their username in the Direct Ban card.
+
 ### Multi-Peer Chaos Lab Live Broadcast Synchronization
 - **Universal Chaos FX Broadcast (`broadcastChaosFx` / `executeIncomingChaosFx`)**:
   - When Master Admin Cam or an administrator activates visual or auditory phenomena in the Chaos Lab, the event is immediately broadcasted across the decentralized mesh:

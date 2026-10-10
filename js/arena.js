@@ -625,10 +625,33 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
   document.getElementById("playerLabelTag").textContent = playerTitle;
   document.getElementById("oppLabelTag").textContent = oppTitle;
 
+  const cardIdx = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.indexOf(battlePlayerCard) : -1;
+  const isPlayerRainbow = (typeof rainbowCards !== "undefined" && Array.isArray(rainbowCards) && rainbowCards.includes(cardIdx));
+  const isPlayerGold = !isPlayerRainbow && (typeof goldCards !== "undefined" && Array.isArray(goldCards) && goldCards.includes(cardIdx));
+
+  let foilSuffix = "";
+  if(isPlayerRainbow){
+    foilSuffix = " [🌈 RAINBOW +25%]";
+    if(pCard){
+      pCard.classList.add("rainbow-edition-card");
+      pCard.classList.remove("gold-edition-card");
+    }
+    if(Number.isFinite(battlePlayerHp)) battlePlayerHp = Math.round(battlePlayerHp * 1.25);
+  } else if(isPlayerGold){
+    foilSuffix = " [✨ GOLD +15%]";
+    if(pCard){
+      pCard.classList.add("gold-edition-card");
+      pCard.classList.remove("rainbow-edition-card");
+    }
+    if(Number.isFinite(battlePlayerHp)) battlePlayerHp = Math.round(battlePlayerHp * 1.15);
+  } else if(pCard){
+    pCard.classList.remove("rainbow-edition-card", "gold-edition-card");
+  }
+
   document.getElementById("playerBattleImg").src = battlePlayerCard.image || "";
   const myEnchant = (typeof getSelectedChampionEnchantment === "function") ? getSelectedChampionEnchantment() : null;
   const enchantSuffix = (myEnchant && typeof ENCHANT_META !== "undefined" && ENCHANT_META[myEnchant]) ? ` [${ENCHANT_META[myEnchant].badge}]` : "";
-  document.getElementById("playerBattleName").textContent = (battlePlayerCard.name || "Champion") + enchantSuffix;
+  document.getElementById("playerBattleName").textContent = (battlePlayerCard.name || "Champion") + enchantSuffix + foilSuffix;
 
   document.getElementById("aiBattleImg").src = battleOppCard.image || "";
   document.getElementById("aiBattleName").textContent = battleOppCard.name || "Opponent";
@@ -643,9 +666,15 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
     const btn = document.createElement("button");
     btn.className = "attack-btn";
     const isInf = (typeof isInfiniteValue === "function" && isInfiniteValue(atk.dmg)) || atk.dmg === "Infinity";
-    const dmgLabel = isInf ? "∞ INFINITE DMG" : (typeof formatDmg === "function" ? formatDmg(atk.dmg) : `${atk.dmg} DMG`);
+    let calcDmg = atk.dmg;
+    if(!isInf && typeof calcDmg === "number"){
+      if(isPlayerRainbow) calcDmg = Math.round(calcDmg * 1.25);
+      else if(isPlayerGold) calcDmg = Math.round(calcDmg * 1.15);
+    }
+    const effectiveAtk = { ...atk, dmg: calcDmg };
+    const dmgLabel = isInf ? "∞ INFINITE DMG" : (typeof formatDmg === "function" ? formatDmg(calcDmg) : `${calcDmg} DMG`);
     btn.innerHTML = `<span>⚔️ <b>${atk.name}</b></span> <span style="color:${isInf ? "#f43f5e;font-weight:900" : "#fbbf24"}">${dmgLabel}</span>`;
-    btn.onclick = () => performPlayerAttack(atk);
+    btn.onclick = () => performPlayerAttack(effectiveAtk);
     attacksContainer.appendChild(btn);
   });
 

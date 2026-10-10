@@ -2056,21 +2056,97 @@ body.shader-prismatic {
 }
 .enchant-badge.gaia { background: linear-gradient(135deg, #10b981, #047857); color: #fff; }
 
-/* Golden Edition Booster Card Drops */
+/* ========================================================
+   RAINBOW & GOLD FOIL CARD SYSTEM
+   ======================================================== */
+@keyframes goldFoilGleam {
+  0% { filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4)) brightness(1); }
+  50% { filter: drop-shadow(0 0 24px rgba(251, 191, 36, 0.8)) brightness(1.15); }
+  100% { filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4)) brightness(1); }
+}
+
+@keyframes rainbowBorderShift {
+  0% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(180deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+@keyframes rainbowFoilGlare {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* 24K Gold Edition */
 .gold-edition-card {
-  box-shadow: 0 0 35px rgba(251, 191, 36, 0.75), inset 0 0 20px rgba(245, 158, 11, 0.35) !important;
+  box-shadow: 0 0 32px rgba(251, 191, 36, 0.75), inset 0 0 22px rgba(245, 158, 11, 0.45) !important;
   border: 2px solid #fbbf24 !important;
+  animation: goldFoilGleam 4s infinite ease-in-out;
+  position: relative;
+}
+.gold-edition-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(251, 191, 36, 0.25) 25%, transparent 50%, rgba(245, 158, 11, 0.25) 75%, rgba(255, 255, 255, 0.35) 100%);
+  pointer-events: none;
+  border-radius: inherit;
+  mix-blend-mode: overlay;
+  z-index: 4;
 }
 .gold-edition-tag {
   background: linear-gradient(135deg, #fbbf24, #d97706);
-  color: #000;
+  color: #1e1b4b;
   font-weight: 900;
   font-size: 8.5px;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
   letter-spacing: 0.5px;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
-  margin-left: 4px;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.7);
+  margin-left: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Prismatic Rainbow Edition */
+.rainbow-edition-card {
+  border: 2px solid transparent !important;
+  background-image: linear-gradient(rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.96)), linear-gradient(135deg, #f43f5e, #ec4899, #a855f7, #6366f1, #06b6d4, #10b981, #facc15, #f43f5e) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  box-shadow: 0 0 35px rgba(236, 72, 153, 0.6), 0 0 60px rgba(168, 85, 247, 0.4) !important;
+  position: relative;
+}
+.rainbow-edition-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 20%, rgba(244, 63, 94, 0.35) 35%, rgba(168, 85, 247, 0.35) 50%, rgba(59, 130, 246, 0.35) 65%, rgba(16, 185, 129, 0.35) 80%, transparent 95%);
+  background-size: 250% 250%;
+  animation: rainbowFoilGlare 6s infinite linear;
+  pointer-events: none;
+  border-radius: inherit;
+  mix-blend-mode: color-dodge;
+  z-index: 4;
+}
+.rainbow-edition-tag {
+  background: linear-gradient(135deg, #f43f5e, #ec4899, #a855f7, #3b82f6, #10b981, #facc15);
+  background-size: 200% 200%;
+  animation: rainbowFoilGlare 4s infinite linear;
+  color: #fff;
+  font-weight: 900;
+  font-size: 8.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.7);
+  margin-left: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 /* ========================================================

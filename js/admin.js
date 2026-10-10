@@ -206,6 +206,11 @@ function isValidGameAccount(name, data){
     return true;
   }
 
+  // Any account present in accounts dictionary is valid for admin management
+  if(data && typeof data === "object"){
+    return true;
+  }
+
   return false;
 }
 
@@ -246,8 +251,15 @@ function refreshAdminPlayerData(){
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   localStorage.setItem("cardCollectorSubAdmins", JSON.stringify(subAdminRoles));
 
+  const statusFilterEl = document.getElementById("adminPlayerStatusFilter");
+  if(statusFilterEl && !statusFilterEl._hasListener){
+    statusFilterEl._hasListener = true;
+    statusFilterEl.addEventListener("change", () => refreshAdminPlayerData());
+  }
+  const activeStatusFilter = statusFilterEl ? statusFilterEl.value : (isFilterOnline ? "online" : "all");
+
   const now = Date.now();
-  if(typeof fetchCloudAccounts === "function" && (!window._lastAdminCloudSyncTime || (now - window._lastAdminCloudSyncTime > 12000))){
+  if(typeof fetchCloudAccounts === "function" && (!window._lastAdminCloudSyncTime || (now - window._lastAdminCloudSyncTime > 4000))){
     window._lastAdminCloudSyncTime = now;
     fetchCloudAccounts().then(cloudAccs => {
       let changed = false;
@@ -279,7 +291,24 @@ function refreshAdminPlayerData(){
   // ONLY accounts that are online or that have played the game before. Zero made-up names.
   let allNames = Object.keys(accounts).filter(name => isValidGameAccount(name, accounts[name]));
 
-  if(isFilterOnline){
+  if(activeStatusFilter === "online"){
+    allNames = allNames.filter(name => {
+      const st = getAccountOnlineState(name);
+      return st.status === "online";
+    });
+  } else if(activeStatusFilter === "away"){
+    allNames = allNames.filter(name => {
+      const st = getAccountOnlineState(name);
+      return st.status === "away";
+    });
+  } else if(activeStatusFilter === "offline"){
+    allNames = allNames.filter(name => {
+      const st = getAccountOnlineState(name);
+      return st.status === "offline";
+    });
+  } else if(activeStatusFilter === "banned"){
+    allNames = allNames.filter(name => accounts[name] && accounts[name].banned);
+  } else if(isFilterOnline){
     allNames = allNames.filter(name => isAccountOnline(name));
   }
 
@@ -391,6 +420,7 @@ function refreshAdminPlayerData(){
         <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#059669;color:#fff;margin-right:3px" onclick="quickGiftPlayerCardPrompt('${name}')" title="Gift a card to this player">🎁 Gift</button>
         <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#dc2626;color:#fff;margin-right:3px" onclick="quickRevokePlayerCardPrompt('${name}')" title="Take away a card from this player">❌ Take</button>
         <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#d97706;color:#fff;margin-right:3px" onclick="quickTreasuryPlayerPrompt('${name}')" title="Gift or take away coins">💰 Coins</button>
+        <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:linear-gradient(135deg,#fbbf24,#ec4899);color:#0f172a;font-weight:900;margin-right:3px" onclick="adminFoilPrompt('${name}')" title="Gift Gold or Rainbow edition cards">✨ Foil</button>
         <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#0284c7;color:#fff;margin-right:3px" onclick="adminChangePlayerPasswordPrompt('${name}')" title="Change or reset password">🔑 Pass</button>
         ${!isMaster ? ((typeof isMasterAdmin === "function" && isMasterAdmin()) ? `
           <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#334155;color:${data.banned ? '#4ade80' : '#f87171'};margin-right:3px" onclick="adminToggleBanPlayer('${name}')" title="${data.banned ? 'Click to unban player immediately' : 'Suspend player with custom message & timer'}">${data.banned ? '🟢 Unban' : '⛔ Ban'}</button>
@@ -7460,3 +7490,86 @@ if(document.readyState === "complete" || document.readyState === "interactive"){
     initUsefulAdminToolsDom();
   }, 140);
 }
+
+// ========================================================
+// ADMIN FOIL EDITION STUDIO (GOLD & RAINBOW)
+// ========================================================
+window.adminFoilPrompt = function(targetUser){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift or modify Gold & Rainbow card editions.");
+  if(!targetUser) return;
+  const acc = accounts[targetUser];
+  if(!acc) return alert(`Account [${targetUser}] not found.`);
+
+  const choice = prompt(
+    `✨ FOIL EDITION STUDIO FOR [${targetUser}]\n\n` +
+    `Choose an action:\n` +
+    `1: Gift Random Gold Card\n` +
+    `2: Gift Random Rainbow Card\n` +
+    `3: Upgrade ALL Owned Cards to 24K Gold Edition\n` +
+    `4: Upgrade ALL Owned Cards to Prismatic Rainbow Edition\n` +
+    `5: Upgrade specific card index to Gold\n` +
+    `6: Upgrade specific card index to Rainbow\n\n` +
+    `Enter option number (1-6):`
+  );
+  if(!choice) return;
+
+  if(!Array.isArray(acc.goldCards)) acc.goldCards = [];
+  if(!Array.isArray(acc.rainbowCards)) acc.rainbowCards = [];
+  const ownedList = Array.isArray(acc.owned) && acc.owned.length > 0 ? acc.owned : [0];
+
+  if(choice === "1"){
+    const randCardIdx = ownedList[Math.floor(Math.random() * ownedList.length)];
+    if(!acc.goldCards.includes(randCardIdx)) acc.goldCards.push(randCardIdx);
+    const cName = (typeof cards !== "undefined" && cards[randCardIdx]) ? cards[randCardIdx].name : `Card #${randCardIdx}`;
+    alert(`✨ Gifted Gold Edition of [${cName}] to [${targetUser}]!`);
+  } else if(choice === "2"){
+    const randCardIdx = ownedList[Math.floor(Math.random() * ownedList.length)];
+    if(!acc.rainbowCards.includes(randCardIdx)) acc.rainbowCards.push(randCardIdx);
+    const cName = (typeof cards !== "undefined" && cards[randCardIdx]) ? cards[randCardIdx].name : `Card #${randCardIdx}`;
+    alert(`🌈 Gifted Rainbow Edition of [${cName}] to [${targetUser}]!`);
+  } else if(choice === "3"){
+    acc.goldCards = Array.from(new Set([...acc.goldCards, ...ownedList]));
+    alert(`✨ Upgraded all ${ownedList.length} owned cards to 24K Gold Edition for [${targetUser}]!`);
+  } else if(choice === "4"){
+    acc.rainbowCards = Array.from(new Set([...acc.rainbowCards, ...ownedList]));
+    alert(`🌈 Upgraded all ${ownedList.length} owned cards to Prismatic Rainbow Edition for [${targetUser}]!`);
+  } else if(choice === "5"){
+    const idxInput = prompt(`Enter card index to upgrade to Gold (0 - ${typeof cards !== "undefined" ? cards.length - 1 : 200}):`);
+    const idx = parseInt(idxInput, 10);
+    if(isNaN(idx) || idx < 0) return alert("Invalid card index.");
+    if(!acc.goldCards.includes(idx)) acc.goldCards.push(idx);
+    if(!acc.owned.includes(idx)) acc.owned.push(idx);
+    alert(`✨ Set Gold Edition for card #${idx}!`);
+  } else if(choice === "6"){
+    const idxInput = prompt(`Enter card index to upgrade to Rainbow (0 - ${typeof cards !== "undefined" ? cards.length - 1 : 200}):`);
+    const idx = parseInt(idxInput, 10);
+    if(isNaN(idx) || idx < 0) return alert("Invalid card index.");
+    if(!acc.rainbowCards.includes(idx)) acc.rainbowCards.push(idx);
+    if(!acc.owned.includes(idx)) acc.owned.push(idx);
+    alert(`🌈 Set Rainbow Edition for card #${idx}!`);
+  } else {
+    return alert("Invalid option number.");
+  }
+
+  acc.lastAdminActionTime = Date.now();
+  acc.adminRevision = (acc.adminRevision || 0) + 1;
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+  if(targetUser === currentUser){
+    if(typeof goldCards !== "undefined") window.goldCards = acc.goldCards;
+    if(typeof rainbowCards !== "undefined") window.rainbowCards = acc.rainbowCards;
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+  }
+
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(targetUser, {
+      type: "gift_foil",
+      goldCards: acc.goldCards,
+      rainbowCards: acc.rainbowCards
+    });
+  }
+
+  refreshAdminPlayerData();
+};
