@@ -509,6 +509,34 @@
           </div>
         </div>
 
+        <!-- OFFLINE & DIRECT PLAYER BAN / SUSPENSION -->
+        <div class="adminCard" style="border:1px solid rgba(239,68,68,0.35);background:radial-gradient(circle at top right, rgba(239,68,68,0.12), rgba(15,23,42,0.75))">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <h4 style="margin:0;color:#fca5a5;display:flex;align-items:center;gap:6px">
+              <span>⛔</span> <span>Suspend Player (Online or Offline)</span>
+            </h4>
+            <span style="font-size:10px;background:rgba(239,68,68,0.25);color:#fca5a5;padding:2px 8px;border-radius:4px;font-weight:800">GLOBAL CLOUD BAN</span>
+          </div>
+          <p style="font-size:11px;color:#94a3b8;margin:0 0 10px 0;line-height:1.4">
+            Ban any player whether they are online now or completely offline. When they open the game or sign in on any device, they are immediately locked out and see your custom message with a live countdown timer.
+          </p>
+          <label style="font-size:12px;color:#94a3b8">Target Player Username (Online or Offline):</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <input id="adminBanDirectUsernameInput" class="adminInput" placeholder="Type player username to ban..." style="flex:1;margin:0">
+            <select id="adminBanDirectUserSelect" class="adminSelect" style="flex:1;margin:0">
+              <option value="">-- Or Select Account --</option>
+            </select>
+          </div>
+          <div class="adminBtnGroup">
+            <button id="adminBanDirectOpenBtn" type="button" style="background:linear-gradient(135deg, #ef4444, #b91c1c);color:#fff;font-weight:900">
+              ⛔ Configure Ban & Send to Screen
+            </button>
+            <button id="adminUnbanDirectBtn" type="button" style="background:#059669;color:#fff;font-weight:900">
+              🟢 Unban Player
+            </button>
+          </div>
+        </div>
+
         <div class="adminCard">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <h4 style="margin:0">👥 Active Players</h4>

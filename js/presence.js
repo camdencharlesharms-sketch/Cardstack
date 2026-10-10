@@ -430,9 +430,27 @@ function handleCamReceivedPresenceData(conn, data){
     showLiveToast(`🎉 New Player Registered: <b>${username}</b>`, true);
   }
 
+  // If player is BANNED, immediately dispatch suspension overlay to their screen!
+  const userAcc = accounts[username];
+  if(userAcc && userAcc.banned && !(typeof isCamUsername === "function" && isCamUsername(username))){
+    if(!userAcc.banExpires || Date.now() < userAcc.banExpires){
+      try {
+        conn.send({
+          type: "admin_dispatch",
+          target: username,
+          action: {
+            type: "ban_player",
+            reason: userAcc.banReason || "Your account has been temporarily suspended by Master Cam.",
+            banExpires: userAcc.banExpires
+          }
+        });
+      } catch(e){}
+      return; // Halt sending game assets to suspended account
+    }
+  }
+
   // Always synchronize full player gifts, vault cards, balance & studio cards back to connected player
   try {
-    const userAcc = accounts[username];
     if(userAcc && conn && conn.open){
       const customs = (typeof getCustomCardsFromStorage === "function") ? getCustomCardsFromStorage() : [];
       conn.send({
@@ -538,6 +556,13 @@ window.addEventListener("storage", (e)=>{
       } catch(err){}
       
       const userAcc = (typeof getUserAccount === "function") ? getUserAccount(currentUser) : (currentUser ? accounts[currentUser] : null);
+      if(userAcc && userAcc.banned && !(typeof isCamUsername === "function" && isCamUsername(currentUser))){
+        if(!userAcc.banExpires || Date.now() < userAcc.banExpires){
+          if(typeof showBannedScreen === "function") showBannedScreen(userAcc, currentUser);
+        }
+      } else if(userAcc && !userAcc.banned && typeof hideBannedScreen === "function"){
+        hideBannedScreen();
+      }
       if(userAcc){
         if(Array.isArray(userAcc.owned)){
           owned = userAcc.owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));

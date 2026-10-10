@@ -201,8 +201,8 @@ function isValidGameAccount(name, data){
   // Online account is valid
   if(isAccountOnline(n)) return true;
 
-  // Must have played the game before
-  if(data && (data.hasPlayed === true || (Array.isArray(data.owned) && data.owned.length > 0) || (data.lastActive && data.lastActive > 0))){
+  // Must have played the game before or have an active ban / admin action
+  if(data && (data.banned === true || data.hasPlayed === true || (Array.isArray(data.owned) && data.owned.length > 0) || (data.lastActive && data.lastActive > 0))){
     return true;
   }
 
@@ -233,6 +233,8 @@ function refreshAdminPlayerData(){
   if(playerSelect) playerSelect.innerHTML = '<option value="">Select Target Player...</option>';
   if(subAdminSelect) subAdminSelect.innerHTML = '<option value="">Select Player...</option>';
   if(ecoPlayerSelect) ecoPlayerSelect.innerHTML = '<option value="">Select Target Player...</option>';
+  const directBanSelectEl = document.getElementById("adminBanDirectUserSelect");
+  if(directBanSelectEl) directBanSelectEl.innerHTML = '<option value="">-- Or Select Account --</option>';
   if(tableBody) tableBody.innerHTML = "";
 
   // Always sanitize against fake / made-up names
@@ -338,6 +340,14 @@ function refreshAdminPlayerData(){
       casOpt.value = name;
       casOpt.textContent = `${name} [${statusText}]${isCurrent ? " (You)" : ""}`;
       casinoSelect.appendChild(casOpt);
+    }
+
+    // Direct Ban target selector
+    if(directBanSelectEl && !isMaster){
+      const banOpt = document.createElement("option");
+      banOpt.value = name;
+      banOpt.textContent = `${name} [${statusText}]${data.banned ? " ⛔ (BANNED)" : ""}`;
+      directBanSelectEl.appendChild(banOpt);
     }
 
     // Auto-lift expired timed ban
@@ -2564,7 +2574,12 @@ window.adminConfirmBan = function(){
 
 window.adminUnbanPlayer = function(name){
   if(!isMasterAdmin()) return alert("Only Master Admin Cam can unsuspend players.");
-  if(!name || !accounts[name]) return;
+  if(!name) return alert("Please specify a player username to unsuspend.");
+  name = name.trim();
+
+  if(!accounts[name]){
+    accounts[name] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+  }
 
   accounts[name].banned = false;
   accounts[name].banReason = "";
@@ -7376,6 +7391,43 @@ function initUsefulAdminToolsDom(){
 
   const confirmBanBtn = document.getElementById("adminConfirmBanBtn");
   if(confirmBanBtn) confirmBanBtn.onclick = () => adminConfirmBan();
+
+  // Direct offline/online player ban controls
+  const directBanInput = document.getElementById("adminBanDirectUsernameInput");
+  const directBanSelect = document.getElementById("adminBanDirectUserSelect");
+  const directBanOpenBtn = document.getElementById("adminBanDirectOpenBtn");
+  const directUnbanBtn = document.getElementById("adminUnbanDirectBtn");
+
+  if(directBanSelect && directBanInput){
+    directBanSelect.onchange = () => {
+      if(directBanSelect.value){
+        directBanInput.value = directBanSelect.value;
+      }
+    };
+  }
+
+  if(directBanOpenBtn && directBanInput){
+    directBanOpenBtn.onclick = () => {
+      const target = directBanInput.value.trim();
+      if(!target){
+        return alert("Please enter the player's username to suspend them.");
+      }
+      if(target.toLowerCase() === ADMIN_USERNAME.toLowerCase() || (typeof isCamUsername === "function" && isCamUsername(target))){
+        return alert("Master Cam cannot be suspended.");
+      }
+      adminOpenBanDialog(target);
+    };
+  }
+
+  if(directUnbanBtn && directBanInput){
+    directUnbanBtn.onclick = () => {
+      const target = directBanInput.value.trim();
+      if(!target){
+        return alert("Please enter the player's username to unsuspend them.");
+      }
+      adminUnbanPlayer(target);
+    };
+  }
 
   const durSelect = document.getElementById("adminBanDurationSelect");
   const customInput = document.getElementById("adminBanCustomMinutesInput");

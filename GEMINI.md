@@ -634,3 +634,18 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - Action button changes to `🟢 Unban`.
   - Clicking `🟢 Unban` instantly clears `banned: false`, `banReason: ""`, `banExpires: null`, writes authoritative admin timestamp, updates the Global Cloud Registry, and dispatches a real-time `unban_player` P2P signal.
   - If the player is currently online on any device, the ban screen is instantly dismissed and their viewport unlocked without requiring a reload.
+
+### Offline Player Moderation & Universal Screen Enforcement
+- **Direct Offline Player Suspension Hub (`#adminBanDirectUsernameInput`, `#adminBanDirectUserSelect`, `#adminBanDirectOpenBtn`)**:
+  - Master Admin Cam can suspend any player by entering their username directly in Player Manager (`#tabPlayers`), whether they are currently online, completely offline, or playing on a remote device.
+  - Includes an account selector dropdown pre-populated with all player accounts across the realm, plus an instant `🟢 Unban Player` button (`#adminUnbanDirectBtn`).
+  - Automatically preserves banned accounts in the Active Players table (`isValidGameAccount`) so Master Cam can track their remaining suspension duration and lift it with a single click.
+- **Authoritative Cloud Precedence for Bans (`mergeAccountData`)**:
+  - Active cloud bans placed by Master Cam (`cloudAcc.banned && (!banExpires || Date.now() < banExpires)`) take absolute precedence over local client storage, ensuring offline players cannot evade suspensions via stale cache or clock discrepancies.
+- **Immediate Startup & Tab Awakening Enforcement (`checkAuthCloudBanOnStartup`)**:
+  - When an offline player launches the game, wakes their phone/laptop screen, or focuses the tab (`window.onfocus`, `document.onvisibilitychange`), the client immediately verifies their suspension status against the Global Cloud Registry.
+  - If suspended, the full-screen lockout overlay (`#bannedScreenOverlay`) is presented immediately, displaying Master Cam's custom message and the live ticking countdown timer.
+- **Login Pipeline Verification (`accountSubmit.onclick` & `signInWithGoogle`)**:
+  - When an offline player submits credentials in the Account modal or signs in via Google, the client queries the cloud registry prior to session activation. If suspended, the account modal is dismissed and the user is instantly locked out with the suspension screen.
+- **Real-Time WebRTC Presence Mesh Enforcement**:
+  - When a suspended player connects to Master Cam's presence host, the host inspects their ban status and immediately dispatches a direct `ban_player` command across the P2P channel, enforcing immediate screen lockout.

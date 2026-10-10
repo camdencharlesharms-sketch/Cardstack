@@ -1106,9 +1106,9 @@ function mergeAccountData(localAcc, cloudAcc){
     googleName,
     googlePicture,
     hasPlayed: true,
-    banned: cloudAdminTime > localAdminTime ? !!cloudAcc.banned : (localAdminTime > cloudAdminTime ? !!localAcc.banned : !!(cloudAcc.banned || localAcc.banned)),
-    banReason: cloudAdminTime > localAdminTime ? (cloudAcc.banReason || "") : (localAcc.banReason || cloudAcc.banReason || ""),
-    banExpires: cloudAdminTime > localAdminTime ? (cloudAcc.banExpires || null) : (localAcc.banExpires || cloudAcc.banExpires || null),
+    banned: (cloudAcc.banned && (!cloudAcc.banExpires || Date.now() < cloudAcc.banExpires)) ? true : (cloudAdminTime > localAdminTime ? !!cloudAcc.banned : (localAdminTime > cloudAdminTime ? !!localAcc.banned : !!(cloudAcc.banned || localAcc.banned))),
+    banReason: (cloudAcc.banned && (!cloudAcc.banExpires || Date.now() < cloudAcc.banExpires)) ? (cloudAcc.banReason || "Your account has been temporarily suspended by Master Cam.") : (cloudAdminTime > localAdminTime ? (cloudAcc.banReason || "") : (localAcc.banReason || cloudAcc.banReason || "")),
+    banExpires: (cloudAcc.banned && (!cloudAcc.banExpires || Date.now() < cloudAcc.banExpires)) ? (cloudAcc.banExpires || null) : (cloudAdminTime > localAdminTime ? (cloudAcc.banExpires || null) : (localAcc.banExpires || cloudAcc.banExpires || null)),
     lastAdminActionTime: Math.max(localAdminTime, cloudAdminTime),
     adminRevision: Math.max(localAcc.adminRevision || 0, cloudAcc.adminRevision || 0),
     lastActive: Math.max(localAcc.lastActive || 0, cloudAcc.lastActive || 0, Date.now())
@@ -2032,6 +2032,16 @@ document.getElementById("accountSubmit").onclick = async () => {
     return;
   }
 
+  // Authoritative Offline Check: Verify latest cloud registry for offline bans or admin actions
+  try {
+    const cloudAccs = await fetchCloudAccounts();
+    const cloudMatchKey = Object.keys(cloudAccs || {}).find(k => k.toLowerCase() === actualUser.toLowerCase());
+    if(cloudMatchKey && cloudAccs[cloudMatchKey]){
+      accounts[actualUser] = mergeAccountData(accounts[actualUser], cloudAccs[cloudMatchKey]);
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    }
+  } catch(eCloud){}
+
   loadAccount(actualUser);
   syncAccountToCloud(actualUser, true);
   document.getElementById("accountModal").classList.remove("show");
@@ -2319,6 +2329,52 @@ if(changeNewEl && changeConfEl){
     }
   });
 }
+
+// Authoritative ban and admin action check for players starting or awakening
+async function checkAuthCloudBanOnStartup(){
+  const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+  if(!myUser || (typeof isCamUsername === "function" && isCamUsername(myUser))) return;
+
+  try {
+    const cloudAccs = await fetchCloudAccounts();
+    if(cloudAccs && cloudAccs[myUser]){
+      const cloudAcc = cloudAccs[myUser];
+      const isCloudBanned = !!(cloudAcc.banned && (!cloudAcc.banExpires || Date.now() < cloudAcc.banExpires));
+      if(isCloudBanned){
+        if(!accounts) accounts = {};
+        accounts[myUser] = (typeof mergeAccountData === "function") ? mergeAccountData(accounts[myUser] || {}, cloudAcc) : cloudAcc;
+        accounts[myUser].banned = true;
+        accounts[myUser].banReason = cloudAcc.banReason || "Your account has been temporarily suspended by Master Cam.";
+        accounts[myUser].banExpires = cloudAcc.banExpires || null;
+        accounts[myUser].lastAdminActionTime = cloudAcc.lastAdminActionTime || Date.now();
+        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+        if(typeof showBannedScreen === "function") showBannedScreen(cloudAcc, myUser);
+      } else if(cloudAcc.banned === false && accounts[myUser] && accounts[myUser].banned){
+        accounts[myUser].banned = false;
+        accounts[myUser].banReason = "";
+        accounts[myUser].banExpires = null;
+        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+        if(typeof hideBannedScreen === "function") hideBannedScreen();
+      }
+    }
+  } catch(e){}
+}
+window.checkAuthCloudBanOnStartup = checkAuthCloudBanOnStartup;
+
+// Run immediate cloud check on startup
+checkAuthCloudBanOnStartup();
+
+// Re-check when window is focused or tab becomes visible (e.g. waking phone, opening tab)
+window.addEventListener("focus", () => {
+  checkAuthCloudBanOnStartup();
+  if(typeof checkRecentAdminDispatches === "function") checkRecentAdminDispatches();
+});
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible"){
+    checkAuthCloudBanOnStartup();
+    if(typeof checkRecentAdminDispatches === "function") checkRecentAdminDispatches();
+  }
+});
 
 // Background Cloud Sync on startup: merge latest cloud changes
 setTimeout(() => {
