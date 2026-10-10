@@ -91,13 +91,16 @@ function save(){
     localStorage.setItem("cardCollectorCurrentUser", currentUser);
     if(typeof syncAccountToCloud === "function") syncAccountToCloud(currentUser);
   } else if(currentUser && accounts) {
+    const existing = accounts[currentUser] || {};
     accounts[currentUser] = {
-      password: "",
+      password: existing.password || "",
       owned: activeOwned.map(x => parseInt(x, 10)).filter(n => !isNaN(n)),
       goldCards: Array.from(new Set(cleanGold)),
       rainbowCards: Array.from(new Set(cleanRainbow)),
       coins: persistCoins,
-      unreleasedOwned: [],
+      unreleasedOwned: existing.unreleasedOwned || [],
+      lastDailyClaim: existing.lastDailyClaim || 0,
+      dailyStreak: existing.dailyStreak || 0,
       hasPlayed: true,
       lastActive: Date.now()
     };
@@ -1136,6 +1139,14 @@ function mergeAccountData(localAcc, cloudAcc){
   const cloudRainbow = Array.isArray(cloudAcc.rainbowCards) ? cloudAcc.rainbowCards : [];
   const mergedRainbow = Array.from(new Set([...localRainbow, ...cloudRainbow])).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
 
+  const localDailyClaim = localAcc.lastDailyClaim || 0;
+  const cloudDailyClaim = cloudAcc.lastDailyClaim || 0;
+  const mergedLastDailyClaim = Math.max(localDailyClaim, cloudDailyClaim);
+
+  const localDailyStreak = localAcc.dailyStreak || 0;
+  const cloudDailyStreak = cloudAcc.dailyStreak || 0;
+  const mergedDailyStreak = Math.max(localDailyStreak, cloudDailyStreak);
+
   if(cloudAdminTime > localAdminTime){
     const isOwnedAll = !!(cloudAcc.ownedAll || (cloudAcc.owned && cloudAcc.owned.length >= 200));
     return {
@@ -1146,6 +1157,8 @@ function mergeAccountData(localAcc, cloudAcc){
       goldCards: mergedGold,
       rainbowCards: mergedRainbow,
       unreleasedOwned: Array.isArray(cloudAcc.unreleasedOwned) ? cloudAcc.unreleasedOwned : [],
+      lastDailyClaim: mergedLastDailyClaim,
+      dailyStreak: mergedDailyStreak,
       googleEmail: cloudAcc.googleEmail || localAcc.googleEmail || "",
       googleName: cloudAcc.googleName || localAcc.googleName || "",
       googlePicture: cloudAcc.googlePicture || localAcc.googlePicture || "",
@@ -1190,6 +1203,8 @@ function mergeAccountData(localAcc, cloudAcc){
     goldCards: mergedGold,
     rainbowCards: mergedRainbow,
     unreleasedOwned: mergedUnreleased,
+    lastDailyClaim: mergedLastDailyClaim,
+    dailyStreak: mergedDailyStreak,
     googleEmail,
     googleName,
     googlePicture,
@@ -3143,25 +3158,30 @@ function getSelectedChampionEnchantment(){
 window.getSelectedChampionEnchantment = getSelectedChampionEnchantment;
 
 // ========================================================
-// DAILY FORTUNE VAULT & STREAK CONTROLLER
+// DAILY FORTUNE VAULT & STREAK CONTROLLER (STRICT ONCE-PER-DAY)
 // ========================================================
 function getDailyRewardState(){
   const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
   const userAcc = (myUser && accounts && accounts[myUser]) ? accounts[myUser] : null;
-  if(!userAcc) return { canClaim: true, streak: 1, nextClaimMs: 0, dayIndex: 0 };
 
-  const lastClaim = userAcc.lastDailyClaim || 0;
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
+
+  // Strict check across account, guest storage, and device-level timestamp
+  const userClaim = userAcc ? (userAcc.lastDailyClaim || 0) : 0;
+  const guestClaim = parseInt(localStorage.getItem("cardCollectorGuestLastDailyClaim") || "0", 10) || 0;
+  const deviceClaim = parseInt(localStorage.getItem("cardCollectorDeviceLastDailyClaim") || "0", 10) || 0;
+
+  const lastClaim = Math.max(userClaim, guestClaim, deviceClaim);
   const elapsed = now - lastClaim;
 
-  let streak = userAcc.dailyStreak || 0;
+  let streak = userAcc ? (userAcc.dailyStreak || 0) : (parseInt(localStorage.getItem("cardCollectorGuestDailyStreak") || "0", 10) || 0);
   let canClaim = false;
 
+  // Only allow claim if never claimed or if at least 24 hours have elapsed
   if(!lastClaim || elapsed >= dayMs){
-    // If more than 48 hours passed, streak resets to 0
     if(lastClaim && elapsed >= (dayMs * 2)){
-      streak = 0;
+      streak = 0; // Streak resets to 0 if more than 48 hours passed without claiming
     }
     canClaim = true;
   }
@@ -3169,7 +3189,7 @@ function getDailyRewardState(){
   const dayIndex = (streak % 7);
   const nextClaimMs = canClaim ? 0 : Math.max(0, dayMs - elapsed);
 
-  return { canClaim, streak: streak + 1, dayIndex, nextClaimMs };
+  return { canClaim, streak: streak + 1, dayIndex, nextClaimMs, lastClaim };
 }
 window.getDailyRewardState = getDailyRewardState;
 
@@ -3235,7 +3255,7 @@ function openDailyRewardModal(){
         claimBtn.disabled = true;
         claimBtn.style.opacity = "0.5";
         claimBtn.style.cursor = "not-allowed";
-        claimBtn.innerHTML = `✓ BOUNTY CLAIMED TODAY`;
+        claimBtn.innerHTML = `✓ BOUNTY CLAIMED TODAY (Locked)`;
       }
       if(timerStatus){
         const hrs = Math.floor(curState.nextClaimMs / (1000 * 60 * 60));
@@ -3266,30 +3286,66 @@ function closeDailyRewardModal(){
 window.closeDailyRewardModal = closeDailyRewardModal;
 
 function claimDailyReward(){
-  const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
-  if(!myUser || !accounts || !accounts[myUser]){
-    alert("Please sign into your player account to claim Daily Fortune Vault rewards!");
-    return;
-  }
+  // Prevent double-clicking / rapid spamming
+  if(window._dailyClaimLock) return;
 
   const state = getDailyRewardState();
   if(!state.canClaim){
-    alert("You have already claimed today's daily reward! Check back tomorrow.");
+    const hrs = Math.floor(state.nextClaimMs / (1000 * 60 * 60));
+    const mins = Math.floor((state.nextClaimMs % (1000 * 60 * 60)) / (1000 * 60));
+    alert(`You can only claim the daily reward ONCE per day!\n\nNext reward unlocks in ${hrs}h ${mins}m.`);
     return;
   }
 
-  const userAcc = accounts[myUser];
+  window._dailyClaimLock = true;
+  const now = Date.now();
+
+  // Instantly record device-level claim lockout
+  try {
+    localStorage.setItem("cardCollectorDeviceLastDailyClaim", now.toString());
+  } catch(e){}
+
+  const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+  let userAcc = (myUser && accounts && accounts[myUser]) ? accounts[myUser] : null;
+
   const reward = DAILY_REWARDS[state.dayIndex];
 
-  // Grant Coins
-  if(reward.coins){
-    coins = (typeof coins === "number" && !isNaN(coins)) ? coins + reward.coins : (userAcc.coins || 100) + reward.coins;
-    userAcc.coins = coins;
-    const coinsEl = document.getElementById("coins");
-    if(coinsEl) coinsEl.textContent = (typeof formatCoins === "function") ? formatCoins(coins) : coins.toLocaleString();
+  if(userAcc){
+    // Update account record
+    userAcc.lastDailyClaim = now;
+    userAcc.dailyStreak = (userAcc.dailyStreak || 0) + 1;
+
+    // Grant Coins
+    if(reward.coins){
+      if(userAcc.coins === "Infinity" || userAcc.coins === Infinity || coins === Infinity){
+        coins = Infinity;
+        userAcc.coins = "Infinity";
+      } else {
+        coins = (Number.isFinite(userAcc.coins) ? userAcc.coins : 100) + reward.coins;
+        userAcc.coins = coins;
+      }
+      const coinsEl = document.getElementById("coins");
+      if(coinsEl) coinsEl.textContent = (typeof formatCoins === "function") ? formatCoins(coins) : coins.toLocaleString();
+    }
+
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(myUser, true, true);
+  } else {
+    // Guest player claim
+    try {
+      localStorage.setItem("cardCollectorGuestLastDailyClaim", now.toString());
+      const gStreak = (parseInt(localStorage.getItem("cardCollectorGuestDailyStreak") || "0", 10) || 0) + 1;
+      localStorage.setItem("cardCollectorGuestDailyStreak", gStreak.toString());
+      if(reward.coins){
+        coins = (typeof coins === "number" && !isNaN(coins)) ? coins + reward.coins : 100 + reward.coins;
+        localStorage.setItem("cardCollectorGuestCoins", coins.toString());
+        const coinsEl = document.getElementById("coins");
+        if(coinsEl) coinsEl.textContent = (typeof formatCoins === "function") ? formatCoins(coins) : coins.toLocaleString();
+      }
+    } catch(e){}
   }
 
-  // Grant Booster Pack
+  // Grant Booster Pack if scheduled
   let packAwardedMsg = "";
   if(reward.pack && typeof startPackOpening === "function"){
     packAwardedMsg = ` and unlocked a <b>${reward.pack.toUpperCase()} BOOSTER PACK</b>!`;
@@ -3297,12 +3353,6 @@ function claimDailyReward(){
       startPackOpening(reward.pack);
     }, 1200);
   }
-
-  // Update claim timestamp & streak
-  userAcc.lastDailyClaim = Date.now();
-  userAcc.dailyStreak = (userAcc.dailyStreak || 0) + 1;
-  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-  if(typeof syncAccountToCloud === "function") syncAccountToCloud(myUser, true);
 
   // Audio & Confetti
   if(typeof playChaosSfx === "function"){
@@ -3317,8 +3367,13 @@ function claimDailyReward(){
     showLiveToast(`🎁 <b>Day ${state.dayIndex + 1} Claimed!</b> +${reward.coins.toLocaleString()} Coins${packAwardedMsg}`, true);
   }
 
+  // Refresh modal and badge immediately
   openDailyRewardModal();
   updateDailyRewardBadge();
+
+  setTimeout(() => {
+    window._dailyClaimLock = false;
+  }, 1000);
 }
 window.claimDailyReward = claimDailyReward;
 

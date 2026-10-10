@@ -55,10 +55,12 @@ Cardstack/
   - Day 5: 🪙 3,500 Coins + 🔮 Chaos Mutation Crystal
   - Day 6: 🪙 5,000 Coins + 👑 Legendary Booster Pack
   - Day 7: 🌌 **GOD TIER JACKPOT**: 🪙 10,000 Coins + Free God Booster Pack + Exclusive "⚡ Chronos Master" Title!
-- **Claim Cycle & Streak State Management**:
-  - Evaluates `userAcc.lastDailyClaim` against current epoch timestamp.
+- **Strict Once-Per-Day Claim Cycle & Streak State Management**:
+  - Strictly enforces that daily rewards can only be claimed **once every 24 hours**.
+  - Evaluates `userAcc.lastDailyClaim`, guest claims, and device-level claim timestamps (`cardCollectorDeviceLastDailyClaim`) to prevent multiple claims via page refreshes, account switching, or rapid double clicks.
+  - Preserved across all cloud sync routines and `mergeAccountData` merges (`lastDailyClaim`, `dailyStreak`) to guarantee claims are never wiped by background cloud synchronization.
   - Resets streak to Day 1 if more than 48 hours lapse between claims; increments streak upon consecutive daily claims.
-  - Live digital countdown timer (`#dailyTimerStatus`) accurately displays hours, minutes, and seconds until the next unlock when on cooldown.
+  - Live digital countdown timer (`#dailyTimerStatus`) displays exact hours, minutes, and seconds until the next unlock (`✓ BOUNTY CLAIMED TODAY (Locked)`).
   - Celebratory coin sfx, triumph fanfare, and confetti showers upon claiming.
 
 ### D. Card Elemental Aura Infusion (The Mystic Forge)
