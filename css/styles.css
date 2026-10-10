@@ -1957,3 +1957,182 @@ body.shader-prismatic {
 #bannedScreenOverlay > div {
   animation: banBorderPulse 2.8s infinite alternate ease-in-out;
 }
+
+/* ========================================================
+   DYNAMIC 3D HOLOGRAPHIC FOIL & SPECULAR REFLECTION
+   ======================================================== */
+.card-holo-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 5;
+  mix-blend-mode: color-dodge;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.foil-standard .card-holo-glare {
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.45) 0%, transparent 60%);
+}
+
+.foil-holo .card-holo-glare, .foil-prism .card-holo-glare {
+  background: linear-gradient(135deg, rgba(255,0,0,0.35) 0%, rgba(255,154,0,0.35) 15%, rgba(208,222,33,0.35) 30%, rgba(79,220,74,0.35) 45%, rgba(63,218,216,0.35) 60%, rgba(47,201,226,0.35) 75%, rgba(149,0,255,0.35) 90%);
+  background-size: 200% 200%;
+}
+
+.foil-gold .card-holo-glare {
+  background: radial-gradient(circle at 50% 50%, rgba(254, 240, 138, 0.75) 0%, rgba(234, 179, 8, 0.45) 40%, transparent 75%);
+  box-shadow: inset 0 0 25px rgba(251, 191, 36, 0.6);
+}
+
+.foil-shadow .card-holo-glare {
+  background: radial-gradient(circle at 50% 50%, rgba(192, 132, 252, 0.65) 0%, rgba(88, 28, 135, 0.55) 45%, transparent 80%);
+  box-shadow: inset 0 0 30px rgba(168, 85, 247, 0.6);
+}
+
+.foil-cyber .card-holo-glare {
+  background: repeating-linear-gradient(0deg, rgba(6, 182, 212, 0.25) 0px, rgba(6, 182, 212, 0.25) 2px, transparent 2px, transparent 6px),
+              radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.55) 0%, transparent 70%);
+}
+
+.foil-starlight .card-holo-glare {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.85) 0%, rgba(192, 132, 252, 0.45) 30%, transparent 70%);
+  filter: drop-shadow(0 0 10px #fff);
+}
+
+.foil-lava .card-holo-glare {
+  background: radial-gradient(circle at 50% 50%, rgba(249, 115, 22, 0.75) 0%, rgba(220, 38, 38, 0.45) 45%, transparent 75%);
+  box-shadow: inset 0 0 30px rgba(239, 68, 68, 0.7);
+}
+
+/* ========================================================
+   ELEMENTAL AURA INFUSION & FORGE STYLES
+   ======================================================== */
+.enchant-badge {
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 4px;
+  animation: pulseEnchantBadge 2s infinite alternate ease-in-out;
+}
+@keyframes pulseEnchantBadge {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.05); filter: brightness(1.2); }
+}
+
+.enchant-inferno {
+  box-shadow: 0 0 25px rgba(249, 115, 22, 0.65), inset 0 0 15px rgba(239, 68, 68, 0.35) !important;
+  border-color: #f97316 !important;
+}
+.enchant-badge.inferno { background: linear-gradient(135deg, #f97316, #dc2626); color: #fff; }
+
+.enchant-plasma {
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.65), inset 0 0 15px rgba(37, 99, 235, 0.35) !important;
+  border-color: #38bdf8 !important;
+}
+.enchant-badge.plasma { background: linear-gradient(135deg, #38bdf8, #2563eb); color: #fff; }
+
+.enchant-glacial {
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.65), inset 0 0 15px rgba(14, 165, 233, 0.35) !important;
+  border-color: #06b6d4 !important;
+}
+.enchant-badge.glacial { background: linear-gradient(135deg, #06b6d4, #0284c7); color: #fff; }
+
+.enchant-void {
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.65), inset 0 0 15px rgba(88, 28, 135, 0.45) !important;
+  border-color: #a855f7 !important;
+}
+.enchant-badge.void { background: linear-gradient(135deg, #a855f7, #6b21a8); color: #fff; }
+
+.enchant-gaia {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.65), inset 0 0 15px rgba(5, 150, 105, 0.35) !important;
+  border-color: #10b981 !important;
+}
+.enchant-badge.gaia { background: linear-gradient(135deg, #10b981, #047857); color: #fff; }
+
+/* Golden Edition Booster Card Drops */
+.gold-edition-card {
+  box-shadow: 0 0 35px rgba(251, 191, 36, 0.75), inset 0 0 20px rgba(245, 158, 11, 0.35) !important;
+  border: 2px solid #fbbf24 !important;
+}
+.gold-edition-tag {
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+  color: #000;
+  font-weight: 900;
+  font-size: 8.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+  margin-left: 4px;
+}
+
+/* ========================================================
+   DAILY FORTUNE VAULT & 7-DAY STREAK STYLES
+   ======================================================== */
+.daily-streak-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 6px;
+  text-align: center;
+  transition: all 0.25s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.daily-streak-card.active {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.2), rgba(15, 23, 42, 0.8));
+  border-color: #f59e0b;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+  transform: translateY(-3px) scale(1.03);
+}
+.daily-streak-card.claimed {
+  opacity: 0.6;
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+.daily-streak-card.claimed::after {
+  content: '✓';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  color: #10b981;
+  font-weight: 900;
+  font-size: 13px;
+}
+.daily-day-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+.daily-streak-card.active .daily-day-label {
+  color: #fde68a;
+}
+.daily-chest-icon {
+  font-size: 26px;
+  margin: 2px 0;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.daily-streak-card.active .daily-chest-icon {
+  animation: chestBounce 1.5s infinite alternate ease-in-out;
+}
+@keyframes chestBounce {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-4px) scale(1.1); }
+}
+.daily-reward-label {
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.2;
+}

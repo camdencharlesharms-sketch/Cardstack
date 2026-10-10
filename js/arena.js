@@ -626,7 +626,9 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
   document.getElementById("oppLabelTag").textContent = oppTitle;
 
   document.getElementById("playerBattleImg").src = battlePlayerCard.image || "";
-  document.getElementById("playerBattleName").textContent = battlePlayerCard.name || "Champion";
+  const myEnchant = (typeof getSelectedChampionEnchantment === "function") ? getSelectedChampionEnchantment() : null;
+  const enchantSuffix = (myEnchant && typeof ENCHANT_META !== "undefined" && ENCHANT_META[myEnchant]) ? ` [${ENCHANT_META[myEnchant].badge}]` : "";
+  document.getElementById("playerBattleName").textContent = (battlePlayerCard.name || "Champion") + enchantSuffix;
 
   document.getElementById("aiBattleImg").src = battleOppCard.image || "";
   document.getElementById("aiBattleName").textContent = battleOppCard.name || "Opponent";
@@ -936,6 +938,20 @@ function performPlayerAttackWithMultiplier(attackObj, multiplier, tierLabel, tie
     tierColor = "#ef4444";
   }
 
+  // Elemental Aura Infusion Combat Buffs
+  const myAtkEnchant = (typeof getSelectedChampionEnchantment === "function") ? getSelectedChampionEnchantment() : null;
+  if(myAtkEnchant === "inferno"){
+    playerDmg += 20;
+    appendBattleLog(`🔥 <b>Inferno Aura</b> ignited opponent for <b>+20 Fire DMG</b>!`);
+  } else if(myAtkEnchant === "plasma"){
+    playerDmg += 20;
+    appendBattleLog(`⚡ <b>Plasma Spark</b> arced through opponent for <b>+20 Shock DMG</b>!`);
+  } else if(myAtkEnchant === "gaia"){
+    battlePlayerHp = Math.min(battlePlayerMaxHp, battlePlayerHp + 15);
+    updateBattleHpBars();
+    appendBattleLog(`🌿 <b>Gaia Vitality</b> restored <b>+15 HP</b> to your champion!`);
+  }
+
   if(isOppHpInf){
     appendBattleLog(`🛡️ <b>${battleOppCard.name}</b> has <b style="color:#38bdf8">∞ INFINITE HP</b> and absorbed ${attackObj.name} with 0 damage!`);
   } else {
@@ -994,7 +1010,12 @@ function performPlayerAttackWithMultiplier(attackObj, multiplier, tierLabel, tie
         return;
       }
 
-      const aiDmg = Math.floor(aiAttack.dmg * (0.85 + Math.random() * 0.3));
+      let aiDmg = Math.floor(aiAttack.dmg * (0.85 + Math.random() * 0.3));
+      const myDefEnchant = (typeof getSelectedChampionEnchantment === "function") ? getSelectedChampionEnchantment() : null;
+      if(myDefEnchant === "glacial"){
+        aiDmg = Math.max(1, aiDmg - 15);
+        appendBattleLog(`❄️ <b>Glacial Frost Shield</b> crystallized and absorbed 15 damage!`);
+      }
       battlePlayerHp = Math.max(0, battlePlayerHp - aiDmg);
       updateBattleHpBars();
       appendBattleLog(`🤖 <b>AI's ${battleOppCard.name}</b> used <span style="color:#fca5a5">${aiAttack.name}</span> dealing <b>${aiDmg}</b> damage!`);

@@ -1,3 +1,31 @@
+
+// ========================================================
+// ELEMENTAL ENCHANTMENTS & FORGE CONSTANTS
+// ========================================================
+const ENCHANT_META = {
+  none: { name: "None", icon: "", badge: "NONE", color: "#94a3b8", glow: "", statBuff: "No active elemental infusion.", desc: "Standard artifact essence." },
+  inferno: { name: "Inferno", icon: "🔥", badge: "🔥 INFERNO", color: "#f97316", glow: "rgba(249, 115, 22, 0.6)", statBuff: "+20 Fire Attack DMG", desc: "Infused with nether flame. Attacks ignite opponents for scorching criticals." },
+  plasma: { name: "Plasma", icon: "⚡", badge: "⚡ PLASMA", color: "#38bdf8", glow: "rgba(56, 189, 248, 0.6)", statBuff: "+20 Shock Attack DMG", desc: "Charged with high-voltage ion plasma. Delivers high-voltage critical strikes." },
+  glacial: { name: "Glacial", icon: "❄️", badge: "❄️ GLACIAL", color: "#06b6d4", glow: "rgba(6, 182, 212, 0.6)", statBuff: "+25 Frost Armor Shield", desc: "Encased in absolute zero cryo ice. Shields champion from incoming damage." },
+  void: { name: "Void", icon: "🌌", badge: "🌌 VOID", color: "#a855f7", glow: "rgba(168, 85, 247, 0.6)", statBuff: "True Armor Pierce", desc: "Resonates with cosmic dark matter. Attacks phase directly through enemy armor." },
+  gaia: { name: "Gaia", icon: "🌿", badge: "🌿 GAIA", color: "#10b981", glow: "rgba(16, 185, 129, 0.6)", statBuff: "+15 HP Regen Each Turn", desc: "Blessed with primordial earth vitality. Regenerates HP each combat round." }
+};
+window.ENCHANT_META = ENCHANT_META;
+
+// ========================================================
+// DAILY FORTUNE VAULT & 7-DAY STREAK CONFIGURATION
+// ========================================================
+const DAILY_REWARDS = [
+  { day: 1, label: "Day 1", rewardDesc: "500 🪙", icon: "🪙", coins: 500, pack: null },
+  { day: 2, label: "Day 2", rewardDesc: "750 🪙 + Common Pack", icon: "📦", coins: 750, pack: "common" },
+  { day: 3, label: "Day 3", rewardDesc: "1,500 🪙 + 2x Luck", icon: "✨", coins: 1500, pack: null, luck: 2 },
+  { day: 4, label: "Day 4", rewardDesc: "2,000 🪙 + Rare Pack", icon: "📦", coins: 2000, pack: "rare" },
+  { day: 5, label: "Day 5", rewardDesc: "3,500 🪙 + Crystal", icon: "🔮", coins: 3500, pack: null },
+  { day: 6, label: "Day 6", rewardDesc: "5,000 🪙 + Legendary Pack", icon: "👑", coins: 5000, pack: "legendary" },
+  { day: 7, label: "Day 7", rewardDesc: "10,000 🪙 + GOD PACK", icon: "🌌", coins: 10000, pack: "god", title: "⚡ Chronos Master" }
+];
+window.DAILY_REWARDS = DAILY_REWARDS;
+
 // Helper: case-insensitive account lookup
 function getUserAccount(username){
   if(!username || typeof accounts !== "object" || !accounts) return null;
@@ -560,6 +588,7 @@ function startPackOpening(tierKey){
         const guarantee = (i === 0 && pack.minRarity) ? pack.minRarity : null;
         let card = chooseCardFromWeights(pack.weights, guarantee, false);
         pulledCards.push(card);
+        const isGoldEdition = Math.random() < 0.12; // 12% chance for Shiny Gold Edition!
         // Booster packs strictly drop public & studio cards. Unreleased vault cards can ONLY be gifted by Cam!
 
         const isUnrel = !!card.isUnreleased;
@@ -602,10 +631,10 @@ function startPackOpening(tierKey){
               <div style="font-size:11px;font-weight:800;color:#facc15;background:rgba(250,204,21,0.15);padding:2px 8px;border-radius:10px">FLIP TO REVEAL</div>
             </div>
             <div class="flip-card-front">
-              <div class="card" style="height:100%">
+              <div class="card ${isGoldEdition ? 'gold-edition-card' : ''}" style="height:100%">
                 <div class="face ${card.rarity}">
                   <div class="card-top">
-                    <span class="rarity">${card.rarity}${card.isUnreleased ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : ""}</span>
+                    <span class="rarity">${card.rarity}${card.isUnreleased ? '<span style="background:#dc2626;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 UNRELEASED</span>' : ""}${isGoldEdition ? '<span class="gold-edition-tag">✨ GOLD FOIL</span>' : ''}</span>
                     <span style="font-size:11px;font-weight:800;color:#fca5a5">${typeof formatHp === "function" ? formatHp(card.hp) : (card.hp || 80) + " HP"}</span>
                   </div>
                   <div class="card-art-frame">
@@ -631,6 +660,11 @@ function startPackOpening(tierKey){
           if(item.classList.contains("flipped")) return;
           item.classList.add("flipped");
           if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+          if(isGoldEdition){
+            if(typeof confetti === "function"){
+              confetti({ particleCount: 35, spread: 55, colors: ["#fbbf24", "#f59e0b", "#fff", "#eab308"] });
+            }
+          }
           if(card.rarity === "divine" || card.rarity === "mythic" || card.rarity === "legendary"){
             if(typeof confetti === "function"){
               const rect = item.getBoundingClientRect();
@@ -847,6 +881,17 @@ function render(){
           : '<span style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:800;margin-left:4px">🔒 GIFTED VAULT</span>') 
       : "";
 
+    const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+    const userAcc = (myUser && accounts && accounts[myUser]) ? accounts[myUser] : null;
+    const cardKey = isUnrel ? c.id : (c.id || c.name);
+    const enchantKey = (userAcc && userAcc.cardEnchantments && userAcc.cardEnchantments[cardKey]) || null;
+    const enchantBadge = (has && enchantKey && ENCHANT_META[enchantKey]) 
+      ? `<span class="enchant-badge ${enchantKey}">${ENCHANT_META[enchantKey].badge}</span>` 
+      : "";
+    if(has && enchantKey){
+      el.classList.add(`enchant-${enchantKey}`);
+    }
+
     const cardFaceRarity = has ? c.rarity : "";
     const displayedRarity = has ? rarityDisplayName : "Locked";
     const displayedHp = has ? ((typeof formatHp === "function") ? formatHp(c.hp) : ((c.hp || 80) + " HP")) : "???";
@@ -863,7 +908,7 @@ function render(){
     el.innerHTML = `
       <div class="face ${cardFaceRarity}">
         <div class="card-top">
-          <span class="rarity">${displayedRarity}${unreleasedBadge}</span>
+          <span class="rarity">${displayedRarity}${unreleasedBadge}${enchantBadge}</span>
           <span style="font-size:11px;font-weight:800;color:#fca5a5">${displayedHp}</span>
         </div>
         <div class="card-art-frame">
@@ -2482,8 +2527,20 @@ function openCardDetailModal(card){
         <div class="desc">${card.desc}</div>
       </div>
       <div class="holo-glint" style="opacity:0.4"></div>
+      <div class="card-holo-glare"></div>
     </div>
   `;
+
+  // Load and apply active enchantment to detail modal
+  const curUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+  const userAcc = (curUser && accounts && accounts[curUser]) ? accounts[curUser] : null;
+  const enchants = (userAcc && userAcc.cardEnchantments) || {};
+  const cardKey = card.isUnreleased ? card.id : (card.id || card.name);
+  const activeEnchant = enchants[cardKey] || "none";
+  updateDetailEnchantUI(activeEnchant);
+  if(activeEnchant && activeEnchant !== "none"){
+    cardEl.classList.add(`enchant-${activeEnchant}`);
+  }
 
   // Dynamic 3D mousemove on detail card
   cardEl.onmousemove = (e) => {
@@ -2500,11 +2557,20 @@ function openCardDetailModal(card){
       glint.style.background = `radial-gradient(circle at ${xPct}% ${yPct}%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.15) 45%, transparent 75%)`;
       glint.style.opacity = "1";
     }
+    const glare = cardEl.querySelector(".card-holo-glare");
+    if(glare){
+      const xPct = Math.round((x / rect.width) * 100);
+      const yPct = Math.round((y / rect.height) * 100);
+      glare.style.opacity = "0.9";
+      glare.style.backgroundPosition = `${xPct}% ${yPct}%`;
+    }
   };
   cardEl.onmouseleave = () => {
     cardEl.style.transform = "";
     const glint = cardEl.querySelector(".holo-glint");
     if(glint) glint.style.opacity = "0.4";
+    const glare = cardEl.querySelector(".card-holo-glare");
+    if(glare) glare.style.opacity = "0";
   };
 
   modal.style.display = "flex";
@@ -2824,6 +2890,274 @@ function initAmbientCosmosCanvas(){
 }
 
 /* Wire up Super Cool Listeners */
+
+// ========================================================
+// ELEMENTAL ENCHANTMENT INFUSION LOGIC
+// ========================================================
+function updateDetailEnchantUI(enchantKey){
+  enchantKey = enchantKey || "none";
+  const badgeEl = document.getElementById("detailActiveEnchantBadge");
+  const descEl = document.getElementById("detailEnchantBuffDesc");
+  const meta = ENCHANT_META[enchantKey] || ENCHANT_META.none;
+
+  if(badgeEl){
+    badgeEl.textContent = meta.badge;
+    badgeEl.style.color = meta.color;
+    badgeEl.style.background = meta.glow ? meta.glow.replace("0.6", "0.2") : "rgba(255,255,255,0.08)";
+  }
+  if(descEl){
+    descEl.textContent = meta.desc + " (" + meta.statBuff + ")";
+    descEl.style.color = meta.color || "#cbd5e1";
+  }
+
+  document.querySelectorAll(".detailEnchantBtn").forEach(btn => {
+    if(btn.getAttribute("data-enchant") === enchantKey){
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+}
+window.updateDetailEnchantUI = updateDetailEnchantUI;
+
+function infuseActiveDetailCard(enchantKey){
+  if(!activeDetailCard) return;
+  const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+  if(!myUser || !accounts || !accounts[myUser]){
+    alert("Please sign into an account to infuse artifacts with elemental power!");
+    return;
+  }
+
+  const userAcc = accounts[myUser];
+  if(!userAcc.cardEnchantments) userAcc.cardEnchantments = {};
+  const cardKey = activeDetailCard.isUnreleased ? activeDetailCard.id : (activeDetailCard.id || activeDetailCard.name);
+
+  if(enchantKey === "none"){
+    delete userAcc.cardEnchantments[cardKey];
+  } else {
+    userAcc.cardEnchantments[cardKey] = enchantKey;
+  }
+
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(myUser, true);
+
+  // Update card detail element styling
+  const cardEl = document.getElementById("detailCardElement");
+  if(cardEl){
+    ["enchant-inferno", "enchant-plasma", "enchant-glacial", "enchant-void", "enchant-gaia"].forEach(cls => cardEl.classList.remove(cls));
+    if(enchantKey !== "none"){
+      cardEl.classList.add(`enchant-${enchantKey}`);
+    }
+  }
+
+  updateDetailEnchantUI(enchantKey);
+
+  const meta = ENCHANT_META[enchantKey] || ENCHANT_META.none;
+  if(enchantKey !== "none"){
+    if(typeof playChaosSfx === "function") playChaosSfx("laser");
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`⚡ Infused <b>${activeDetailCard.name}</b> with ${meta.badge} power! (${meta.statBuff})`, true);
+    }
+  } else {
+    if(typeof showLiveToast === "function") showLiveToast(`Elemental infusion cleansed from ${activeDetailCard.name}.`, true);
+  }
+
+  if(typeof render === "function") render();
+}
+window.infuseActiveDetailCard = infuseActiveDetailCard;
+
+// Helper to get active champion enchantment for arena combat
+function getSelectedChampionEnchantment(){
+  const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+  if(!myUser || !accounts || !accounts[myUser]) return null;
+  const champCard = (typeof getSelectedChampionCard === "function") ? getSelectedChampionCard() : null;
+  if(!champCard) return null;
+  const enchants = accounts[myUser].cardEnchantments || {};
+  const cardKey = champCard.isUnreleased ? champCard.id : (champCard.id || champCard.name);
+  return enchants[cardKey] || null;
+}
+window.getSelectedChampionEnchantment = getSelectedChampionEnchantment;
+
+// ========================================================
+// DAILY FORTUNE VAULT & STREAK CONTROLLER
+// ========================================================
+function getDailyRewardState(){
+  const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+  const userAcc = (myUser && accounts && accounts[myUser]) ? accounts[myUser] : null;
+  if(!userAcc) return { canClaim: true, streak: 1, nextClaimMs: 0, dayIndex: 0 };
+
+  const lastClaim = userAcc.lastDailyClaim || 0;
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const elapsed = now - lastClaim;
+
+  let streak = userAcc.dailyStreak || 0;
+  let canClaim = false;
+
+  if(!lastClaim || elapsed >= dayMs){
+    // If more than 48 hours passed, streak resets to 0
+    if(lastClaim && elapsed >= (dayMs * 2)){
+      streak = 0;
+    }
+    canClaim = true;
+  }
+
+  const dayIndex = (streak % 7);
+  const nextClaimMs = canClaim ? 0 : Math.max(0, dayMs - elapsed);
+
+  return { canClaim, streak: streak + 1, dayIndex, nextClaimMs };
+}
+window.getDailyRewardState = getDailyRewardState;
+
+function updateDailyRewardBadge(){
+  const badge = document.getElementById("dailyRewardBadge");
+  if(!badge) return;
+  const state = getDailyRewardState();
+  badge.style.display = state.canClaim ? "inline-block" : "none";
+}
+window.updateDailyRewardBadge = updateDailyRewardBadge;
+
+let dailyTimerInterval = null;
+
+function openDailyRewardModal(){
+  const modal = document.getElementById("dailyRewardModal");
+  if(!modal) return;
+
+  const state = getDailyRewardState();
+  const streakBadge = document.getElementById("dailyStreakBadge");
+  if(streakBadge){
+    streakBadge.textContent = `🔥 Day ${state.dayIndex + 1} of 7 Streak`;
+  }
+
+  const grid = document.getElementById("dailyStreakGrid");
+  if(grid){
+    grid.innerHTML = DAILY_REWARDS.map((rew, idx) => {
+      let statusClass = "";
+      if(idx < state.dayIndex){
+        statusClass = "claimed";
+      } else if(idx === state.dayIndex){
+        statusClass = state.canClaim ? "active" : "claimed";
+      } else {
+        statusClass = "locked";
+      }
+
+      return `
+        <div class="daily-streak-card ${statusClass}">
+          <div class="daily-day-label">${rew.label}</div>
+          <div class="daily-chest-icon">${rew.icon}</div>
+          <div class="daily-reward-label">${rew.rewardDesc}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  const claimBtn = document.getElementById("claimDailyRewardBtn");
+  const timerStatus = document.getElementById("dailyTimerStatus");
+
+  function updateModalTimer(){
+    const curState = getDailyRewardState();
+    if(curState.canClaim){
+      if(claimBtn){
+        claimBtn.disabled = false;
+        claimBtn.style.opacity = "1";
+        claimBtn.style.cursor = "pointer";
+        claimBtn.innerHTML = `🎁 CLAIM TODAY'S BOUNTY (+${DAILY_REWARDS[curState.dayIndex].rewardDesc})`;
+      }
+      if(timerStatus){
+        timerStatus.innerHTML = `<span style="color:#6ee7b7;font-weight:800">✨ Ready to claim right now!</span>`;
+      }
+    } else {
+      if(claimBtn){
+        claimBtn.disabled = true;
+        claimBtn.style.opacity = "0.5";
+        claimBtn.style.cursor = "not-allowed";
+        claimBtn.innerHTML = `✓ BOUNTY CLAIMED TODAY`;
+      }
+      if(timerStatus){
+        const hrs = Math.floor(curState.nextClaimMs / (1000 * 60 * 60));
+        const mins = Math.floor((curState.nextClaimMs % (1000 * 60 * 60)) / (1000 * 60));
+        const secs = Math.floor((curState.nextClaimMs % (1000 * 60)) / 1000);
+        timerStatus.innerHTML = `Next daily reward unlocks in: <b style="color:#fde047">${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}</b>`;
+      }
+    }
+  }
+
+  updateModalTimer();
+  if(dailyTimerInterval) clearInterval(dailyTimerInterval);
+  dailyTimerInterval = setInterval(updateModalTimer, 1000);
+
+  modal.style.display = "flex";
+  if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+}
+window.openDailyRewardModal = openDailyRewardModal;
+
+function closeDailyRewardModal(){
+  const modal = document.getElementById("dailyRewardModal");
+  if(modal) modal.style.display = "none";
+  if(dailyTimerInterval){
+    clearInterval(dailyTimerInterval);
+    dailyTimerInterval = null;
+  }
+}
+window.closeDailyRewardModal = closeDailyRewardModal;
+
+function claimDailyReward(){
+  const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+  if(!myUser || !accounts || !accounts[myUser]){
+    alert("Please sign into your player account to claim Daily Fortune Vault rewards!");
+    return;
+  }
+
+  const state = getDailyRewardState();
+  if(!state.canClaim){
+    alert("You have already claimed today's daily reward! Check back tomorrow.");
+    return;
+  }
+
+  const userAcc = accounts[myUser];
+  const reward = DAILY_REWARDS[state.dayIndex];
+
+  // Grant Coins
+  if(reward.coins){
+    coins = (typeof coins === "number" && !isNaN(coins)) ? coins + reward.coins : (userAcc.coins || 100) + reward.coins;
+    userAcc.coins = coins;
+    const coinsEl = document.getElementById("coins");
+    if(coinsEl) coinsEl.textContent = (typeof formatCoins === "function") ? formatCoins(coins) : coins.toLocaleString();
+  }
+
+  // Grant Booster Pack
+  let packAwardedMsg = "";
+  if(reward.pack && typeof startPackOpening === "function"){
+    packAwardedMsg = ` and unlocked a <b>${reward.pack.toUpperCase()} BOOSTER PACK</b>!`;
+    setTimeout(() => {
+      startPackOpening(reward.pack);
+    }, 1200);
+  }
+
+  // Update claim timestamp & streak
+  userAcc.lastDailyClaim = Date.now();
+  userAcc.dailyStreak = (userAcc.dailyStreak || 0) + 1;
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(myUser, true);
+
+  // Audio & Confetti
+  if(typeof playChaosSfx === "function"){
+    playChaosSfx("coins");
+    setTimeout(() => playChaosSfx("triumph"), 250);
+  }
+  if(typeof confetti === "function"){
+    confetti({ particleCount: 75, spread: 80, origin: { y: 0.6 } });
+  }
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🎁 <b>Day ${state.dayIndex + 1} Claimed!</b> +${reward.coins.toLocaleString()} Coins${packAwardedMsg}`, true);
+  }
+
+  openDailyRewardModal();
+  updateDailyRewardBadge();
+}
+window.claimDailyReward = claimDailyReward;
+
 function initSuperCoolDom(){
   initAmbientCosmosCanvas();
 
@@ -2890,10 +3224,33 @@ function initSuperCoolDom(){
       const foil = btn.getAttribute("data-foil");
       const cardEl = document.getElementById("detailCardElement");
       if(cardEl){
-        cardEl.className = `card foil-${foil}`;
+        // Preserve active enchant classes when switching foils
+        const currentEnchants = Array.from(cardEl.classList).filter(c => c.startsWith("enchant-"));
+        cardEl.className = `card foil-${foil} ${currentEnchants.join(" ")}`;
       }
+      if(typeof playChaosSfx === "function") playChaosSfx("click");
     };
   });
+
+  // Elemental Aura Infusion Buttons in Card Detail Modal
+  document.querySelectorAll(".detailEnchantBtn").forEach(btn => {
+    btn.onclick = () => {
+      const enchant = btn.getAttribute("data-enchant");
+      infuseActiveDetailCard(enchant);
+    };
+  });
+
+  // Daily Reward Fortune Vault Modal Controls
+  const dailyBtn = document.getElementById("dailyRewardBtn");
+  if(dailyBtn) dailyBtn.onclick = openDailyRewardModal;
+
+  const closeDailyBtn = document.getElementById("closeDailyRewardModalBtn");
+  if(closeDailyBtn) closeDailyBtn.onclick = closeDailyRewardModal;
+
+  const claimDailyBtn = document.getElementById("claimDailyRewardBtn");
+  if(claimDailyBtn) claimDailyBtn.onclick = claimDailyReward;
+
+  updateDailyRewardBadge();
 }
 
 document.addEventListener("DOMContentLoaded", () => {

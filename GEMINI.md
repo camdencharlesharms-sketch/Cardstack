@@ -44,6 +44,45 @@ Cardstack/
 - **Studio Card Manager Controls**: In the Admin Hub Studio list, administrators can toggle any custom card between `🔄 Return to Packs` (un-claims so it can be rolled from packs) and `🎁 Instant Claim` (immediately grants ownership).
 - **Arena Combat Usability**: Once unlocked (whether pulled from a booster pack or claimed), custom cards appear in the Arena champion carousel deck picker (`renderArenaCardPicker`), can be chosen as battle champions, and used in AI solo battles and real-time P2P multiplayer duels with their custom attacks and stats.
 
+
+### C. Daily Fortune Vault & 7-Day Login Streak
+- **Header Entry & Active Pulse Notification**: Header features a prominent `🎁 Daily Gift` button (`#dailyRewardBtn`) that automatically displays a pulsing `NEW` badge whenever a daily reward is claimable.
+- **7-Day Progressive Milestone Calendar**:
+  - Day 1: 🪙 500 Coins
+  - Day 2: 🪙 750 Coins + 📦 Common Booster Pack
+  - Day 3: 🪙 1,500 Coins + ✨ 2x Luck Boost Token
+  - Day 4: 🪙 2,000 Coins + 📦 Rare Booster Pack
+  - Day 5: 🪙 3,500 Coins + 🔮 Chaos Mutation Crystal
+  - Day 6: 🪙 5,000 Coins + 👑 Legendary Booster Pack
+  - Day 7: 🌌 **GOD TIER JACKPOT**: 🪙 10,000 Coins + Free God Booster Pack + Exclusive "⚡ Chronos Master" Title!
+- **Claim Cycle & Streak State Management**:
+  - Evaluates `userAcc.lastDailyClaim` against current epoch timestamp.
+  - Resets streak to Day 1 if more than 48 hours lapse between claims; increments streak upon consecutive daily claims.
+  - Live digital countdown timer (`#dailyTimerStatus`) accurately displays hours, minutes, and seconds until the next unlock when on cooldown.
+  - Celebratory coin sfx, triumph fanfare, and confetti showers upon claiming.
+
+### D. Card Elemental Aura Infusion (The Mystic Forge)
+- **Artifact Customization**: In `#cardDetailModal`, players can forge and infuse any unlocked card with elemental essences:
+  - 🔥 **Inferno**: Nether flame aura with +20 Fire Attack DMG.
+  - ⚡ **Plasma**: High-voltage electrical arc aura with +20 Shock DMG.
+  - ❄️ **Glacial**: Sub-zero cryo ice aura granting +25 Ice Armor defense shield.
+  - 🌌 **Cosmic Void**: Dark matter distortion aura granting true armor pierce.
+  - 🌿 **Verdant Gaia**: Primordial life vitality regenerating +15 HP per turn in Arena duels.
+- **Storage & Synchronization**: Stored under `userAcc.cardEnchantments = { [cardKey]: enchantKey }` and automatically synced to localStorage and cloud databases.
+- **Visual Presentation**:
+  - Dynamically renders glowing aura box-shadows (`.enchant-inferno`, `.enchant-plasma`, `.enchant-glacial`, `.enchant-void`, `.enchant-gaia`) across collection cards.
+  - Badges cards with animated elemental badges (`🔥 INFERNO`, `⚡ PLASMA`, etc.) in the binder, detail view, and combat arena.
+- **Arena Combat Integration**: In `arena.js`, selected champions carrying elemental infusions deal bonus elemental damage, trigger status logs, regenerate health, or mitigate incoming damage automatically.
+
+### E. 3D Holographic Foil Engine & Specular Reflection
+- **Real-Time Gyro & Pointer Physics**: Moving across `#detailCardElement` tilts the artifact smoothly in 3D perspective (`transform: perspective(800px) rotateX(...) rotateY(...) scale(1.05)`).
+- **Dynamic Specular Light Glare**: `.card-holo-glare` dynamically computes cursor vectors, casting moving iridescent light flares, radial highlights, and color dispersion across card art.
+- **Foil Texture Editions**: Supports Standard, Prism Holo, Golden Sun, Void Dark, Cyber Neon, ✨ Starlight Galaxy Sparkle, and 🌋 Molten Lava Magma.
+
+### F. Golden Edition Booster Pack Drops
+- **12% Golden Pull Rate**: Every booster pack opening features a 12% chance for any drawn card to roll as a special **✨ GOLD FOIL EDITION**.
+- **Golden Flair & Rewards**: Golden editions display radiant metallic gold borders, custom golden foil tags, double duplicate coin payouts, and golden confetti detonations upon reveal.
+
 ### B. Battle Arena & Combat Engine
 - **Champion Selection**: Players select any unlocked card from their collection or gifted vault skins to champion them into battle.
 - **Starter Champion Fallback**: If a player or guest owns 0 cards, Card 0 ("Blaze") is provided as a free Starter Champion so anyone can enter and battle immediately.
