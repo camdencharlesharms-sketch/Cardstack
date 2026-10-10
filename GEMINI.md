@@ -558,3 +558,28 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - Broadcastable over PeerJS mesh and BroadcastChannel to shift the visual theme across all connected player screens.
 - **📦 Instant Chaos Divine Booster Pack Unboxer**: Opens an exclusive 5-card God Pack with 100% guaranteed Divine, Mythic, or Transcendent cards and +2,500 bonus coins. Displays cards in an animated holographic showcase and automatically unlocks missing cards into the player's binder.
 - **🪙 Interactive Falling Coin Shower**: Summons a cascading shower of 28 floating golden coins across the screen. Players tap or click falling coins to catch them, yielding +150 to +500 coins per catch with audio effects and floating particle feedback.
+
+### Advanced Player Suspension, Custom Ban Messages & Timed Bans
+- **Custom Ban Message System (`#adminBanDialogModal`)**:
+  - When Master Admin Cam clicks `⛔ Ban` in the Player Accounts table, an interactive suspension modal opens.
+  - Allows entering an arbitrary custom notice/message (e.g. specific reason, guidelines, or notice from Cam) that is displayed prominently on that player's screen instead of a generic ban message.
+  - Quick-pick preset reason chips:
+    - *⏱️ 15m Cooldown*: "15-minute cooldown for spamming packs."
+    - *⚠️ Trade Violation (1h)*: "Suspended for trade policy violation."
+    - *🛑 Disruptive Conduct (24h)*: "Suspended for disruptive or toxic conduct."
+    - *🔒 Permanent*: "Permanent suspension. Contact Master Cam."
+- **Configurable Ban Durations (Timed Bans & Timeouts)**:
+  - Duration selector options: `5 Minutes`, `15 Minutes`, `1 Hour`, `24 Hours (1 Day)`, `7 Days (1 Week)`, `Permanent (Indefinite)`, and `Custom Duration (Minutes)`.
+  - Calculates exact timestamp expiration `banExpires = durationMs ? Date.now() + durationMs : null`.
+  - Stored in player account records (`banned: true`, `banReason`, `banExpires`, `lastAdminActionTime`, `adminRevision`) and synchronized authoritatively to the Global Cloud Registry.
+- **Banned Player Viewport Experience (`#bannedScreenOverlay`)**:
+  - Full-screen blurred backdrop (`z-index: 9999999`) with animated pulsing crimson borders (`@keyframes banBorderPulse`) and suspension crest.
+  - Displays target account name, header, and custom message from Master Admin Cam.
+  - **Live Countdown Timer**: For timed bans, renders a large glowing digital countdown timer (`MM:SS` or `HH:MM:SS`) ticking down every second.
+  - **Automatic Expiration & Unban**: When the countdown timer reaches `00:00`, the system automatically lifts the ban, clears the suspension overlay, updates the account in storage and cloud, plays victory triumph audio, displays a celebratory toast, and restores access.
+  - **Sign Out / Play as Guest Button**: Allows the suspended user to cleanly sign out and play as a guest without getting trapped in refresh loops.
+- **One-Click Unban & Real-Time Screen Unlocking**:
+  - In Player Manager, banned player rows display status badges: `TIMED BAN (Xm left)` or `BANNED`.
+  - Action button changes to `🟢 Unban`.
+  - Clicking `🟢 Unban` instantly clears `banned: false`, `banReason: ""`, `banExpires: null`, writes authoritative admin timestamp, updates the Global Cloud Registry, and dispatches a real-time `unban_player` P2P signal.
+  - If the player is currently online on any device, the ban screen is instantly dismissed and their viewport unlocked without requiring a reload.

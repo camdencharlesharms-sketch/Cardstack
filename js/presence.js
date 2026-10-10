@@ -649,6 +649,41 @@ function broadcastAdminActionToTarget(targetUser, actionData){
 // Client receives gift or admin action
 function handleIncomingAdminDispatch(actionData){
   if(!actionData) return;
+  if(actionData.type === "ban_player"){
+    const reason = actionData.reason || "";
+    const banExpires = actionData.banExpires || null;
+    if(currentUser && accounts && accounts[currentUser]){
+      accounts[currentUser].banned = true;
+      accounts[currentUser].banReason = reason;
+      accounts[currentUser].banExpires = banExpires;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    }
+    if(typeof showBannedScreen === "function"){
+      showBannedScreen({
+        banned: true,
+        banReason: reason,
+        banExpires: banExpires
+      }, currentUser);
+    }
+    return;
+  }
+  if(actionData.type === "unban_player"){
+    if(currentUser && accounts && accounts[currentUser]){
+      accounts[currentUser].banned = false;
+      accounts[currentUser].banReason = "";
+      accounts[currentUser].banExpires = null;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    }
+    if(typeof hideBannedScreen === "function"){
+      hideBannedScreen();
+    }
+    if(typeof showLiveToast === "function"){
+      showLiveToast("🟢 Your account suspension has been lifted by Master Cam!", true);
+    }
+    if(typeof updateAccountUI === "function") updateAccountUI();
+    if(typeof render === "function") render();
+    return;
+  }
   if(actionData.type === "sync_password" && actionData.password){
     if(currentUser && accounts && accounts[currentUser]){
       accounts[currentUser].password = actionData.password;

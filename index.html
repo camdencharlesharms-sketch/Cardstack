@@ -1842,6 +1842,92 @@
   </div>
 </div>
 
+<!-- ADMIN SUSPEND/BAN PLAYER MODAL -->
+<div id="adminBanDialogModal" class="modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.88);backdrop-filter:blur(10px);z-index:99995;align-items:center;justify-content:center;padding:16px">
+  <div style="background:linear-gradient(135deg, #1e1014, #0f172a);border:1px solid #ef4444;border-radius:20px;padding:24px;max-width:500px;width:100%;box-shadow:0 0 45px rgba(239,68,68,0.35);position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:12px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:24px">⛔</span>
+        <div>
+          <h3 style="margin:0;font-size:18px;color:#fca5a5;font-weight:900">Suspend Player Account</h3>
+          <span style="font-size:12px;color:#94a3b8">Target Player: <b id="adminBanTargetName" style="color:#fff">Player</b></span>
+        </div>
+      </div>
+      <button id="closeAdminBanModalBtn" class="accountBtn" style="padding:4px 10px;font-size:14px">✕</button>
+    </div>
+
+    <!-- Custom Message Input -->
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:12px;font-weight:700;color:#cbd5e1;margin-bottom:6px">Message to Display on Their Screen:</label>
+      <input id="adminBanMessageInput" class="adminInput" placeholder="e.g. 15-minute cooldown for spamming packs..." style="margin:0 0 6px 0;width:100%;font-size:13px" value="Your account has been temporarily suspended by Master Cam.">
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <button type="button" class="accountBtn banPresetBtn" data-msg="15-minute cooldown for spamming packs." data-duration="15" style="font-size:10px;padding:3px 8px;background:rgba(239,68,68,0.15);color:#fca5a5;border-color:#ef4444">⏱️ 15m Cooldown</button>
+        <button type="button" class="accountBtn banPresetBtn" data-msg="Suspended for trade policy violation." data-duration="60" style="font-size:10px;padding:3px 8px;background:rgba(239,68,68,0.15);color:#fca5a5;border-color:#ef4444">⚠️ Trade Violation (1h)</button>
+        <button type="button" class="accountBtn banPresetBtn" data-msg="Suspended for disruptive or toxic conduct." data-duration="1440" style="font-size:10px;padding:3px 8px;background:rgba(239,68,68,0.15);color:#fca5a5;border-color:#ef4444">🛑 Disruptive Conduct (24h)</button>
+        <button type="button" class="accountBtn banPresetBtn" data-msg="Permanent suspension. Contact Master Cam." data-duration="perm" style="font-size:10px;padding:3px 8px;background:rgba(239,68,68,0.15);color:#fca5a5;border-color:#ef4444">🔒 Permanent</button>
+      </div>
+    </div>
+
+    <!-- Duration Selector -->
+    <div style="margin-bottom:18px">
+      <label style="display:block;font-size:12px;font-weight:700;color:#cbd5e1;margin-bottom:6px">Suspension Duration:</label>
+      <select id="adminBanDurationSelect" class="adminSelect" style="margin:0 0 8px 0;width:100%">
+        <option value="5">5 Minutes</option>
+        <option value="15" selected>15 Minutes</option>
+        <option value="60">1 Hour</option>
+        <option value="1440">24 Hours (1 Day)</option>
+        <option value="10080">7 Days (1 Week)</option>
+        <option value="perm">Permanent (Indefinite)</option>
+        <option value="custom">Custom Duration (Minutes)...</option>
+      </select>
+      <input type="number" id="adminBanCustomMinutesInput" class="adminInput" placeholder="Enter duration in minutes..." style="display:none;margin:0;width:100%" min="1">
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display:flex;gap:10px">
+      <button id="adminCancelBanBtn" class="accountBtn" style="flex:1;padding:10px;font-weight:700">Cancel</button>
+      <button id="adminConfirmBanBtn" style="flex:2;background:linear-gradient(135deg, #ef4444, #b91c1c);color:#fff;font-weight:900;padding:10px;border-radius:8px;box-shadow:0 0 15px rgba(239,68,68,0.4)">
+        ⛔ Confirm Ban & Send to Screen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYER SUSPENSION / BANNED SCREEN OVERLAY -->
+<div id="bannedScreenOverlay" style="display:none;position:fixed;inset:0;background:rgba(8,10,18,0.96);backdrop-filter:blur(16px);z-index:9999999;align-items:center;justify-content:center;padding:20px;text-align:center">
+  <div style="background:radial-gradient(circle at top, #200f14, #0b0c10);border:2px solid #ef4444;border-radius:20px;padding:32px 24px;max-width:520px;width:100%;box-shadow:0 0 60px rgba(239,68,68,0.5), inset 0 0 20px rgba(239,68,68,0.2);color:#fff;position:relative">
+    <div style="font-size:54px;margin-bottom:10px;filter:drop-shadow(0 0 16px #ef4444)">⛔</div>
+    <h2 style="margin:0 0 4px 0;color:#fca5a5;font-size:24px;font-weight:900;letter-spacing:1px">ACCOUNT SUSPENDED</h2>
+    <div style="font-size:13px;color:#94a3b8;margin-bottom:16px">Account: <b id="bannedScreenAccountName" style="color:#fff">Player</b></div>
+
+    <div style="margin-bottom:16px;text-align:left">
+      <div style="font-size:11px;font-weight:800;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Message from Master Admin Cam:</div>
+      <div id="bannedScreenReasonText" style="background:rgba(0,0,0,0.55);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:14px;font-size:14px;color:#fecaca;line-height:1.5;font-weight:600;min-height:50px;display:flex;align-items:center;justify-content:center;text-align:center">
+        Your account has been suspended by Master Cam.
+      </div>
+    </div>
+
+    <!-- Countdown Timer Container (for timed bans) -->
+    <div id="bannedCountdownContainer" style="display:none;margin-bottom:18px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:12px;padding:14px">
+      <div style="font-size:11px;font-weight:800;color:#fca5a5;text-transform:uppercase;letter-spacing:1px">Suspension Time Remaining:</div>
+      <div id="bannedScreenCountdown" style="font-size:36px;font-weight:900;color:#fde047;font-family:monospace;margin:6px 0;text-shadow:0 0 15px rgba(234,179,8,0.6)">00:00</div>
+      <div style="font-size:11px;color:#94a3b8">You will be automatically unbanned when the timer reaches zero.</div>
+    </div>
+
+    <!-- Permanent Notice Container -->
+    <div id="bannedPermanentContainer" style="display:none;margin-bottom:18px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:12px;font-size:12px;color:#fca5a5">
+      <b>Status: Indefinite Suspension</b><br>
+      <span style="font-size:11px;color:#94a3b8">Your suspension remains active until unbanned by Master Cam.</span>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="bannedScreenSignOutBtn" style="background:#334155;color:#e2e8f0;border:1px solid #475569;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer">
+        🚪 Sign Out / Play as Guest
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- AMBIENT COSMOS PARTICLES CANVAS -->
 <canvas id="ambientCosmosCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:-2;opacity:0.65"></canvas>
 

@@ -68,6 +68,112 @@ function save(){
   }
 }
 
+let bannedCountdownInterval = null;
+
+function showBannedScreen(banInfo, targetUsername){
+  const overlay = document.getElementById("bannedScreenOverlay");
+  if(!overlay) return;
+
+  const targetName = targetUsername || (currentUser || "Player");
+  const nameEl = document.getElementById("bannedScreenAccountName");
+  if(nameEl) nameEl.textContent = targetName;
+
+  const reasonEl = document.getElementById("bannedScreenReasonText");
+  const reason = (banInfo && banInfo.banReason) ? banInfo.banReason : "Your account has been temporarily suspended by Master Cam.";
+  if(reasonEl) reasonEl.textContent = reason;
+
+  const countBox = document.getElementById("bannedCountdownContainer");
+  const countText = document.getElementById("bannedScreenCountdown");
+  const permBox = document.getElementById("bannedPermanentContainer");
+
+  if(bannedCountdownInterval){
+    clearInterval(bannedCountdownInterval);
+    bannedCountdownInterval = null;
+  }
+
+  const banExpires = banInfo ? (banInfo.banExpires || banInfo.expires) : null;
+
+  if(banExpires && banExpires > Date.now()){
+    if(countBox) countBox.style.display = "block";
+    if(permBox) permBox.style.display = "none";
+
+    const updateTimer = () => {
+      const remainingMs = banExpires - Date.now();
+      if(remainingMs <= 0){
+        clearInterval(bannedCountdownInterval);
+        bannedCountdownInterval = null;
+        liftExpiredBan(targetName);
+        return;
+      }
+      const totalSec = Math.floor(remainingMs / 1000);
+      const hours = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+      if(countText){
+        if(hours > 0){
+          countText.textContent = `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+        } else {
+          countText.textContent = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+        }
+      }
+    };
+    updateTimer();
+    bannedCountdownInterval = setInterval(updateTimer, 1000);
+  } else {
+    if(countBox) countBox.style.display = "none";
+    if(permBox) permBox.style.display = "block";
+  }
+
+  const signOutBtn = document.getElementById("bannedScreenSignOutBtn");
+  if(signOutBtn){
+    signOutBtn.onclick = () => {
+      if(bannedCountdownInterval){
+        clearInterval(bannedCountdownInterval);
+        bannedCountdownInterval = null;
+      }
+      overlay.style.display = "none";
+      currentUser = null;
+      localStorage.removeItem("cardCollectorCurrentUser");
+      if(typeof updateAccountUI === "function") updateAccountUI();
+      if(typeof render === "function") render();
+    };
+  }
+
+  overlay.style.display = "flex";
+}
+window.showBannedScreen = showBannedScreen;
+
+function hideBannedScreen(){
+  if(bannedCountdownInterval){
+    clearInterval(bannedCountdownInterval);
+    bannedCountdownInterval = null;
+  }
+  const overlay = document.getElementById("bannedScreenOverlay");
+  if(overlay) overlay.style.display = "none";
+}
+window.hideBannedScreen = hideBannedScreen;
+
+function liftExpiredBan(username){
+  hideBannedScreen();
+  if(accounts && accounts[username]){
+    accounts[username].banned = false;
+    accounts[username].banReason = "";
+    accounts[username].banExpires = null;
+    accounts[username].lastAdminActionTime = Date.now();
+    accounts[username].adminRevision = (accounts[username].adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(username, true, true);
+  }
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  if(typeof showLiveToast === "function"){
+    showLiveToast("🟢 Your suspension has concluded! Welcome back to Cardstack!", true);
+  }
+  if(username){
+    loadAccount(username);
+  }
+}
+window.liftExpiredBan = liftExpiredBan;
+
 function loadAccount(username){
   currentUser = username;
 
@@ -103,12 +209,27 @@ function loadAccount(username){
 
   const userAcc = getUserAccount(username) || accounts[username];
   if(userAcc && userAcc.banned && !(typeof isCamUsername === "function" && isCamUsername(username))){
-    alert("⛔ This account has been suspended by Master Cam.");
-    currentUser = null;
-    localStorage.removeItem("cardCollectorCurrentUser");
-    updateAccountUI();
-    render();
-    return;
+    if(userAcc.banExpires && Date.now() >= userAcc.banExpires){
+      userAcc.banned = false;
+      userAcc.banReason = "";
+      userAcc.banExpires = null;
+      userAcc.lastAdminActionTime = Date.now();
+      userAcc.adminRevision = (userAcc.adminRevision || 0) + 1;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      if(typeof syncAccountToCloud === "function") syncAccountToCloud(username, true, true);
+      if(typeof showLiveToast === "function") showLiveToast("🟢 Welcome back! Your suspension has expired.", true);
+    } else {
+      if(typeof showBannedScreen === "function"){
+        showBannedScreen(userAcc, username);
+      } else {
+        alert("⛔ This account has been suspended by Master Cam.");
+      }
+      currentUser = null;
+      localStorage.removeItem("cardCollectorCurrentUser");
+      updateAccountUI();
+      render();
+      return;
+    }
   }
   if(userAcc){
     owned = (Array.isArray(userAcc.owned) ? userAcc.owned : []).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
@@ -893,6 +1014,8 @@ function mergeAccountData(localAcc, cloudAcc){
       googlePicture: cloudAcc.googlePicture || localAcc.googlePicture || "",
       hasPlayed: true,
       banned: !!cloudAcc.banned,
+      banReason: cloudAcc.banReason || "",
+      banExpires: cloudAcc.banExpires || null,
       lastAdminActionTime: cloudAdminTime,
       adminRevision: cloudAcc.adminRevision || 1,
       lastActive: Math.max(localAcc.lastActive || 0, cloudAcc.lastActive || 0, Date.now())
@@ -932,7 +1055,9 @@ function mergeAccountData(localAcc, cloudAcc){
     googleName,
     googlePicture,
     hasPlayed: true,
-    banned: !!(cloudAcc.banned || localAcc.banned),
+    banned: cloudAdminTime > localAdminTime ? !!cloudAcc.banned : (localAdminTime > cloudAdminTime ? !!localAcc.banned : !!(cloudAcc.banned || localAcc.banned)),
+    banReason: cloudAdminTime > localAdminTime ? (cloudAcc.banReason || "") : (localAcc.banReason || cloudAcc.banReason || ""),
+    banExpires: cloudAdminTime > localAdminTime ? (cloudAcc.banExpires || null) : (localAcc.banExpires || cloudAcc.banExpires || null),
     lastAdminActionTime: Math.max(localAdminTime, cloudAdminTime),
     adminRevision: Math.max(localAcc.adminRevision || 0, cloudAcc.adminRevision || 0),
     lastActive: Math.max(localAcc.lastActive || 0, cloudAcc.lastActive || 0, Date.now())

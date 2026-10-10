@@ -340,6 +340,25 @@ function refreshAdminPlayerData(){
       casinoSelect.appendChild(casOpt);
     }
 
+    // Auto-lift expired timed ban
+    if(data.banned && data.banExpires && Date.now() >= data.banExpires){
+      data.banned = false;
+      data.banReason = "";
+      data.banExpires = null;
+      data.lastAdminActionTime = Date.now();
+      data.adminRevision = (data.adminRevision || 0) + 1;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      if(typeof syncAccountToCloud === "function") syncAccountToCloud(name, true, true);
+    }
+
+    const isTimedBan = data.banned && data.banExpires && data.banExpires > Date.now();
+    const banRemainingMinutes = isTimedBan ? Math.ceil((data.banExpires - Date.now()) / 60000) : 0;
+    const banBadge = data.banned ? (
+      isTimedBan 
+        ? `<span style="background:#f59e0b;color:#000;font-size:9px;padding:2px 4px;border-radius:4px;font-weight:800;margin-left:4px" title="Reason: ${(data.banReason || "None").replace(/"/g, "&quot;")} - Expires in ${banRemainingMinutes}m">TIMED BAN (${banRemainingMinutes}m)</span>`
+        : `<span style="background:#ef4444;color:#fff;font-size:9px;padding:2px 4px;border-radius:4px;font-weight:800;margin-left:4px" title="Reason: ${(data.banReason || "None").replace(/"/g, "&quot;")}">BANNED</span>`
+    ) : "";
+
     const tr = document.createElement("tr");
     tr.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
     tr.style.cursor = "pointer";
@@ -351,7 +370,7 @@ function refreshAdminPlayerData(){
     tr.innerHTML = `
       <td style="padding:8px 6px">
         <b>${name}</b>
-        ${data.banned ? '<span style="background:#ef4444;color:#fff;font-size:9px;padding:2px 4px;border-radius:4px;font-weight:800;margin-left:4px">BANNED</span>' : ''}
+        ${banBadge}
       </td>
       <td><span style="color:${isMaster ? '#f43f5e' : (isSub ? '#38bdf8' : '#64748b')}">${roleText}</span></td>
       <td>${statusBadge}</td>
@@ -364,7 +383,7 @@ function refreshAdminPlayerData(){
         <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#d97706;color:#fff;margin-right:3px" onclick="quickTreasuryPlayerPrompt('${name}')" title="Gift or take away coins">💰 Coins</button>
         <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#0284c7;color:#fff;margin-right:3px" onclick="adminChangePlayerPasswordPrompt('${name}')" title="Change or reset password">🔑 Pass</button>
         ${!isMaster ? ((typeof isMasterAdmin === "function" && isMasterAdmin()) ? `
-          <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#334155;color:${data.banned ? '#4ade80' : '#f87171'};margin-right:3px" onclick="adminToggleBanPlayer('${name}')" title="Suspend or unsuspend account">${data.banned ? '🟢 Unban' : '⛔ Ban'}</button>
+          <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#334155;color:${data.banned ? '#4ade80' : '#f87171'};margin-right:3px" onclick="adminToggleBanPlayer('${name}')" title="${data.banned ? 'Click to unban player immediately' : 'Suspend player with custom message & timer'}">${data.banned ? '🟢 Unban' : '⛔ Ban'}</button>
           <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;color:#f87171" onclick="adminDeleteSingleAccount('${name}')" title="Delete account across all devices & cloud">Delete</button>
         ` : '') : '<span style="color:#94a3b8;font-size:11px">Owner</span>'}
       </td>
@@ -2454,28 +2473,131 @@ window.quickTreasuryPlayerPrompt = function(name){
   alert(`💰 Treasury updated for [${name}]! New Balance: ${accounts[name].coins.toLocaleString()} 🪙 (Synced to Cloud Registry)`);
 };
 
-window.adminToggleBanPlayer = function(name){
-  if(!isMasterAdmin()) return alert("Only Master Admin Cam can suspend/unsuspend players.");
-  if(!name) return;
-  if(name.toLowerCase() === ADMIN_USERNAME.toLowerCase()) return alert("Master Cam cannot be suspended.");
+let currentBanTarget = "";
 
+window.adminOpenBanDialog = function(name){
+  if(!name) return;
+  currentBanTarget = name;
+
+  const modal = document.getElementById("adminBanDialogModal");
+  const targetLabel = document.getElementById("adminBanTargetName");
+  const msgInput = document.getElementById("adminBanMessageInput");
+  const durSelect = document.getElementById("adminBanDurationSelect");
+  const customInput = document.getElementById("adminBanCustomMinutesInput");
+
+  if(!modal) return;
+  if(targetLabel) targetLabel.textContent = name;
+  if(msgInput) msgInput.value = "Your account has been temporarily suspended by Master Cam.";
+  if(durSelect) durSelect.value = "15";
+  if(customInput){
+    customInput.value = "";
+    customInput.style.display = "none";
+  }
+
+  modal.style.display = "flex";
+};
+
+window.adminCloseBanDialog = function(){
+  const modal = document.getElementById("adminBanDialogModal");
+  if(modal) modal.style.display = "none";
+  currentBanTarget = "";
+};
+
+window.adminConfirmBan = function(){
+  const name = currentBanTarget;
+  if(!name){
+    return alert("No target player selected.");
+  }
+  if(name.toLowerCase() === ADMIN_USERNAME.toLowerCase() || (typeof isCamUsername === "function" && isCamUsername(name))){
+    return alert("Master Cam cannot be suspended.");
+  }
   if(!accounts[name]){
     accounts[name] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
   }
-  accounts[name].banned = !accounts[name].banned;
+
+  const msgInput = document.getElementById("adminBanMessageInput");
+  const durSelect = document.getElementById("adminBanDurationSelect");
+  const customInput = document.getElementById("adminBanCustomMinutesInput");
+
+  const banMessage = msgInput && msgInput.value.trim() ? msgInput.value.trim() : "Your account has been suspended by Master Cam.";
+  const durVal = durSelect ? durSelect.value : "15";
+
+  let durationMinutes = null;
+  if(durVal === "perm"){
+    durationMinutes = null;
+  } else if(durVal === "custom"){
+    const parsed = parseInt(customInput ? customInput.value : "15", 10);
+    if(isNaN(parsed) || parsed <= 0) return alert("Please enter a valid positive number for custom minutes.");
+    durationMinutes = parsed;
+  } else {
+    durationMinutes = parseInt(durVal, 10);
+  }
+
+  const banExpires = durationMinutes ? Date.now() + (durationMinutes * 60 * 1000) : null;
+
+  accounts[name].banned = true;
+  accounts[name].banReason = banMessage;
+  accounts[name].banExpires = banExpires;
   accounts[name].lastAdminActionTime = Date.now();
   accounts[name].adminRevision = (accounts[name].adminRevision || 0) + 1;
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
   if(typeof syncAccountToCloud === "function") syncAccountToCloud(name, true, true);
 
-  if(accounts[name].banned){
-    if(typeof broadcastAdminActionToTarget === "function") broadcastAdminActionToTarget(name, { type: "ban_player" });
-    alert(`⛔ Account [${name}] has been SUSPENDED / BANNED across all devices and cloud.`);
-  } else {
-    if(typeof broadcastAdminActionToTarget === "function") broadcastAdminActionToTarget(name, { type: "unban_player" });
-    alert(`🟢 Account [${name}] has been UNSUSPENDED / UNBANNED.`);
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(name, {
+      type: "ban_player",
+      reason: banMessage,
+      banExpires: banExpires
+    });
   }
+
+  adminCloseBanDialog();
   refreshAdminPlayerData();
+
+  const durationStr = durationMinutes ? `${durationMinutes} Minute(s)` : "Permanent (Indefinite)";
+  if(typeof playChaosSfx === "function") playChaosSfx("detonation");
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`⛔ Account <b>[${name}]</b> has been SUSPENDED (${durationStr})! Custom message sent to their screen.`, true);
+  }
+  alert(`⛔ Account [${name}] has been SUSPENDED!\n\nDuration: ${durationStr}\nMessage to Player: "${banMessage}"\n\nThis ban has been synchronized to the cloud registry and sent directly to their screen!`);
+};
+
+window.adminUnbanPlayer = function(name){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can unsuspend players.");
+  if(!name || !accounts[name]) return;
+
+  accounts[name].banned = false;
+  accounts[name].banReason = "";
+  accounts[name].banExpires = null;
+  accounts[name].lastAdminActionTime = Date.now();
+  accounts[name].adminRevision = (accounts[name].adminRevision || 0) + 1;
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(name, true, true);
+
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(name, { type: "unban_player" });
+  }
+
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🟢 Account <b>[${name}]</b> has been UNBANNED! Screen unlocked.`, true);
+  }
+  alert(`🟢 Account [${name}] has been UNSUSPENDED / UNBANNED across all devices and cloud!`);
+  refreshAdminPlayerData();
+};
+
+window.adminToggleBanPlayer = function(name){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can suspend/unsuspend players.");
+  if(!name) return;
+  if(name.toLowerCase() === ADMIN_USERNAME.toLowerCase() || (typeof isCamUsername === "function" && isCamUsername(name))){
+    return alert("Master Cam cannot be suspended.");
+  }
+
+  if(accounts[name] && accounts[name].banned){
+    adminUnbanPlayer(name);
+  } else {
+    adminOpenBanDialog(name);
+  }
 };
 
 window.quickGiftPlayerCardPrompt = function(name){
@@ -7245,6 +7367,36 @@ function initUsefulAdminToolsDom(){
 
   const resetStatsBtn = document.getElementById("bulkResetStatsBtn");
   if(resetStatsBtn) resetStatsBtn.onclick = () => bulkResetStats();
+
+  const closeBanBtn = document.getElementById("closeAdminBanModalBtn");
+  if(closeBanBtn) closeBanBtn.onclick = () => adminCloseBanDialog();
+
+  const cancelBanBtn = document.getElementById("adminCancelBanBtn");
+  if(cancelBanBtn) cancelBanBtn.onclick = () => adminCloseBanDialog();
+
+  const confirmBanBtn = document.getElementById("adminConfirmBanBtn");
+  if(confirmBanBtn) confirmBanBtn.onclick = () => adminConfirmBan();
+
+  const durSelect = document.getElementById("adminBanDurationSelect");
+  const customInput = document.getElementById("adminBanCustomMinutesInput");
+  if(durSelect && customInput){
+    durSelect.onchange = () => {
+      customInput.style.display = durSelect.value === "custom" ? "block" : "none";
+    };
+  }
+
+  document.querySelectorAll(".banPresetBtn").forEach(btn => {
+    btn.onclick = () => {
+      const msg = btn.getAttribute("data-msg");
+      const dur = btn.getAttribute("data-duration");
+      const msgInput = document.getElementById("adminBanMessageInput");
+      const dSel = document.getElementById("adminBanDurationSelect");
+      const cInput = document.getElementById("adminBanCustomMinutesInput");
+      if(msgInput && msg) msgInput.value = msg;
+      if(dSel && dur) dSel.value = dur;
+      if(cInput) cInput.style.display = "none";
+    };
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
