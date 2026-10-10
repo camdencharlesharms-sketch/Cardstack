@@ -74,7 +74,13 @@ function showBannedScreen(banInfo, targetUsername){
   const overlay = document.getElementById("bannedScreenOverlay");
   if(!overlay) return;
 
-  const targetName = targetUsername || (currentUser || "Player");
+  // Close any potentially active game modals so the suspension overlay takes immediate full focus
+  ["packModal", "arenaModal", "cardDetailModal", "accountModal", "adminBanDialogModal", "summonerModal", "qrPairModal"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = "none";
+  });
+
+  const targetName = targetUsername || (currentUser || localStorage.getItem("cardCollectorCurrentUser") || "Player");
   const nameEl = document.getElementById("bannedScreenAccountName");
   if(nameEl) nameEl.textContent = targetName;
 
@@ -219,15 +225,15 @@ function loadAccount(username){
       if(typeof syncAccountToCloud === "function") syncAccountToCloud(username, true, true);
       if(typeof showLiveToast === "function") showLiveToast("🟢 Welcome back! Your suspension has expired.", true);
     } else {
+      currentUser = username;
+      localStorage.setItem("cardCollectorCurrentUser", username);
       if(typeof showBannedScreen === "function"){
         showBannedScreen(userAcc, username);
       } else {
         alert("⛔ This account has been suspended by Master Cam.");
       }
-      currentUser = null;
-      localStorage.removeItem("cardCollectorCurrentUser");
-      updateAccountUI();
-      render();
+      if(typeof initInstantAdminSSE === "function") initInstantAdminSSE();
+      if(typeof checkRecentAdminDispatches === "function") checkRecentAdminDispatches();
       return;
     }
   }
@@ -2899,3 +2905,25 @@ if(document.readyState === "complete" || document.readyState === "interactive"){
     initSuperCoolDom();
   }, 100);
 }
+
+// Cross-tab immediate ban synchronization
+window.addEventListener("storage", (e) => {
+  if(e.key === "cardCollectorAccounts"){
+    try {
+      const updatedAccounts = JSON.parse(e.newValue);
+      const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+      if(myUser && updatedAccounts && updatedAccounts[myUser]){
+        const userAcc = updatedAccounts[myUser];
+        if(userAcc.banned && !(typeof isCamUsername === "function" && isCamUsername(myUser))){
+          if(!userAcc.banExpires || Date.now() < userAcc.banExpires){
+            if(typeof showBannedScreen === "function") showBannedScreen(userAcc, myUser);
+          } else {
+            if(typeof liftExpiredBan === "function") liftExpiredBan(myUser);
+          }
+        } else {
+          if(typeof hideBannedScreen === "function") hideBannedScreen();
+        }
+      }
+    } catch(err){}
+  }
+});

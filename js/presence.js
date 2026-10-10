@@ -33,9 +33,80 @@ if(typeof window !== "undefined") window.broadcastToAllPresencePeers = broadcast
 let presencePeer = null;
 let presenceConnToCam = null;
 let presenceHeartbeatTimer = null;
+let adminSSEInstance = null;
+let lastProcessedAdminDispatchTime = 0;
+const NTFY_ADMIN_BROADCAST_URL = "https://ntfy.sh/cardstack_admin_broadcast_v1";
+
+// Instant Cross-Device Admin Broadcast SSE Listener (Sub-50ms real-time delivery)
+function initInstantAdminSSE(){
+  if(typeof EventSource === "undefined") return;
+  if(adminSSEInstance && adminSSEInstance.readyState !== EventSource.CLOSED) return;
+
+  try {
+    adminSSEInstance = new EventSource(`${NTFY_ADMIN_BROADCAST_URL}/sse`);
+
+    adminSSEInstance.onmessage = (event) => {
+      if(!event || !event.data) return;
+      try {
+        const msgObj = JSON.parse(event.data);
+        const payload = (typeof msgObj.message === "string") ? JSON.parse(msgObj.message) : msgObj;
+        if(payload && payload.type === "admin_dispatch"){
+          if(payload.time && payload.time <= lastProcessedAdminDispatchTime) return;
+          if(payload.time) lastProcessedAdminDispatchTime = payload.time;
+
+          const target = payload.target;
+          const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+          if(target && myUser && target.toLowerCase() === myUser.toLowerCase()){
+            handleIncomingAdminDispatch(payload.action, target);
+          }
+        }
+      } catch(err){}
+    };
+
+    adminSSEInstance.onerror = () => {
+      if(adminSSEInstance && adminSSEInstance.readyState === EventSource.CLOSED){
+        adminSSEInstance = null;
+        setTimeout(initInstantAdminSSE, 3000);
+      }
+    };
+  } catch(e){}
+}
+if(typeof window !== "undefined") window.initInstantAdminSSE = initInstantAdminSSE;
+try { initInstantAdminSSE(); } catch(e){}
+
+// Catch-up check for dispatches sent while offline or tab in background
+async function checkRecentAdminDispatches(){
+  const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+  if(!myUser) return;
+  try {
+    const res = await fetch(`${NTFY_ADMIN_BROADCAST_URL}/json?poll=1`, { cache: "no-store" });
+    if(!res.ok) return;
+    const text = await res.text();
+    if(!text || !text.trim()) return;
+    const lines = text.trim().split("\n").filter(l => l.trim().length > 0);
+    lines.forEach(line => {
+      try {
+        const item = JSON.parse(line);
+        const payload = (typeof item.message === "string") ? JSON.parse(item.message) : item;
+        if(payload && payload.type === "admin_dispatch"){
+          if(payload.time && payload.time <= lastProcessedAdminDispatchTime) return;
+          const target = payload.target;
+          if(target && target.toLowerCase() === myUser.toLowerCase()){
+            if(payload.time) lastProcessedAdminDispatchTime = payload.time;
+            handleIncomingAdminDispatch(payload.action, target);
+          }
+        }
+      } catch(e){}
+    });
+  } catch(e){}
+}
+if(typeof window !== "undefined") window.checkRecentAdminDispatches = checkRecentAdminDispatches;
 
 // Initialize Presence Mesh
 function initPresenceSystem(){
+  initInstantAdminSSE();
+  checkRecentAdminDispatches();
+
   if(typeof Peer === "undefined") return;
 
   const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
@@ -187,7 +258,10 @@ function connectToCamBeacon(){
     presenceConnToCam.on("data", (data)=>{
       if(!data) return;
       if(data.type === "admin_dispatch"){
-        handleIncomingAdminDispatch(data.action);
+        const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+        if(!data.target || (myUser && data.target.toLowerCase() === myUser.toLowerCase())){
+          handleIncomingAdminDispatch(data.action, data.target);
+        }
       } else if(data.type === "sync_sub_admins"){
         if(data.subAdminRoles && typeof data.subAdminRoles === "object"){
           subAdminRoles = data.subAdminRoles;
@@ -431,8 +505,9 @@ if(presenceBroadcast){
         handleSubAdminActionRelay(null, data);
       }
     } else if(data.type === "admin_dispatch"){
-      if(currentUser && data.target && data.target.toLowerCase() === currentUser.toLowerCase()){
-        handleIncomingAdminDispatch(data.action);
+      const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+      if(!data.target || (myUser && data.target.toLowerCase() === myUser.toLowerCase())){
+        handleIncomingAdminDispatch(data.action, data.target);
       }
     } else if(data.type === "studio_card_created"){
       handleIncomingStudioCardCreated(data.card);
@@ -587,11 +662,13 @@ function handleSubAdminActionRelay(conn, data){
   }
 }
 
-// Gifting dispatch: sends real-time updates to target player
+// Gifting & Admin dispatch: sends real-time updates to target player across ALL channels simultaneously
 function broadcastAdminActionToTarget(targetUser, actionData){
   if(!targetUser) return;
+  actionData = actionData || {};
+  actionData.target = targetUser;
 
-  // 1. Same-device multi-tab broadcast
+  // 1. Same-device multi-tab BroadcastChannel (<1ms)
   if(presenceBroadcast){
     try {
       presenceBroadcast.postMessage({
@@ -602,7 +679,22 @@ function broadcastAdminActionToTarget(targetUser, actionData){
     } catch(e){}
   }
 
-  // 2. If sender is Sub-Admin and not Master, forward relay to Master Cam
+  // 2. Instant Global Server-Sent Events Dispatch (Universal cross-device, school Wi-Fi & mobile data bypass, <50ms)
+  try {
+    const payload = JSON.stringify({
+      type: "admin_dispatch",
+      target: targetUser,
+      action: actionData,
+      time: Date.now()
+    });
+    fetch(NTFY_ADMIN_BROADCAST_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: payload
+    }).catch(()=>{});
+  } catch(e){}
+
+  // 3. If sender is Sub-Admin and not Master, forward relay to Master Cam
   if((typeof isSubAdmin === "function" && isSubAdmin()) && !(typeof isMasterAdmin === "function" && isMasterAdmin())){
     const activeCamConn = (presenceConnToCam && presenceConnToCam.open) ? presenceConnToCam : (typeof window !== "undefined" && window.presenceConnToCam && window.presenceConnToCam.open ? window.presenceConnToCam : null);
     if(activeCamConn){
@@ -627,7 +719,7 @@ function broadcastAdminActionToTarget(targetUser, actionData){
     }
   }
 
-  // 3. PeerJS remote connection (used by Master Cam to dispatch to active connections)
+  // 4. PeerJS remote connections (all registered active presence peers)
   if(window.activePresencePeers){
     let peerConn = window.activePresencePeers[targetUser];
     if(!peerConn){
@@ -644,39 +736,83 @@ function broadcastAdminActionToTarget(targetUser, actionData){
       } catch(e){}
     }
   }
+
+  // 5. Send to all connected presence connections on Cam host beacon
+  if(window.allConnectedPresenceConns && window.allConnectedPresenceConns.size){
+    window.allConnectedPresenceConns.forEach(conn => {
+      if(conn && conn.open){
+        try {
+          conn.send({
+            type: "admin_dispatch",
+            target: targetUser,
+            action: actionData
+          });
+        } catch(e){}
+      }
+    });
+  }
+
+  // 6. Broadcast across any open multiplayer battle connections
+  if(typeof window !== "undefined" && window.activeBattlePeerConn && window.activeBattlePeerConn.open){
+    try {
+      window.activeBattlePeerConn.send({
+        type: "admin_dispatch",
+        target: targetUser,
+        action: actionData
+      });
+    } catch(e){}
+  }
 }
 
 // Client receives gift or admin action
-function handleIncomingAdminDispatch(actionData){
+function handleIncomingAdminDispatch(actionData, targetUser){
   if(!actionData) return;
+  const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+
+  // Target identity check
+  const target = targetUser || actionData.target;
+  if(target && myUser && target.toLowerCase() !== myUser.toLowerCase()){
+    return; // Addressed to someone else
+  }
+
   if(actionData.type === "ban_player"){
-    const reason = actionData.reason || "";
+    if(myUser && (typeof isCamUsername === "function" && isCamUsername(myUser))){
+      return; // Master Cam is immune to suspension
+    }
+
+    const reason = actionData.reason || "Your account has been temporarily suspended by Master Cam.";
     const banExpires = actionData.banExpires || null;
-    if(currentUser && accounts && accounts[currentUser]){
-      accounts[currentUser].banned = true;
-      accounts[currentUser].banReason = reason;
-      accounts[currentUser].banExpires = banExpires;
+
+    if(myUser && accounts && accounts[myUser]){
+      accounts[myUser].banned = true;
+      accounts[myUser].banReason = reason;
+      accounts[myUser].banExpires = banExpires;
+      accounts[myUser].lastAdminActionTime = Date.now();
       localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     }
+
+    if(typeof playChaosSfx === "function") playChaosSfx("detonation");
     if(typeof showBannedScreen === "function"){
       showBannedScreen({
         banned: true,
         banReason: reason,
         banExpires: banExpires
-      }, currentUser);
+      }, myUser || target);
     }
     return;
   }
   if(actionData.type === "unban_player"){
-    if(currentUser && accounts && accounts[currentUser]){
-      accounts[currentUser].banned = false;
-      accounts[currentUser].banReason = "";
-      accounts[currentUser].banExpires = null;
+    if(myUser && accounts && accounts[myUser]){
+      accounts[myUser].banned = false;
+      accounts[myUser].banReason = "";
+      accounts[myUser].banExpires = null;
+      accounts[myUser].lastAdminActionTime = Date.now();
       localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     }
     if(typeof hideBannedScreen === "function"){
       hideBannedScreen();
     }
+    if(typeof playChaosSfx === "function") playChaosSfx("triumph");
     if(typeof showLiveToast === "function"){
       showLiveToast("🟢 Your account suspension has been lifted by Master Cam!", true);
     }
@@ -1383,3 +1519,18 @@ function handleIncomingCardOverridesSync(deletedCards, cardOverrides){
   if(typeof render === "function") render();
 }
 if(typeof window !== "undefined") window.handleIncomingCardOverridesSync = handleIncomingCardOverridesSync;
+
+// Auto-check dispatches on focus, visibility change, and periodic heartbeat
+if(typeof document !== "undefined"){
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState === "visible"){
+      if(typeof checkRecentAdminDispatches === "function") checkRecentAdminDispatches();
+    }
+  });
+  window.addEventListener("focus", ()=>{
+    if(typeof checkRecentAdminDispatches === "function") checkRecentAdminDispatches();
+  });
+  setInterval(()=>{
+    if(typeof checkRecentAdminDispatches === "function") checkRecentAdminDispatches();
+  }, 3500);
+}

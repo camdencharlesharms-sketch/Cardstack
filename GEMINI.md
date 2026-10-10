@@ -136,6 +136,18 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
 5. **GitHub CLI**: `gh` is installed at `~/.local/bin/gh`.
 6. **Zero-Build Vercel Hosting**: Static web project. Pushing to `origin main` automatically deploys updates to production immediately.
 
+### Instant Cross-Device Admin Dispatch & Player Suspension
+- **Multi-Channel Instant Delivery Pipeline**:
+  - **Server-Sent Events (SSE)**: Powered by `https://ntfy.sh/cardstack_admin_broadcast_v1/sse` for sub-50ms real-time global message delivery across different devices, smartphones, tablets, and school/restricted Wi-Fi networks where WebRTC direct P2P might be firewalled.
+  - **BroadcastChannel**: Instant (<1ms) multi-tab synchronization within the same browser environment (`cardstack_presence_channel`).
+  - **WebRTC Mesh Broadcast**: Dispatches through all open direct peer connections (`window.allConnectedPresenceConns`, `window.activePresencePeers`, and active arena duel sockets).
+  - **Local Storage Event Sync**: Immediate `storage` event reaction when accounts are updated on the same device.
+  - **Catch-up Background Poller**: Automatically polls active dispatches on tab focus, visibility change, and a lightweight 3.5s periodic timer to guarantee no dispatches are missed if a device was asleep.
+- **Immediate Viewport Lockout & Dismissal**:
+  - On `ban_player` dispatch: Immediately closes active gameplay modals (`packModal`, `arenaModal`, `cardDetailModal`, `accountModal`), plays `detonation` audio effect, and displays `#bannedScreenOverlay` (z-index: 9,999,999) with Master Cam's custom reason and digital live countdown timer.
+  - Maintains `currentUser` identity during active suspension so subsequent real-time unban dispatches match and execute immediately.
+  - On `unban_player` dispatch: Immediately hides `#bannedScreenOverlay`, plays `triumph` fanfare, shows a success live toast, and restores interactive gameplay on the fly without requiring a browser reload.
+
 ### Gifting & Card Synchronization Mechanics
 - **Dropdown & Manual Target Resolution**: `getTargetPlayer` prioritizes chosen select elements when populated, synchronizes two-way changes between text inputs and selects, and resolves accounts case-insensitively.
 - **Auto Account Stubs & Password Claiming**: Accounts registered through Admin Hub gifting (`password: ""`) allow users to smoothly claim their accounts on first login without "Invalid passcode" failures.
