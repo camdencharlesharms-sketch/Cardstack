@@ -128,6 +128,12 @@ document.querySelectorAll(".admin-tab-btn").forEach(btn => {
     if(targetId === "tabChaosLab" && typeof initChaosLabUI === "function"){
       initChaosLabUI();
     }
+    if(targetId === "tabAuditLog" && typeof renderAdminAuditLogs === "function"){
+      renderAdminAuditLogs();
+    }
+    if(typeof playChaosSfx === "function"){
+      playChaosSfx("click");
+    }
   };
 });
 
@@ -3730,6 +3736,21 @@ function getMicroDetune(cents = 18){
 
 function playChaosSfx(type){
   if(localStorage.getItem("cardCollectorSfxMuted") === "true") return;
+
+  // Custom Audio Override check
+  const customMap = (typeof getCustomAudioMap === "function") ? getCustomAudioMap() : null;
+  if(customMap && customMap[type]){
+    try {
+      const vol = (typeof getChaosVolume === "function" ? getChaosVolume() : 0.3) * 2.2;
+      const audio = new Audio(customMap[type]);
+      audio.volume = Math.min(1, Math.max(0, vol));
+      audio.play().catch(e => {
+        console.warn("Could not play custom audio for " + type, e);
+      });
+      return;
+    } catch(e){}
+  }
+
   const ctx = getChaosAudioCtx();
   if(!ctx) return;
   const now = ctx.currentTime;
@@ -3975,6 +3996,29 @@ function playChaosSfx(type){
   // 5. COINS: Cascading 24K Gold Coin Shower & Velvet Clinks
   // ==========================================
   else if(type === "coins"){
+    // Stage 0: Iconic Video Game Mario/Sonic style B5 -> E6 Ding (987Hz -> 1318Hz)
+    const vgOsc1 = ctx.createOscillator();
+    const vgGain1 = ctx.createGain();
+    vgOsc1.type = "sine";
+    vgOsc1.frequency.setValueAtTime(987.77, now);
+    vgGain1.gain.setValueAtTime(0.45, now);
+    vgGain1.gain.exponentialRampToValueAtTime(0.01, now + 0.065);
+    vgOsc1.connect(vgGain1);
+    vgGain1.connect(soundBus);
+    vgOsc1.start(now);
+    vgOsc1.stop(now + 0.07);
+
+    const vgOsc2 = ctx.createOscillator();
+    const vgGain2 = ctx.createGain();
+    vgOsc2.type = "sine";
+    vgOsc2.frequency.setValueAtTime(1318.51, now + 0.065);
+    vgGain2.gain.setValueAtTime(0.55, now + 0.065);
+    vgGain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+    vgOsc2.connect(vgGain2);
+    vgGain2.connect(soundBus);
+    sendReverb(vgGain2, 0.4);
+    vgOsc2.start(now + 0.065);
+    vgOsc2.stop(now + 0.4);
     const coinPitches = [1975.53, 2217.46, 2489.02, 2793.83, 3135.96, 3520.00, 3951.07];
     const coinDelays = [0, 0.038, 0.082, 0.134, 0.192, 0.255, 0.315];
     const pans = [-0.5, 0.45, -0.25, 0.3, -0.4, 0.2, -0.1];
@@ -8846,10 +8890,12 @@ function playProceduralSoundscape(trackType){
 
   const statusEl = document.getElementById("adminJukeboxStatusText");
   const trackLabels = {
-    cyberwave: "🌃 Cyber Synthwave (118 BPM Electro Loop)",
-    bossbattle: "🌋 Hellfire Boss Battle (Aggressive Drone & Pulse)",
-    celestial: "🌌 Celestial Orbit (Ethereal Ambient Space Chords)",
-    tavern: "🏰 Citadel Tavern (Lively Medieval Folk Groove)"
+    arcade: "👾 8-Bit Retro Arcade Adventure (132 BPM Chiptune Theme)",
+    cyberwave: "🌆 Cyber Synthwave (124 BPM Driving Electro Groove)",
+    bossbattle: "🌋 Hellfire Boss Battle (138 BPM Cinematic Battle Drums)",
+    celestial: "🌌 Celestial Orbit (Ethereal RPG Save Screen Arpeggios)",
+    tavern: "🏰 Citadel Tavern (Lively 6/8 Medieval Village Jig)",
+    custom: "⭐ My Custom Soundtrack (Playing User Audio)"
   };
   if(statusEl) statusEl.textContent = `Current Track: ${trackLabels[trackType] || trackType}`;
 
@@ -8869,7 +8915,98 @@ function playProceduralSoundscape(trackType){
   masterMusicGain.connect(ctx.destination);
   activeJukeboxNodes.push(masterMusicGain);
 
-  if(trackType === "celestial"){
+  if(trackType === "arcade"){
+    // Authentic 8-Bit / 16-Bit Retro Video Game Adventure Theme (132 BPM)
+    const melodyScale = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 659.25, 587.33, 523.25, 783.99, 880.00, 1046.50];
+    const bassline = [130.81, 130.81, 196.00, 130.81, 110.00, 110.00, 164.81, 110.00, 87.31, 87.31, 130.81, 87.31, 98.00, 98.00, 146.83, 196.00];
+    let step = 0;
+
+    jukeboxIntervalId = setInterval(() => {
+      if(!ctx || ctx.state === "suspended") return;
+      const now = ctx.currentTime;
+
+      // 1. 8-Bit Bouncy Bass (Triangle wave)
+      const bassFreq = bassline[step % bassline.length];
+      const bassOsc = ctx.createOscillator();
+      const bassGain = ctx.createGain();
+      bassOsc.type = "triangle";
+      bassOsc.frequency.setValueAtTime(bassFreq, now);
+
+      bassGain.gain.setValueAtTime(0.24, now);
+      bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+      bassOsc.connect(bassGain);
+      bassGain.connect(masterMusicGain);
+      bassOsc.start(now);
+      bassOsc.stop(now + 0.17);
+
+      // 2. Chiptune Arp Lead (Square wave pulse)
+      const melFreq = melodyScale[(step * 2 + Math.floor(step / 4)) % melodyScale.length];
+      const leadOsc = ctx.createOscillator();
+      const leadGain = ctx.createGain();
+      leadOsc.type = "square";
+      leadOsc.frequency.setValueAtTime(melFreq, now);
+
+      leadGain.gain.setValueAtTime(0.08, now);
+      leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+      leadOsc.connect(leadGain);
+      leadGain.connect(masterMusicGain);
+      leadOsc.start(now);
+      leadOsc.stop(now + 0.13);
+
+      // 3. Crunchy Chip Hi-Hat (Every 2 steps)
+      if(step % 2 === 1){
+        const hatBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.03), ctx.sampleRate);
+        const data = hatBuffer.getChannelData(0);
+        for(let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+        const hatSource = ctx.createBufferSource();
+        hatSource.buffer = hatBuffer;
+
+        const hatFilt = ctx.createBiquadFilter();
+        hatFilt.type = "highpass";
+        hatFilt.frequency.setValueAtTime(7000, now);
+
+        const hatGain = ctx.createGain();
+        hatGain.gain.setValueAtTime(0.05, now);
+        hatGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.028);
+
+        hatSource.connect(hatFilt);
+        hatFilt.connect(hatGain);
+        hatGain.connect(masterMusicGain);
+        hatSource.start(now);
+      }
+
+      step++;
+    }, 125);
+
+  } else if(trackType === "custom"){
+    const customMap = (typeof getCustomAudioMap === "function") ? getCustomAudioMap() : {};
+    const customUrl = customMap["bgm"] || customMap["customMusic"];
+    if(!customUrl){
+      alert("No custom music uploaded or linked yet! Upload an audio file or paste an audio link in the Custom Audio Studio.");
+      stopJukeboxAudio();
+      return;
+    }
+    try {
+      const bgmAudio = new Audio(customUrl);
+      bgmAudio.loop = true;
+      bgmAudio.volume = Math.min(1, Math.max(0, baseVol * 2.8));
+      bgmAudio.play().catch(e => {
+        alert("Could not play custom audio. Make sure the file or URL is valid.");
+        stopJukeboxAudio();
+      });
+      activeJukeboxNodes.push({
+        stop: () => { try { bgmAudio.pause(); bgmAudio.currentTime = 0; } catch(e){} },
+        disconnect: () => { try { bgmAudio.pause(); } catch(e){} }
+      });
+      if(statusEl) statusEl.textContent = "Current Track: ⭐ My Custom Soundtrack (Playing)";
+    } catch(e){
+      alert("Error playing custom track: " + e.message);
+      stopJukeboxAudio();
+    }
+
+  } else if(trackType === "celestial"){
     // Lush shifting celestial chord pads (C Major 9 / A Minor 9 chords)
     const freqs = [130.81, 196.00, 246.94, 329.63, 392.00, 523.25];
     freqs.forEach((freq, idx) => {
@@ -9081,5 +9218,303 @@ window.addEventListener("cardstackPeerMessage", (e) => {
     adminAuditLogs.unshift(data.entry);
     if(adminAuditLogs.length > MAX_AUDIT_LOGS) adminAuditLogs.pop();
     renderAdminAuditLogs();
+  }
+});
+
+
+// ============================================================
+// CUSTOM AUDIO & VIDEO GAME SOUND STUDIO MANAGER
+// ============================================================
+const DEFAULT_SFX_DEFINITIONS = [
+  { key: "packTear", label: "📦 Pack Opening Foil Rip", desc: "Played when tearing open booster card packs", category: "Packs" },
+  { key: "cardFlip", label: "🃏 Card Turnover / Inspection", desc: "Played when flipping cards in binder or pack reveal", category: "Cards" },
+  { key: "cardSlide", label: "🎴 Card Slide / Draw", desc: "Played when pulling new cards into hand or slot", category: "Cards" },
+  { key: "coins", label: "💰 Coin Shower & Collect", desc: "Played on arena victory, daily rewards, and coin purchases", category: "Economy" },
+  { key: "triumph", label: "🎺 Victory Fanfare", desc: "Played upon winning Arena duels or completing milestones", category: "Battle" },
+  { key: "hit", label: "🥊 Battle Attack Hit", desc: "Played on normal combat damage impact in the Arena", category: "Battle" },
+  { key: "critical", label: "💥 Lethal Critical Strike", desc: "Played on 2x critical hits in Arena combat", category: "Battle" },
+  { key: "ascension", label: "👑 Rare / Divine Card Reveal", desc: "Played when a Divine, Mythic, or Transcendent card is drawn", category: "Cards" },
+  { key: "detonation", label: "💣 Defeat / Game Over", desc: "Played when a player is defeated or reality bomb triggers", category: "Battle" },
+  { key: "click", label: "👆 Menu Tap & Cursor Blip", desc: "Played on UI button clicks, tab switches, and interactions", category: "UI" },
+  { key: "laser", label: "⚡ Plasma Beam & Cyber Blast", desc: "Played on special techno ability or god tools", category: "Chaos" },
+  { key: "fire", label: "🔥 Nether Fire Blast", desc: "Played on fire-infused cards and incinerate commands", category: "Chaos" },
+  { key: "ice", label: "❄️ Frost Glacial Freeze", desc: "Played on ice elemental cards and blizzard freezes", category: "Chaos" },
+  { key: "lightning", label: "⚡ Lightning Arc Shock", desc: "Played on lightning infusions and storm spells", category: "Chaos" },
+  { key: "void", label: "🌌 Void Singularity", desc: "Played on cosmic black hole and transcendence effects", category: "Chaos" }
+];
+
+window.getCustomAudioMap = function(){
+  try {
+    const raw = localStorage.getItem("cardCollectorCustomAudio");
+    return raw ? JSON.parse(raw) : {};
+  } catch(e){
+    return {};
+  }
+};
+
+window.saveCustomAudioMap = function(map){
+  try {
+    localStorage.setItem("cardCollectorCustomAudio", JSON.stringify(map));
+  } catch(e){
+    console.error("Failed to save custom audio map:", e);
+  }
+};
+
+window.openCustomAudioModal = function(){
+  const modal = document.getElementById("customAudioModal");
+  if(modal){
+    modal.style.display = "flex";
+    renderCustomAudioUI();
+  }
+};
+
+window.closeCustomAudioModal = function(){
+  const modal = document.getElementById("customAudioModal");
+  if(modal) modal.style.display = "none";
+};
+
+let currentUploadTargetKey = null;
+
+window.renderCustomAudioUI = function(){
+  const map = getCustomAudioMap();
+
+  // 1. Update BGM status
+  const bgmStatus = document.getElementById("customBgmStatusBadge");
+  const bgmInput = document.getElementById("customBgmUrlInput");
+  const bgmVal = map["bgm"] || "";
+  if(bgmStatus){
+    if(bgmVal){
+      const isData = bgmVal.startsWith("data:");
+      bgmStatus.textContent = isData ? "✨ Custom Audio File Loaded" : "✨ Custom Audio URL Loaded";
+      bgmStatus.style.background = "rgba(236,72,153,0.25)";
+      bgmStatus.style.color = "#f472b6";
+    } else {
+      bgmStatus.textContent = "No Custom Track Set";
+      bgmStatus.style.background = "#334155";
+      bgmStatus.style.color = "#94a3b8";
+    }
+  }
+  if(bgmInput && !bgmInput.matches(":focus")){
+    bgmInput.value = bgmVal.startsWith("data:") ? "[Local Audio File Uploaded]" : bgmVal;
+  }
+
+  // 2. Render SFX Rows
+  const container = document.getElementById("customSfxListContainer");
+  if(!container) return;
+
+  container.innerHTML = DEFAULT_SFX_DEFINITIONS.map(def => {
+    const customVal = map[def.key] || "";
+    const isCustom = !!customVal;
+    const isData = customVal.startsWith("data:");
+
+    return `
+      <div style="background:rgba(0,0,0,0.35);border:1px solid ${isCustom ? 'rgba(192,132,252,0.4)' : 'rgba(255,255,255,0.06)'};border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:800;font-size:13px;color:${isCustom ? '#f472b6' : '#e2e8f0'}">${def.label}</span>
+            <span style="font-size:9px;font-weight:900;padding:1px 6px;border-radius:999px;background:${isCustom ? 'rgba(236,72,153,0.2)' : 'rgba(56,189,248,0.15)'};color:${isCustom ? '#f472b6' : '#38bdf8'}">
+              ${isCustom ? '✨ CUSTOM' : '🎮 VIDEO GAME SYNTH'}
+            </span>
+          </div>
+          <div style="font-size:11px;color:#94a3b8">${def.desc}</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <input type="text" id="customSfxUrl_${def.key}" class="adminInput" placeholder="Paste Audio URL..." value="${isData ? '[Custom Audio File]' : customVal}" style="margin:0;width:170px;font-size:11px;padding:4px 8px">
+          <button type="button" class="accountBtn" onclick="saveCustomSfxUrl('${def.key}')" style="background:#059669;color:#fff;font-size:10px;padding:4px 8px;font-weight:700">Save URL</button>
+          <button type="button" class="accountBtn" onclick="promptUploadSfx('${def.key}')" style="background:#2563eb;color:#fff;font-size:10px;padding:4px 8px;font-weight:700">📁 Upload</button>
+          <button type="button" class="accountBtn" onclick="testSoundItem('${def.key}')" style="background:#3b82f6;color:#fff;font-size:10px;padding:4px 8px">▶️ Test</button>
+          <button type="button" class="accountBtn" onclick="resetSoundItem('${def.key}')" style="background:#475569;color:#fca5a5;font-size:10px;padding:4px 8px">🔄 Reset</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+};
+
+window.promptUploadSfx = function(key){
+  currentUploadTargetKey = key;
+  const input = document.getElementById("genericSfxFileInput");
+  if(input){
+    input.value = "";
+    input.click();
+  }
+};
+
+window.saveCustomSfxUrl = function(key){
+  const el = document.getElementById("customSfxUrl_" + key);
+  if(!el) return;
+  const url = el.value.trim();
+  if(!url || url === "[Custom Audio File]"){
+    return alert("Please enter a valid HTTP/HTTPS audio URL (.mp3, .wav, .ogg, etc.)");
+  }
+  const map = getCustomAudioMap();
+  map[key] = url;
+  saveCustomAudioMap(map);
+  renderCustomAudioUI();
+  playChaosSfx(key);
+};
+
+window.testSoundItem = function(key){
+  playChaosSfx(key);
+};
+
+window.resetSoundItem = function(key){
+  const map = getCustomAudioMap();
+  delete map[key];
+  saveCustomAudioMap(map);
+  renderCustomAudioUI();
+  playChaosSfx(key);
+};
+
+// Wire Event Listeners for Custom Audio
+document.addEventListener("DOMContentLoaded", () => {
+  const openBtn = document.getElementById("openCustomAudioBtn");
+  if(openBtn) openBtn.addEventListener("click", openCustomAudioModal);
+
+  const closeBtn = document.getElementById("closeCustomAudioModalBtn");
+  if(closeBtn) closeBtn.addEventListener("click", closeCustomAudioModal);
+
+  const doneBtn = document.getElementById("doneCustomAudioBtn");
+  if(doneBtn) doneBtn.addEventListener("click", closeCustomAudioModal);
+
+  // Background Music Controls
+  const bgmFile = document.getElementById("customBgmFileInput");
+  if(bgmFile){
+    bgmFile.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        const map = getCustomAudioMap();
+        map["bgm"] = re.target.result;
+        saveCustomAudioMap(map);
+        renderCustomAudioUI();
+        alert("Custom background track uploaded successfully!");
+        playProceduralSoundscape("custom");
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const bgmSaveUrlBtn = document.getElementById("saveCustomBgmUrlBtn");
+  if(bgmSaveUrlBtn){
+    bgmSaveUrlBtn.addEventListener("click", () => {
+      const urlInput = document.getElementById("customBgmUrlInput");
+      const url = urlInput ? urlInput.value.trim() : "";
+      if(!url || url === "[Local Audio File Uploaded]"){
+        return alert("Enter a valid audio URL for your background soundtrack.");
+      }
+      const map = getCustomAudioMap();
+      map["bgm"] = url;
+      saveCustomAudioMap(map);
+      renderCustomAudioUI();
+      alert("Custom background music link saved!");
+      playProceduralSoundscape("custom");
+    });
+  }
+
+  const bgmResetBtn = document.getElementById("resetCustomBgmBtn");
+  if(bgmResetBtn){
+    bgmResetBtn.addEventListener("click", () => {
+      const map = getCustomAudioMap();
+      delete map["bgm"];
+      saveCustomAudioMap(map);
+      renderCustomAudioUI();
+      stopJukeboxAudio();
+      alert("Custom background music reset.");
+    });
+  }
+
+  const bgmStopBtn = document.getElementById("customBgmStopBtn");
+  if(bgmStopBtn){
+    bgmStopBtn.addEventListener("click", () => {
+      stopJukeboxAudio();
+    });
+  }
+
+  const bgmVolSlider = document.getElementById("customBgmVolumeSlider");
+  if(bgmVolSlider){
+    bgmVolSlider.addEventListener("input", (e) => {
+      const adminSlider = document.getElementById("adminJukeboxVolume");
+      if(adminSlider) adminSlider.value = e.target.value;
+    });
+  }
+
+  // Modal Soundtrack buttons
+  document.querySelectorAll(".customAudioTrackBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const track = btn.getAttribute("data-track");
+      if(track) playProceduralSoundscape(track);
+    });
+  });
+
+  // Generic SFX file uploader
+  const sfxFileInput = document.getElementById("genericSfxFileInput");
+  if(sfxFileInput){
+    sfxFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if(!file || !currentUploadTargetKey) return;
+      const key = currentUploadTargetKey;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        const map = getCustomAudioMap();
+        map[key] = re.target.result;
+        saveCustomAudioMap(map);
+        renderCustomAudioUI();
+        playChaosSfx(key);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Export Soundpack
+  const exportBtn = document.getElementById("exportCustomAudioBtn");
+  if(exportBtn){
+    exportBtn.addEventListener("click", () => {
+      const map = getCustomAudioMap();
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(map, null, 2));
+      const dl = document.createElement("a");
+      dl.setAttribute("href", dataStr);
+      dl.setAttribute("download", `cardstack_custom_sounds_${Date.now()}.json`);
+      document.body.appendChild(dl);
+      dl.click();
+      dl.remove();
+    });
+  }
+
+  // Import Soundpack
+  const importBtn = document.getElementById("importCustomAudioBtn");
+  const importInput = document.getElementById("importCustomAudioFileInput");
+  if(importBtn && importInput){
+    importBtn.addEventListener("click", () => importInput.click());
+    importInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        try {
+          const parsed = JSON.parse(re.target.result);
+          if(typeof parsed === "object" && parsed !== null){
+            saveCustomAudioMap(parsed);
+            renderCustomAudioUI();
+            alert("Custom Soundpack imported successfully!");
+          }
+        } catch(err){
+          alert("Invalid Soundpack JSON file: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // Reset All
+  const resetAllBtn = document.getElementById("resetAllCustomAudioBtn");
+  if(resetAllBtn){
+    resetAllBtn.addEventListener("click", () => {
+      if(!confirm("Reset ALL custom sounds and music back to default video game audio?")) return;
+      localStorage.removeItem("cardCollectorCustomAudio");
+      renderCustomAudioUI();
+      alert("All sounds reset to default video game procedural synthesizer!");
+    });
   }
 });

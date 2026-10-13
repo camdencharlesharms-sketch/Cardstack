@@ -714,3 +714,47 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
   - Attack execution plays crisp melee impacts (`hit`) and lethal strikes (`critical`).
   - Elemental enchantments trigger distinct elemental blasts: *Inferno* (roaring nether fire), *Plasma* (high-voltage electric zap), *Glacial* (frost glass shatter / shield deflect), *Void* (singularity collapse), and *Gaia* (restorative chime bloom).
   - Victory triggers a grand brass fanfare followed by an authentic 24K gold coin shower.
+
+### Admin Hub Modal Tab Hierarchy Fix & Stability
+- **Resolved Broken Tab Nesting in `index.html`**:
+  - Eliminated stray closing tags in `tabChaosLab` that prematurely closed `.adminDashboard` and `#adminModal`.
+  - Re-anchored all 11 tabs (`tabPlayers`, `tabEconomy`, `tabStudio`, `tabCardManager`, `tabEvents`, `tabBroadcast`, `tabChaosLab`, `tabGodRealm`, `tabPermissions`, `tabUnreleased`, and `tabAuditLog`) as direct children of `<div class="adminDashboard">` inside `<div id="adminModal">`.
+  - Added tab click handlers in `js/admin.js` and permission guards in `js/app.js` to ensure clean tab switching, preventing the audit log or other tabs from displaying outside the active selection.
+
+### Custom Audio & Video Game Sound Studio
+- **User Custom Sounds & Soundpack Engine**:
+  - Built an interactive **Custom Audio & Video Game Sound Studio** modal (`#customAudioModal`), accessible via the new `🎛️ Custom Audio` button in the top navigation header and from `tabChaosLab` in the Admin Hub.
+  - **Custom SFX Overrides**: Players and admins can override any in-game sound effect:
+    - 📦 Pack Opening Foil Rip (`packTear`)
+    - 🃏 Card Turnover / Inspection (`cardFlip`)
+    - 🎴 Card Slide / Draw (`cardSlide`)
+    - 💰 Coin Shower & Collect (`coins`)
+    - 🎺 Victory Fanfare (`triumph`)
+    - 🥊 Battle Attack Hit (`hit`)
+    - 💥 Lethal Critical Strike (`critical`)
+    - 👑 Rare / Divine Card Reveal (`ascension`)
+    - 💣 Defeat / Game Over (`detonation`)
+    - 👆 Menu Tap & Cursor Blip (`click`)
+    - ⚡ Plasma Beam & Cyber Blast (`laser`)
+    - 🔥 Nether Fire Blast (`fire`)
+    - ❄️ Frost Glacial Freeze (`ice`)
+    - ⚡ Lightning Arc Shock (`lightning`)
+    - 🌌 Void Singularity (`void`)
+  - **Upload or Link Audio**:
+    - **📁 File Upload**: Upload local MP3, WAV, OGG, or M4A audio files converted to base64 Data URLs via `FileReader` and cached in `localStorage` under `cardCollectorCustomAudio`.
+    - **🔗 Direct Audio URL**: Enter direct web audio links for instant streaming.
+    - **▶️ Test & 🔄 Reset**: Test custom audio instantly or revert back to the procedural video game synthesizer with one click.
+  - **Soundpack Management**:
+    - `💾 Export Soundpack`: Download custom sound configurations as a timestamped JSON file.
+    - `📂 Import Soundpack`: Upload and restore custom audio configurations.
+    - `🔄 Reset All`: Revert all sounds and music back to default video game synthesizers.
+- **Custom Background Music (BGM) Player**:
+  - Upload local background music tracks or paste direct audio stream URLs.
+  - Features dedicated looping, volume control slider, silence music toggle, and seamless integration with the Master Jukebox.
+- **Authentic Video Game Procedural Sound Engine Upgrades**:
+  - **`arcade` Soundtrack**: New 132 BPM authentic 8-bit / 16-bit retro video game adventure theme featuring a walking triangle bassline, pulse-wave melody, chiptune arpeggios, and crisp noise hi-hats.
+  - **Video Game `coins` SFX**: Added the iconic video game dual-frequency coin chime (`B5 -> E6`, 987Hz -> 1318Hz, classic Mario/Sonic coin harmonic) followed by gold coin clinks.
+  - **Video Game `triumph` Fanfare**: Classic 8-bit/16-bit Level Clear / Stage Complete fanfare (`C4 -> G4 -> C5 -> E5 -> G5 -> C6`) with brass envelope and glockenspiel stardust.
+  - **Video Game `click` SFX**: Crisp, responsive UI menu cursor blip (`1760Hz -> 880Hz`).
+  - **Video Game `hit` & `critical`**: Punchy battle smack transients and time-freeze critical strikes with sonic boom body.
+  - **Video Game `detonation`**: Descending Game Over cadence with low-frequency sub-thud.

@@ -38,6 +38,9 @@
     <button class="accountBtn" id="accountBtn">Account</button>
     <button id="arenaBtn">⚔ Arena</button>
     <button id="dailyRewardBtn" class="accountBtn" style="background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;font-weight:900;display:flex;align-items:center;gap:5px;box-shadow:0 0 12px rgba(245,158,11,0.35);padding:4px 10px;font-size:12px;border:1px solid #fbbf24"><span id="dailyRewardIcon">🎁</span> <span>Daily Gift</span><span id="dailyRewardBadge" style="background:#ef4444;color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:999px;margin-left:2px;display:none">NEW</span></button>
+    <button id="openCustomAudioBtn" class="accountBtn" style="padding:4px 9px;font-size:12px;display:flex;align-items:center;gap:4px;background:rgba(168,85,247,0.2);border:1px solid #a855f7;color:#e9d5ff" title="Customize Game Sounds & Music">
+      <span>🎛️</span> <span style="font-size:10px;font-weight:800">Custom Audio</span>
+    </button>
     <button id="headerSfxToggleBtn" class="accountBtn" style="padding:4px 9px;font-size:12px;display:flex;align-items:center;gap:4px">
       <span id="headerSfxIcon">🔊</span> <span id="headerSfxText" style="font-size:10px;font-weight:800">SFX</span>
     </button>
@@ -1467,12 +1470,6 @@
           </div>
         </div>
 
-      </div>
-    </div>
-
-
-
-    
         <!-- MASTER AMBIENT SOUNDSCAPE & SYNTH JUKEBOX -->
         <div class="adminCard" style="grid-column:1 / -1;border:1px solid rgba(6,182,212,0.35);background:radial-gradient(circle at top right, rgba(6,182,212,0.12), rgba(15,23,42,0.85))">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -2259,6 +2256,97 @@
 <!-- AMBIENT COSMOS PARTICLES CANVAS -->
 <canvas id="ambientCosmosCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:-2;opacity:0.65"></canvas>
 
+
+<!-- CUSTOM AUDIO & VIDEO GAME SOUND STUDIO MODAL -->
+<div id="customAudioModal" class="modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.88);backdrop-filter:blur(14px);z-index:99990;align-items:center;justify-content:center;padding:16px">
+  <div style="background:radial-gradient(circle at top, #1e1b4b, #0f172a);border:1px solid rgba(168,85,247,0.4);border-radius:20px;padding:24px;max-width:760px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(168,85,247,0.25);color:#fff">
+    
+    <!-- Modal Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:14px;margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:26px">🎛️</span>
+        <div>
+          <h3 style="margin:0;font-size:18px;font-weight:900;background:linear-gradient(135deg,#c084fc,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Custom Audio & Video Game Sound Studio</h3>
+          <span style="font-size:12px;color:#94a3b8">Upload your own audio files or paste URLs to replace any sound in the game, or choose from authentic video game soundtracks!</span>
+        </div>
+      </div>
+      <button id="closeCustomAudioModalBtn" class="accountBtn" style="padding:4px 10px;font-size:14px">✕</button>
+    </div>
+
+    <!-- SECTION 1: BACKGROUND MUSIC SOUNDTRACK -->
+    <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(168,85,247,0.25);border-radius:14px;padding:16px;margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <h4 style="margin:0;color:#c084fc;display:flex;align-items:center;gap:6px;font-size:15px">
+          <span>🎵</span> Game Soundtrack & Background Music
+        </h4>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:4px">
+            <span>Vol:</span>
+            <input type="range" id="customBgmVolumeSlider" min="0" max="100" value="45" style="width:70px;accent-color:#c084fc">
+          </label>
+          <button id="customBgmStopBtn" type="button" class="accountBtn" style="background:#334155;color:#f87171;font-size:11px;padding:4px 10px">⏹️ Silence Music</button>
+        </div>
+      </div>
+
+      <!-- Video Game Soundtracks Selector -->
+      <div style="font-size:11px;color:#94a3b8;font-weight:800;text-transform:uppercase;margin-bottom:6px">Select Video Game Soundtrack:</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;margin-bottom:14px">
+        <button type="button" class="accountBtn customAudioTrackBtn" data-track="arcade" style="background:rgba(234,179,8,0.15);border-color:#eab308;color:#fde047;padding:8px;font-size:11px;font-weight:700">👾 8-Bit Arcade</button>
+        <button type="button" class="accountBtn customAudioTrackBtn" data-track="cyberwave" style="background:rgba(6,182,212,0.15);border-color:#06b6d4;color:#67e8f9;padding:8px;font-size:11px;font-weight:700">🌆 Cyber Synthwave</button>
+        <button type="button" class="accountBtn customAudioTrackBtn" data-track="bossbattle" style="background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5;padding:8px;font-size:11px;font-weight:700">🌋 Boss Battle</button>
+        <button type="button" class="accountBtn customAudioTrackBtn" data-track="celestial" style="background:rgba(168,85,247,0.15);border-color:#a855f7;color:#d8b4fe;padding:8px;font-size:11px;font-weight:700">🌌 Celestial Orbit</button>
+        <button type="button" class="accountBtn customAudioTrackBtn" data-track="tavern" style="background:rgba(245,158,11,0.15);border-color:#f59e0b;color:#fcd34d;padding:8px;font-size:11px;font-weight:700">🏰 Citadel Tavern</button>
+        <button type="button" class="accountBtn customAudioTrackBtn" data-track="custom" id="customBgmTrackBtn" style="background:rgba(236,72,153,0.15);border-color:#ec4899;color:#f472b6;padding:8px;font-size:11px;font-weight:700">⭐ My Custom Track</button>
+      </div>
+
+      <!-- Upload / Link Custom Background Music -->
+      <div style="background:rgba(0,0,0,0.3);border:1px dashed rgba(255,255,255,0.15);border-radius:10px;padding:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:12px;font-weight:800;color:#f472b6">⭐ Upload or Link Your Own Background Music:</span>
+          <span id="customBgmStatusBadge" style="font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;background:#334155;color:#94a3b8">No Custom Track Set</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="file" id="customBgmFileInput" accept="audio/*" style="display:none">
+          <button type="button" class="accountBtn" onclick="document.getElementById('customBgmFileInput').click()" style="background:#2563eb;color:#fff;font-size:11px;padding:6px 12px;font-weight:700">📁 Upload Audio File</button>
+          <input type="text" id="customBgmUrlInput" class="adminInput" placeholder="Or paste direct Audio URL (MP3/WAV/OGG)..." style="flex:1;margin:0;min-width:180px;font-size:12px">
+          <button type="button" id="saveCustomBgmUrlBtn" class="accountBtn" style="background:#059669;color:#fff;font-size:11px;padding:6px 12px;font-weight:700">Save</button>
+          <button type="button" id="resetCustomBgmBtn" class="accountBtn" style="background:#475569;color:#cbd5e1;font-size:11px;padding:6px 10px">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: SOUND EFFECTS CUSTOMIZER -->
+    <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(56,189,248,0.25);border-radius:14px;padding:16px;margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <h4 style="margin:0;color:#38bdf8;display:flex;align-items:center;gap:6px;font-size:15px">
+            <span>🔊</span> Sound Effects Customizer (Upload Your Own Sounds)
+          </h4>
+          <span style="font-size:11px;color:#94a3b8">Replace any game sound effect with your own uploaded audio or web audio URL. Leave empty to use the video game procedural synthesizer.</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button type="button" id="exportCustomAudioBtn" class="accountBtn" style="background:#0284c7;color:#fff;font-size:10px;padding:4px 8px">💾 Export Soundpack</button>
+          <button type="button" id="importCustomAudioBtn" class="accountBtn" style="background:#475569;color:#fff;font-size:10px;padding:4px 8px">📂 Import</button>
+          <input type="file" id="importCustomAudioFileInput" accept=".json" style="display:none">
+          <button type="button" id="resetAllCustomAudioBtn" class="accountBtn" style="background:#7f1d1d;color:#fca5a5;font-size:10px;padding:4px 8px">🔄 Reset All</button>
+        </div>
+      </div>
+
+      <!-- Hidden generic file uploader for SFX -->
+      <input type="file" id="genericSfxFileInput" accept="audio/*" style="display:none">
+
+      <!-- SFX Items List -->
+      <div id="customSfxListContainer" style="display:flex;flex-direction:column;gap:8px;max-height:42vh;overflow-y:auto;padding-right:4px">
+        <!-- Rendered dynamically by renderCustomAudioUI() -->
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end">
+      <button type="button" id="doneCustomAudioBtn" class="accountBtn" style="background:linear-gradient(135deg,#c084fc,#38bdf8);color:#0f172a;font-weight:900;padding:8px 24px;font-size:13px">Done / Close</button>
+    </div>
+
+  </div>
+</div>
 
 <script src="js/cards-data.js?v=3.0"></script>
 <script src="js/admin.js?v=3.0"></script>

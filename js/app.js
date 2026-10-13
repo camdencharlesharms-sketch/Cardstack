@@ -384,6 +384,7 @@ function updateAccountUI(){
   const tabBtnBroadcast = document.querySelector('.admin-tab-btn[data-tab="tabBroadcast"]');
   const tabBtnChaos = document.getElementById("chaosLabTabBtn") || document.querySelector('.admin-tab-btn[data-tab="tabChaosLab"]');
   const tabBtnGodRealm = document.getElementById("godRealmTabBtn") || document.querySelector('.admin-tab-btn[data-tab="tabGodRealm"]');
+  const tabBtnAudit = document.getElementById("auditLogTabBtn") || document.querySelector('.admin-tab-btn[data-tab="tabAuditLog"]');
 
   let statusBanner = document.getElementById("subAdminStatusBanner");
 
@@ -401,6 +402,7 @@ function updateAccountUI(){
     if(tabBtnBroadcast) tabBtnBroadcast.style.display = "block";
     if(tabBtnChaos) tabBtnChaos.style.display = "block";
     if(tabBtnGodRealm) tabBtnGodRealm.style.display = "block";
+    if(tabBtnAudit) tabBtnAudit.style.display = "block";
 
     const headerEl = document.getElementById("adminHubHeader");
     if(headerEl) headerEl.textContent = "⚡ Supreme Admin Suite (Cam)";
@@ -426,6 +428,7 @@ function updateAccountUI(){
     if(tabBtnBroadcast) tabBtnBroadcast.style.display = perms.broadcast ? "block" : "none";
     if(tabBtnChaos) tabBtnChaos.style.display = perms.chaosLab ? "block" : "none";
     if(tabBtnGodRealm) tabBtnGodRealm.style.display = perms.godRealm ? "block" : "none";
+    if(tabBtnAudit) tabBtnAudit.style.display = (perms.auditLog || false) ? "block" : "none";
 
     // Reset tab if currently on disallowed or Cam-only tabs
     const activeTab = document.querySelector(".admin-tab-content.active");
@@ -436,7 +439,9 @@ function updateAccountUI(){
       (activeTab.id === "tabCardManager" && perms.cardManager) ||
       (activeTab.id === "tabEvents" && perms.events) ||
       (activeTab.id === "tabBroadcast" && perms.broadcast) ||
-      (activeTab.id === "tabChaosLab" && perms.chaosLab)
+      (activeTab.id === "tabChaosLab" && perms.chaosLab) ||
+      (activeTab.id === "tabGodRealm" && perms.godRealm) ||
+      (activeTab.id === "tabAuditLog" && (perms.auditLog || isMaster))
     );
 
     if(!isCurrentAllowed){
