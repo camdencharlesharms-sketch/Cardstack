@@ -695,7 +695,32 @@ function startPackOpening(tierKey){
         item.onclick = () => {
           if(item.classList.contains("flipped")) return;
           item.classList.add("flipped");
-          if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+
+          if(isRainbowEdition){
+            if(typeof playChaosSfx === "function"){
+              playChaosSfx("cardFlip");
+              setTimeout(() => playChaosSfx("sparkle"), 60);
+              setTimeout(() => playChaosSfx("ascension"), 180);
+            }
+          } else if(isGoldEdition){
+            if(typeof playChaosSfx === "function"){
+              playChaosSfx("cardFlip");
+              setTimeout(() => playChaosSfx("goldGlint"), 80);
+            }
+          } else if(card.rarity === "divine" || card.rarity === "mythic" || card.rarity === "transcendent"){
+            if(typeof playChaosSfx === "function"){
+              playChaosSfx("cardFlip");
+              setTimeout(() => playChaosSfx("triumph"), 120);
+            }
+          } else if(card.rarity === "legendary" || card.rarity === "epic"){
+            if(typeof playChaosSfx === "function"){
+              playChaosSfx("cardFlip");
+              setTimeout(() => playChaosSfx("ascension"), 90);
+            }
+          } else {
+            if(typeof playChaosSfx === "function") playChaosSfx("cardFlip");
+          }
+
           if(isRainbowEdition){
             if(typeof confetti === "function"){
               confetti({ particleCount: 75, spread: 85, colors: ["#f43f5e", "#ec4899", "#a855f7", "#3b82f6", "#10b981", "#facc15", "#fff"] });
@@ -2817,7 +2842,15 @@ function openCardDetailModal(card){
   };
 
   modal.style.display = "flex";
-  if(typeof playChaosSfx === "function") playChaosSfx("laser");
+  if(typeof playChaosSfx === "function"){
+    if(isDetailRainbow){
+      playChaosSfx("sparkle");
+    } else if(isDetailGold){
+      playChaosSfx("goldGlint");
+    } else {
+      playChaosSfx("cardSlide");
+    }
+  }
 }
 window.openCardDetailModal = openCardDetailModal;
 
@@ -3197,7 +3230,14 @@ function infuseActiveDetailCard(enchantKey){
 
   const meta = ENCHANT_META[enchantKey] || ENCHANT_META.none;
   if(enchantKey !== "none"){
-    if(typeof playChaosSfx === "function") playChaosSfx("laser");
+    if(typeof playChaosSfx === "function"){
+      if(enchantKey === "inferno") playChaosSfx("fire");
+      else if(enchantKey === "plasma") playChaosSfx("lightning");
+      else if(enchantKey === "glacial") playChaosSfx("ice");
+      else if(enchantKey === "void") playChaosSfx("void");
+      else if(enchantKey === "gaia") playChaosSfx("heal");
+      else playChaosSfx("ascension");
+    }
     if(typeof showLiveToast === "function"){
       showLiveToast(`⚡ Infused <b>${activeDetailCard.name}</b> with ${meta.badge} power! (${meta.statBuff})`, true);
     }
@@ -3496,7 +3536,21 @@ function initSuperCoolDom(){
   if(cryBtn){
     cryBtn.onclick = () => {
       if(!activeDetailCard) return;
-      if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+      if(typeof playChaosSfx === "function"){
+        const curUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
+        const userAcc = (curUser && accounts && accounts[curUser]) ? accounts[curUser] : null;
+        const enchants = (userAcc && userAcc.cardEnchantments) || {};
+        const cardKey = activeDetailCard.isUnreleased ? activeDetailCard.id : (activeDetailCard.id || activeDetailCard.name);
+        const activeEnchant = enchants[cardKey];
+
+        if(activeEnchant === "inferno") playChaosSfx("fire");
+        else if(activeEnchant === "plasma") playChaosSfx("lightning");
+        else if(activeEnchant === "glacial") playChaosSfx("ice");
+        else if(activeEnchant === "void") playChaosSfx("void");
+        else if(activeEnchant === "gaia") playChaosSfx("heal");
+        else if(activeDetailCard.rarity === "divine" || activeDetailCard.rarity === "transcendent") playChaosSfx("triumph");
+        else playChaosSfx("ascension");
+      }
     };
   }
 

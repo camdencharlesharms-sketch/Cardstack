@@ -743,6 +743,7 @@ function triggerBattleAnimation(attacker, defender){
   atkEl.classList.add(lungeClass);
   setTimeout(()=>{
     defEl.classList.add("hit-shake");
+    if(typeof playChaosSfx === "function") playChaosSfx("hit");
   }, 120);
 
   setTimeout(()=>{
@@ -757,7 +758,10 @@ function triggerVictory(){
   if(!isInfiniteValue(coins)) coins += reward;
   save();
   render();
-  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  if(typeof playChaosSfx === "function"){
+    playChaosSfx("triumph");
+    setTimeout(() => playChaosSfx("coins"), 250);
+  }
 
   const victoryBanner = document.getElementById("victoryBanner");
   if(victoryBanner){
@@ -936,7 +940,10 @@ function performPlayerAttackWithMultiplier(attackObj, multiplier, tierLabel, tie
   if(battlePlayerHp <= 0 || battleOppHp <= 0) return;
 
   triggerBattleAnimation("player", "ai");
-  if(typeof playChaosSfx === "function" && multiplier === 1.0) playChaosSfx("laser");
+  if(typeof playChaosSfx === "function"){
+    if(multiplier === 1.0) playChaosSfx("critical");
+    else playChaosSfx("laser");
+  }
 
   const isAtkInf = (typeof isInfiniteValue === "function" && isInfiniteValue(attackObj.dmg)) || attackObj.dmg === "Infinity";
 
@@ -971,13 +978,16 @@ function performPlayerAttackWithMultiplier(attackObj, multiplier, tierLabel, tie
   const myAtkEnchant = (typeof getSelectedChampionEnchantment === "function") ? getSelectedChampionEnchantment() : null;
   if(myAtkEnchant === "inferno"){
     playerDmg += 20;
+    if(typeof playChaosSfx === "function") setTimeout(() => playChaosSfx("fire"), 120);
     appendBattleLog(`🔥 <b>Inferno Aura</b> ignited opponent for <b>+20 Fire DMG</b>!`);
   } else if(myAtkEnchant === "plasma"){
     playerDmg += 20;
+    if(typeof playChaosSfx === "function") setTimeout(() => playChaosSfx("lightning"), 120);
     appendBattleLog(`⚡ <b>Plasma Spark</b> arced through opponent for <b>+20 Shock DMG</b>!`);
   } else if(myAtkEnchant === "gaia"){
     battlePlayerHp = Math.min(battlePlayerMaxHp, battlePlayerHp + 15);
     updateBattleHpBars();
+    if(typeof playChaosSfx === "function") setTimeout(() => playChaosSfx("heal"), 120);
     appendBattleLog(`🌿 <b>Gaia Vitality</b> restored <b>+15 HP</b> to your champion!`);
   }
 

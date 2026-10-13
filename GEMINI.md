@@ -140,8 +140,10 @@ Cardstack/
      - Benchmarks booster pack odds by opening 10, 25, 50, or 100 packs instantly in background simulation.
      - Displays comprehensive statistical analytics (cards drawn, rarity distribution % breakdown, and top high-tier discoveries).
      - Includes a toggleable "Keep Pulled Cards in Collection" mode to mass-claim packs directly into inventory.
-   - **🔊 Master SFX Synth Soundboard**:
-     - Zero-dependency browser Web Audio API synthesizer producing 8 retro arcade sound effects: Victory Fanfare, Pack Foil Tear, Critical Laser Zap, Cosmic Void Warp, Coin Chimes, Alert Siren, Celestial Ascension, and Nuclear Blast, with a live master volume slider.
+   - **🔊 Master SFX Synth Soundboard (AAA Studio Engine)**:
+     - Zero-dependency browser Web Audio API synthesizer featuring a full studio audio pipeline (sub-bass DC blocker at 22Hz, 4.5:1 dynamic compressor, warmth filter at 14.5kHz, master limiter with 1dB headroom, and a 1.6-second spatial stereo algorithmic convolution reverb).
+     - Expanded soundboard with over 20+ procedurally synthesized effects: *🎺 Victory Brass Fanfare*, *📦 Foil Pack Unseal Pop*, *⚡ Plasma Laser*, *🌌 Cosmic Warp*, *💰 24K Gold Coin Cascade*, *🚨 Tactical Klaxon*, *👑 Celestial Bells*, *💣 Seismic Shockwave*, *💥 Lethal Critical*, *🥊 Melee Impact*, *🃏 Physical Card Turnover*, *🗂️ Card Sleeve Slide*, *✨ 24K Gold Glint*, *🌈 Rainbow Gleam*, *🔥 Nether Inferno*, *❄️ Frost Glacial*, *⚡ Lightning Arc*, *🕳️ Singularity Void*, *🌿 Gaia Vitality*, *🛡️ Shield Deflection*, and *👆 Tactile Haptic Tap*.
+     - Full volume control slider and Realm Broadcast toggle to sync effects live to all connected peer players.
    - **👾 World Boss Raid Summoner**:
      - Spawns a global raid boss banner right on the main page above the binder (`#worldBossBanner`).
      - Choose from *🔥 Ignis, The Solar Behemoth* (10k HP), *🌑 Umbra, The Void Leviathan* (25k HP), *⚡ Chronos, The Time Devourer* (50k HP), or build a *✨ Custom World Boss*.
@@ -698,3 +700,17 @@ As defined in `.agents/skills/cardstack-workflow/SKILL.md`:
   - When an offline player submits credentials in the Account modal or signs in via Google, the client queries the cloud registry prior to session activation. If suspended, the account modal is dismissed and the user is instantly locked out with the suspension screen.
 - **Real-Time WebRTC Presence Mesh Enforcement**:
   - When a suspended player connects to Master Cam's presence host, the host inspects their ban status and immediately dispatches a direct `ban_player` command across the P2P channel, enforcing immediate screen lockout.
+
+## Studio Web Audio & Sound FX Architecture
+The game features a procedural, zero-external-asset Web Audio synthesis engine with multitimbral layering:
+- **Master Audio Graph**:
+  `Oscillators / Noise Generators` -> `Sub-buses & Dynamic Stereo Panners` -> `Master Highpass DC Blocker (22Hz)` -> `Studio Dynamics Compressor (-16dB, 4.5:1, 2ms attack, 180ms release)` -> `Master Warmth & Clarity Filter (14.5kHz lowpass)` -> `Master Limiter (0.88)` -> `AudioContext.destination` + `Dual-channel Algorithmic Convolution Reverb Send`.
+- **Dynamic Humanization**:
+  All repeating micro-sounds (`click`, `coins`, `cardFlip`, `hit`) feature ±1.5% micro-detune pitch randomization so consecutive interactions sound organic, physical, and non-robotic.
+- **Pack Opening Audio**:
+  - Unsealing: Multi-layered foil tension rip with vacuum release pop, granular foil crunch, and specular air sheen.
+  - Card Reveals: Physical cardstock flip sound for standard cards, glorious golden bells for Gold Editions, prismatic harp chimes for Rainbow Editions, and orchestral fanfares for Mythic, Divine, and Transcendent cards.
+- **Arena Combat Audio**:
+  - Attack execution plays crisp melee impacts (`hit`) and lethal strikes (`critical`).
+  - Elemental enchantments trigger distinct elemental blasts: *Inferno* (roaring nether fire), *Plasma* (high-voltage electric zap), *Glacial* (frost glass shatter / shield deflect), *Void* (singularity collapse), and *Gaia* (restorative chime bloom).
+  - Victory triggers a grand brass fanfare followed by an authentic 24K gold coin shower.
