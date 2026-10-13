@@ -758,3 +758,19 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
   - **Video Game `click` SFX**: Crisp, responsive UI menu cursor blip (`1760Hz -> 880Hz`).
   - **Video Game `hit` & `critical`**: Punchy battle smack transients and time-freeze critical strikes with sonic boom body.
   - **Video Game `detonation`**: Descending Game Over cadence with low-frequency sub-thud.
+
+### All Rainbows & All Golds Gifting Suite
+- **Gift Cards & Skins Dispatcher Controls (`tabPlayers`)**:
+  - **`🌈 Gift All Rainbows`** (`#adminGiftAllRainbowsBtn`): Unlocks every card in the entire game (100% of all 210 cards) for the target player and grants every card in Prismatic Rainbow Edition.
+  - **`✨ Gift All Golds`** (`#adminGiftAllGoldsBtn`): Unlocks every card in the entire game (100% of all 210 cards) for the target player and grants every card in 24K Gold Edition.
+  - **`👑 Gift BOTH All Rainbows & All Golds`** (`#adminGiftAllRainbowsAndGoldsBtn`): Master button that unlocks 100% of all cards in the game in BOTH Rainbow Edition AND 24K Gold Edition simultaneously.
+- **Active Players Table Action Menu (`✨ Foil`)**:
+  - Clicking `✨ Foil` on any player row in the Active Players list now provides instant 1-click options to gift All Rainbows, All Golds, or Both All Rainbows & Golds, alongside individual card upgrades and random card foil gifts.
+- **Live Player Binder & Inventory Inspector**:
+  - Added **`👑 Both All Rainbow & Gold`** (`#adminInspectorAllRainbowAndGoldBtn`) action button to instantly elevate the inspected player to full dual-foil status.
+- **Secret Promo Codes & Easter Egg Cheats (`tabGodRealm`)**:
+  - Added **`🌈 All Rainbows Cheat`**, **`✨ All Golds Cheat`**, and **`👑 All Rainbows & Golds Cheat`** buttons for instant testing and self-granting.
+- **Authoritative Cloud & Peer Synchronization**:
+  - When all rainbows and/or golds are gifted, `acc.lastAdminActionTime` and `acc.adminRevision` are incremented.
+  - State synchronizes immediately to the Global Cloud Registry (`syncAccountToCloud`) so offline players receive their full Rainbow/Gold collection as soon as they open the app on any device.
+  - Broadcasts direct `gift_foil` payload with updated `owned`, `rainbowCards`, `goldCards`, and custom congratulatory banners over WebRTC PeerJS and BroadcastChannel, triggering celebratory confetti and triumph fanfare on the recipient's screen in real time.

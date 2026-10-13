@@ -861,6 +861,10 @@ function handleIncomingAdminDispatch(actionData, targetUser){
 
   if(actionData.type === "gift_foil"){
     if(myUser && accounts && accounts[myUser]){
+      if(Array.isArray(actionData.owned)){
+        accounts[myUser].owned = Array.from(new Set([...(accounts[myUser].owned || []), ...actionData.owned]));
+        if(typeof owned !== "undefined") window.owned = accounts[myUser].owned;
+      }
       if(Array.isArray(actionData.goldCards)){
         accounts[myUser].goldCards = actionData.goldCards;
         if(typeof goldCards !== "undefined") window.goldCards = actionData.goldCards;
@@ -872,13 +876,14 @@ function handleIncomingAdminDispatch(actionData, targetUser){
       localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     }
     if(typeof confetti === "function"){
-      confetti({ particleCount: 70, spread: 80, colors: ["#fbbf24", "#f43f5e", "#a855f7", "#3b82f6"] });
+      confetti({ particleCount: 100, spread: 90, colors: ["#fbbf24", "#f43f5e", "#a855f7", "#3b82f6", "#10b981", "#ec4899"] });
     }
-    if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+    if(typeof playChaosSfx === "function") playChaosSfx("triumph");
     if(typeof showLiveToast === "function"){
-      showLiveToast("✨ <b>NEW FOIL UPGRADE!</b> Master Cam granted you special Gold / Rainbow card editions!", true);
+      showLiveToast(actionData.customMsg || "✨ <b>NEW FOIL UPGRADE!</b> Master Cam granted you special Gold / Rainbow card editions!", true);
     }
     if(typeof render === "function") render();
+    if(typeof updateDisplay === "function") updateDisplay();
     return;
   }
 

@@ -1378,6 +1378,174 @@ if(maxAccBtn){
   };
 }
 
+// ========================================================
+// CORE FOIL GIFTING ENGINE (ALL RAINBOWS & ALL GOLDS)
+// ========================================================
+window.giftPlayerAllRainbows = function(targetUser){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift all Rainbow cards.");
+  const target = targetUser || getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+  if(!target) return alert("Type or select a target player username first.");
+  
+  if(!accounts[target]){
+    accounts[target] = { password: "", owned: [0], coins: 1000, hasPlayed: true, lastActive: Date.now() };
+  }
+  const acc = accounts[target];
+  const allCardIndices = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.map((_, i) => i) : Array.from({length: 210}, (_, i) => i);
+  
+  // Unlock all cards in collection and set all cards as Rainbow Edition
+  acc.owned = Array.from(new Set([...(acc.owned || []), ...allCardIndices]));
+  acc.rainbowCards = [...allCardIndices];
+  acc.lastAdminActionTime = Date.now();
+  acc.adminRevision = (acc.adminRevision || 0) + 1;
+  
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
+  
+  if(target.toLowerCase() === (currentUser || "").toLowerCase()){
+    if(typeof owned !== "undefined") owned = acc.owned;
+    if(typeof rainbowCards !== "undefined") window.rainbowCards = acc.rainbowCards;
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+    if(typeof updateDisplay === "function") updateDisplay();
+  }
+  
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(target, {
+      type: "gift_foil",
+      owned: acc.owned,
+      rainbowCards: acc.rainbowCards,
+      goldCards: acc.goldCards || [],
+      customMsg: "🌈 <b>DIVINE RAINBOW GIFT!</b> Master Cam granted you 100% ALL RAINBOW CARDS in the game!"
+    });
+  }
+  
+  if(typeof logAdminAudit === "function"){
+    logAdminAudit("PRESTIGE", `Gifted 100% ALL RAINBOW CARDS (${allCardIndices.length} cards) to [${target}]`, { user: target });
+  }
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  if(typeof confetti === "function"){
+    confetti({ particleCount: 120, spread: 90, colors: ["#a855f7", "#ec4899", "#06b6d4", "#f43f5e", "#fbbf24"] });
+  }
+  refreshAdminPlayerData();
+  alert(`🌈 SUCCESS! Gifted 100% ALL RAINBOW CARDS (${allCardIndices.length} cards) to [${target}] (Synced to Cloud Registry)!`);
+};
+
+window.giftPlayerAllGolds = function(targetUser){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift all Gold cards.");
+  const target = targetUser || getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+  if(!target) return alert("Type or select a target player username first.");
+  
+  if(!accounts[target]){
+    accounts[target] = { password: "", owned: [0], coins: 1000, hasPlayed: true, lastActive: Date.now() };
+  }
+  const acc = accounts[target];
+  const allCardIndices = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.map((_, i) => i) : Array.from({length: 210}, (_, i) => i);
+  
+  // Unlock all cards in collection and set all cards as Gold Edition
+  acc.owned = Array.from(new Set([...(acc.owned || []), ...allCardIndices]));
+  acc.goldCards = [...allCardIndices];
+  acc.lastAdminActionTime = Date.now();
+  acc.adminRevision = (acc.adminRevision || 0) + 1;
+  
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
+  
+  if(target.toLowerCase() === (currentUser || "").toLowerCase()){
+    if(typeof owned !== "undefined") owned = acc.owned;
+    if(typeof goldCards !== "undefined") window.goldCards = acc.goldCards;
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+    if(typeof updateDisplay === "function") updateDisplay();
+  }
+  
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(target, {
+      type: "gift_foil",
+      owned: acc.owned,
+      goldCards: acc.goldCards,
+      rainbowCards: acc.rainbowCards || [],
+      customMsg: "✨ <b>ROYAL GOLD GIFT!</b> Master Cam granted you 100% ALL 24K GOLD CARDS in the game!"
+    });
+  }
+  
+  if(typeof logAdminAudit === "function"){
+    logAdminAudit("PRESTIGE", `Gifted 100% ALL 24K GOLD CARDS (${allCardIndices.length} cards) to [${target}]`, { user: target });
+  }
+  if(typeof playChaosSfx === "function") playChaosSfx("coins");
+  if(typeof confetti === "function"){
+    confetti({ particleCount: 120, spread: 90, colors: ["#fbbf24", "#f59e0b", "#eab308", "#fde047", "#ffffff"] });
+  }
+  refreshAdminPlayerData();
+  alert(`✨ SUCCESS! Gifted 100% ALL 24K GOLD CARDS (${allCardIndices.length} cards) to [${target}] (Synced to Cloud Registry)!`);
+};
+
+window.giftPlayerAllRainbowsAndGolds = function(targetUser){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift all Rainbow and Gold cards.");
+  const target = targetUser || getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+  if(!target) return alert("Type or select a target player username first.");
+  
+  if(!accounts[target]){
+    accounts[target] = { password: "", owned: [0], coins: 1000, hasPlayed: true, lastActive: Date.now() };
+  }
+  const acc = accounts[target];
+  const allCardIndices = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.map((_, i) => i) : Array.from({length: 210}, (_, i) => i);
+  
+  // Unlock all cards in collection and set all cards as BOTH Rainbow AND Gold Edition
+  acc.owned = Array.from(new Set([...(acc.owned || []), ...allCardIndices]));
+  acc.rainbowCards = [...allCardIndices];
+  acc.goldCards = [...allCardIndices];
+  acc.lastAdminActionTime = Date.now();
+  acc.adminRevision = (acc.adminRevision || 0) + 1;
+  
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
+  
+  if(target.toLowerCase() === (currentUser || "").toLowerCase()){
+    if(typeof owned !== "undefined") owned = acc.owned;
+    if(typeof rainbowCards !== "undefined") window.rainbowCards = acc.rainbowCards;
+    if(typeof goldCards !== "undefined") window.goldCards = acc.goldCards;
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+    if(typeof updateDisplay === "function") updateDisplay();
+  }
+  
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget(target, {
+      type: "gift_foil",
+      owned: acc.owned,
+      rainbowCards: acc.rainbowCards,
+      goldCards: acc.goldCards,
+      customMsg: "👑 <b>SUPREME DUAL FOIL MASTER!</b> Master Cam granted you BOTH ALL RAINBOWS & ALL GOLDS!"
+    });
+  }
+  
+  if(typeof logAdminAudit === "function"){
+    logAdminAudit("PRESTIGE", `Gifted BOTH 100% ALL RAINBOWS & ALL GOLDS to [${target}]`, { user: target });
+  }
+  if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+  if(typeof confetti === "function"){
+    confetti({ particleCount: 150, spread: 100, colors: ["#fbbf24", "#a855f7", "#ec4899", "#06b6d4", "#10b981"] });
+  }
+  refreshAdminPlayerData();
+  alert(`👑 SUPREME SUCCESS! Gifted BOTH 100% ALL RAINBOWS & ALL GOLDS to [${target}] (Synced to Cloud Registry)!`);
+};
+
+// Dispatcher Button Event Handlers
+const giftAllRainbowsBtn = document.getElementById("adminGiftAllRainbowsBtn");
+if(giftAllRainbowsBtn){
+  giftAllRainbowsBtn.onclick = () => window.giftPlayerAllRainbows();
+}
+
+const giftAllGoldsBtn = document.getElementById("adminGiftAllGoldsBtn");
+if(giftAllGoldsBtn){
+  giftAllGoldsBtn.onclick = () => window.giftPlayerAllGolds();
+}
+
+const giftAllRainbowsAndGoldsBtn = document.getElementById("adminGiftAllRainbowsAndGoldsBtn");
+if(giftAllRainbowsAndGoldsBtn){
+  giftAllRainbowsAndGoldsBtn.onclick = () => window.giftPlayerAllRainbowsAndGolds();
+}
+
 document.getElementById("adminWipePlayerBtn").onclick = ()=>{
   if(!isMasterAdmin()) return alert("Only master admin Cam can wipe accounts.");
 
@@ -7752,6 +7920,12 @@ function initGodRealmDom(){
         window._onePunchActive = true;
         if(typeof playChaosSfx === "function") playChaosSfx("detonation");
         alert("⚡ ONE PUNCH ACTIVE! In your next Arena attack, your card will deal 99,999 DMG!");
+      } else if(cheat === "allRainbows"){
+        giftPlayerAllRainbows(currentUser);
+      } else if(cheat === "allGolds"){
+        giftPlayerAllGolds(currentUser);
+      } else if(cheat === "bothFoils"){
+        giftPlayerAllRainbowsAndGolds(currentUser);
       }
     };
   });
@@ -8195,44 +8369,55 @@ window.adminFoilPrompt = function(targetUser){
   const choice = prompt(
     `✨ FOIL EDITION STUDIO FOR [${targetUser}]\n\n` +
     `Choose an action:\n` +
-    `1: Gift Random Gold Card\n` +
-    `2: Gift Random Rainbow Card\n` +
-    `3: Upgrade ALL Owned Cards to 24K Gold Edition\n` +
-    `4: Upgrade ALL Owned Cards to Prismatic Rainbow Edition\n` +
-    `5: Upgrade specific card index to Gold\n` +
-    `6: Upgrade specific card index to Rainbow\n\n` +
-    `Enter option number (1-6):`
+    `1: 🌈 GIFT ALL RAINBOWS (Unlock 100% of cards in Rainbow Edition!)\n` +
+    `2: ✨ GIFT ALL GOLDS (Unlock 100% of cards in 24K Gold Edition!)\n` +
+    `3: 👑 GIFT BOTH ALL RAINBOWS & ALL GOLDS (100% Complete Dual Set!)\n` +
+    `4: Upgrade currently owned cards to Gold\n` +
+    `5: Upgrade currently owned cards to Rainbow\n` +
+    `6: Gift Random Gold Card\n` +
+    `7: Gift Random Rainbow Card\n` +
+    `8: Upgrade specific card index to Gold\n` +
+    `9: Upgrade specific card index to Rainbow\n\n` +
+    `Enter option number (1-9):`
   );
   if(!choice) return;
+
+  if(choice === "1"){
+    return giftPlayerAllRainbows(targetUser);
+  } else if(choice === "2"){
+    return giftPlayerAllGolds(targetUser);
+  } else if(choice === "3"){
+    return giftPlayerAllRainbowsAndGolds(targetUser);
+  }
 
   if(!Array.isArray(acc.goldCards)) acc.goldCards = [];
   if(!Array.isArray(acc.rainbowCards)) acc.rainbowCards = [];
   const ownedList = Array.isArray(acc.owned) && acc.owned.length > 0 ? acc.owned : [0];
 
-  if(choice === "1"){
+  if(choice === "4"){
+    acc.goldCards = Array.from(new Set([...acc.goldCards, ...ownedList]));
+    alert(`✨ Upgraded all ${ownedList.length} owned cards to 24K Gold Edition for [${targetUser}]!`);
+  } else if(choice === "5"){
+    acc.rainbowCards = Array.from(new Set([...acc.rainbowCards, ...ownedList]));
+    alert(`🌈 Upgraded all ${ownedList.length} owned cards to Prismatic Rainbow Edition for [${targetUser}]!`);
+  } else if(choice === "6"){
     const randCardIdx = ownedList[Math.floor(Math.random() * ownedList.length)];
     if(!acc.goldCards.includes(randCardIdx)) acc.goldCards.push(randCardIdx);
     const cName = (typeof cards !== "undefined" && cards[randCardIdx]) ? cards[randCardIdx].name : `Card #${randCardIdx}`;
     alert(`✨ Gifted Gold Edition of [${cName}] to [${targetUser}]!`);
-  } else if(choice === "2"){
+  } else if(choice === "7"){
     const randCardIdx = ownedList[Math.floor(Math.random() * ownedList.length)];
     if(!acc.rainbowCards.includes(randCardIdx)) acc.rainbowCards.push(randCardIdx);
     const cName = (typeof cards !== "undefined" && cards[randCardIdx]) ? cards[randCardIdx].name : `Card #${randCardIdx}`;
     alert(`🌈 Gifted Rainbow Edition of [${cName}] to [${targetUser}]!`);
-  } else if(choice === "3"){
-    acc.goldCards = Array.from(new Set([...acc.goldCards, ...ownedList]));
-    alert(`✨ Upgraded all ${ownedList.length} owned cards to 24K Gold Edition for [${targetUser}]!`);
-  } else if(choice === "4"){
-    acc.rainbowCards = Array.from(new Set([...acc.rainbowCards, ...ownedList]));
-    alert(`🌈 Upgraded all ${ownedList.length} owned cards to Prismatic Rainbow Edition for [${targetUser}]!`);
-  } else if(choice === "5"){
+  } else if(choice === "8"){
     const idxInput = prompt(`Enter card index to upgrade to Gold (0 - ${typeof cards !== "undefined" ? cards.length - 1 : 200}):`);
     const idx = parseInt(idxInput, 10);
     if(isNaN(idx) || idx < 0) return alert("Invalid card index.");
     if(!acc.goldCards.includes(idx)) acc.goldCards.push(idx);
     if(!acc.owned.includes(idx)) acc.owned.push(idx);
     alert(`✨ Set Gold Edition for card #${idx}!`);
-  } else if(choice === "6"){
+  } else if(choice === "9"){
     const idxInput = prompt(`Enter card index to upgrade to Rainbow (0 - ${typeof cards !== "undefined" ? cards.length - 1 : 200}):`);
     const idx = parseInt(idxInput, 10);
     if(isNaN(idx) || idx < 0) return alert("Invalid card index.");
@@ -8258,6 +8443,7 @@ window.adminFoilPrompt = function(targetUser){
   if(typeof broadcastAdminActionToTarget === "function"){
     broadcastAdminActionToTarget(targetUser, {
       type: "gift_foil",
+      owned: acc.owned,
       goldCards: acc.goldCards,
       rainbowCards: acc.rainbowCards
     });
@@ -8671,6 +8857,16 @@ if(inspectorAllRainbowBtn){
     }
 
     logAdminAudit("PRESTIGE", `Upgraded all ${ownedList.length} cards to Prismatic Rainbow for [${targetUser}]`, { user: targetUser });
+    renderAdminInspector(targetUser);
+  });
+}
+
+const inspectorAllBothBtn = document.getElementById("adminInspectorAllRainbowAndGoldBtn");
+if(inspectorAllBothBtn){
+  inspectorAllBothBtn.addEventListener("click", () => {
+    const targetUser = inspectorSelect ? inspectorSelect.value : "";
+    if(!targetUser) return alert("Select a player first.");
+    giftPlayerAllRainbowsAndGolds(targetUser);
     renderAdminInspector(targetUser);
   });
 }
