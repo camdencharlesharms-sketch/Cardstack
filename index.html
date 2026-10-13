@@ -1013,6 +1013,111 @@
             <button id="adminDismissMarqueeBtn" style="background:#475569">Dismiss Banner</button>
           </div>
         </div>
+
+        <!-- CARD: LIVE REALM MEDIA BROADCASTER (VIDEO & PICTURE STREAM) -->
+        <div class="adminCard" style="grid-column: 1 / -1; border: 1px solid rgba(6, 182, 212, 0.4); background: radial-gradient(circle at top left, rgba(6, 182, 212, 0.08), rgba(15, 23, 42, 0.85));">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+            <h4 style="margin:0;color:#38bdf8;display:flex;align-items:center;gap:8px;font-size:16px">
+              <span>📺</span> <span>Live Screen Media Broadcaster (Video & Picture Stream)</span>
+            </h4>
+            <span style="font-size:10px;background:rgba(6, 182, 212, 0.2);color:#38bdf8;padding:3px 10px;border-radius:999px;font-weight:900;border:1px solid rgba(6, 182, 212, 0.4)">
+              REAL-TIME P2P SCREEN BROADCAST
+            </span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 12px 0;line-height:1.5">
+            Broadcast any video, picture, GIF, or YouTube clip directly to every connected player's screen across the entire realm simultaneously. Perfect for trailers, announcements, card reveals, memes, or cinematics.
+          </p>
+
+          <!-- Quick Presets -->
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+            <label style="font-size:11px;color:#94a3b8;font-weight:700">Quick Presets:</label>
+            <button type="button" class="accountBtn mediaPresetBtn" data-type="image" data-url="https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1000&auto=format&fit=crop" data-title="👑 SUPREME CARDSTACK CHAMPIONSHIP!" data-caption="Master Cam presents the Realm of Legends." style="font-size:11px;padding:3px 8px;background:rgba(245,158,11,0.2);color:#fde047;border:1px solid #f59e0b">🏆 Champion Trophy</button>
+            <button type="button" class="accountBtn mediaPresetBtn" data-type="image" data-url="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1000&auto=format&fit=crop" data-title="🌋 PRIMORDIAL WORLD BOSS AWAKENS!" data-caption="Prepare your arena champions for war!" style="font-size:11px;padding:3px 8px;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid #ef4444">🌋 World Boss</button>
+            <button type="button" class="accountBtn mediaPresetBtn" data-type="video" data-url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" data-title="🎬 CARDSTACK REALM CINEMATIC TRAILER" data-caption="Witness the cosmic expansion live." style="font-size:11px;padding:3px 8px;background:rgba(168,85,247,0.2);color:#d8b4fe;border:1px solid #a855f7">🎬 Sample HD Video</button>
+            <button type="button" class="accountBtn mediaPresetBtn" data-type="youtube" data-url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" data-title="🎵 SECRET REALM ANTHEM" data-caption="Never gonna give the realm up!" style="font-size:11px;padding:3px 8px;background:rgba(236,72,153,0.2);color:#f472b6;border:1px solid #ec4899">🎵 Realm Anthem</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 12px">
+            <!-- Media Source Column -->
+            <div style="background:rgba(0,0,0,0.3);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06)">
+              <label style="font-size:11px;color:#94a3b8;font-weight:700">1. Media Source (URL or Local File):</label>
+              <div style="display:flex;gap:6px;margin:6px 0">
+                <select id="adminBroadcastMediaType" class="adminSelect" style="width:115px;margin:0;font-size:11px">
+                  <option value="auto">🔄 Auto Detect</option>
+                  <option value="image">🖼️ Picture / GIF</option>
+                  <option value="video">🎥 Video (MP4)</option>
+                  <option value="youtube">🔴 YouTube</option>
+                </select>
+                <input id="adminBroadcastMediaUrl" class="adminInput" placeholder="Paste image, video, or YouTube URL..." style="margin:0;flex:1;font-size:12px">
+              </div>
+
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px">
+                <input type="file" id="adminBroadcastFileInput" accept="image/*,video/*" style="display:none">
+                <button type="button" id="adminBroadcastUploadFileBtn" class="accountBtn" style="background:#2563eb;color:#fff;font-size:11px;padding:6px 12px;font-weight:700">
+                  📁 Upload Local Picture/Video
+                </button>
+                <span id="adminBroadcastFileStatus" style="font-size:10px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">
+                  No local file loaded
+                </span>
+                <button type="button" id="adminBroadcastClearFileBtn" class="accountBtn" style="background:#334155;color:#fca5a5;font-size:10px;padding:4px 8px;display:none">
+                  ✖ Clear
+                </button>
+              </div>
+            </div>
+
+            <!-- Configuration Column -->
+            <div style="background:rgba(0,0,0,0.3);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06)">
+              <label style="font-size:11px;color:#94a3b8;font-weight:700">2. Title & Caption:</label>
+              <input id="adminBroadcastTitle" class="adminInput" placeholder="Title (e.g. 🚨 SPECIAL ANNOUNCEMENT FROM CAM)" value="🚨 SPECIAL ANNOUNCEMENT FROM MASTER CAM" style="margin:6px 0;font-size:12px">
+              <input id="adminBroadcastCaption" class="adminInput" placeholder="Subtitle / Caption (e.g. Check out this new update!)" style="margin:0 0 8px 0;font-size:11px">
+
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <div style="flex:1;min-width:120px">
+                  <label style="font-size:10px;color:#94a3b8">Display Mode:</label>
+                  <select id="adminBroadcastDisplayMode" class="adminSelect" style="margin:2px 0 0 0;font-size:11px;padding:4px 6px">
+                    <option value="cinema">🎬 Fullscreen Cinema</option>
+                    <option value="pip">📌 Picture-in-Picture</option>
+                  </select>
+                </div>
+                <div style="flex:1;min-width:120px">
+                  <label style="font-size:10px;color:#94a3b8">Auto-Dismiss Timer:</label>
+                  <select id="adminBroadcastDuration" class="adminSelect" style="margin:2px 0 0 0;font-size:11px;padding:4px 6px">
+                    <option value="0">Manual Close Only (Until Dismissed)</option>
+                    <option value="10">10 Seconds</option>
+                    <option value="15" selected>15 Seconds</option>
+                    <option value="30">30 Seconds</option>
+                    <option value="60">60 Seconds</option>
+                  </select>
+                </div>
+                <div style="flex:1;min-width:120px">
+                  <label style="font-size:10px;color:#94a3b8">Audio Fanfare:</label>
+                  <select id="adminBroadcastSound" class="adminSelect" style="margin:2px 0 0 0;font-size:11px;padding:4px 6px">
+                    <option value="triumph">🎺 Victory Fanfare</option>
+                    <option value="ascension">👑 Ascension Chime</option>
+                    <option value="laser">⚡ Laser Beam</option>
+                    <option value="detonation">💣 Seismic Boom</option>
+                    <option value="coins">💰 Coin Chime</option>
+                    <option value="none">🔇 Silent</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Broadcast Action Buttons -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="button" id="adminBroadcastMediaSendBtn" style="background:linear-gradient(135deg, #06b6d4, #3b82f6);color:#fff;font-weight:900;padding:10px 18px;font-size:13px;box-shadow:0 0 15px rgba(6,182,212,0.4)">
+              🚀 Broadcast to Everyone's Screen
+            </button>
+            <button type="button" id="adminBroadcastMediaPreviewBtn" class="accountBtn" style="background:rgba(255,255,255,0.1);color:#fff;font-size:12px;padding:10px 16px;font-weight:700">
+              👁️ Preview On My Screen
+            </button>
+            <button type="button" id="adminBroadcastMediaDismissBtn" class="accountBtn" style="background:#475569;color:#fca5a5;font-size:12px;padding:10px 16px;font-weight:700">
+              ⏹️ Dismiss Broadcast On All Screens
+            </button>
+            <span id="adminBroadcastStatus" style="font-size:11px;color:#34d399;font-weight:700;margin-left:auto"></span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2226,6 +2331,73 @@
         ⛔ Confirm Ban & Send to Screen
       </button>
     </div>
+  </div>
+</div>
+
+<!-- REALM MEDIA BROADCAST OVERLAY (VIDEO & PICTURE STREAM) -->
+<div id="realmMediaBroadcastOverlay" style="display:none;position:fixed;inset:0;background:rgba(3,7,18,0.88);backdrop-filter:blur(14px);z-index:999999;align-items:center;justify-content:center;padding:16px;transition:background 0.3s ease">
+  <div id="realmMediaBroadcastCard" style="background:linear-gradient(145deg, #0f172a, #090d16);border:2px solid rgba(6,182,212,0.7);border-radius:20px;max-width:800px;width:100%;box-shadow:0 0 60px rgba(6,182,212,0.4), 0 25px 50px rgba(0,0,0,0.9);overflow:hidden;display:flex;flex-direction:column;position:relative;transition:all 0.3s ease">
+    
+    <!-- Top Header Bar -->
+    <div style="background:rgba(0,0,0,0.55);border-bottom:1px solid rgba(255,255,255,0.1);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;box-shadow:0 0 10px #ef4444"></span>
+        <span style="font-size:11px;font-weight:900;letter-spacing:1px;color:#fca5a5;text-transform:uppercase">LIVE BROADCAST</span>
+        <span id="realmMediaBroadcastSender" style="font-size:11px;color:#94a3b8;font-weight:700">• Master Admin Cam</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="realmMediaCountdownBadge" style="display:none;font-size:10px;background:rgba(6,182,212,0.2);color:#67e8f9;padding:2px 8px;border-radius:999px;font-weight:800;border:1px solid rgba(6,182,212,0.4)">
+          Closing in 15s
+        </span>
+        <button id="realmMediaTogglePipBtn" type="button" style="background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:14px;padding:2px 6px" title="Toggle Picture-in-Picture">📌</button>
+        <button id="realmMediaCloseBtn" type="button" style="background:transparent;border:none;color:#fca5a5;cursor:pointer;font-size:16px;font-weight:900;padding:2px 6px" title="Close Broadcast">✕</button>
+      </div>
+    </div>
+
+    <!-- Title Bar -->
+    <div id="realmMediaTitleContainer" style="padding:10px 16px 4px 16px">
+      <h3 id="realmMediaTitle" style="margin:0;font-size:18px;font-weight:900;color:#fff;text-shadow:0 0 10px rgba(6,182,212,0.5)">
+        🚨 SPECIAL REALM BROADCAST
+      </h3>
+    </div>
+
+    <!-- Media Stage -->
+    <div id="realmMediaStage" style="position:relative;width:100%;min-height:220px;max-height:520px;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden">
+      <!-- Image Player -->
+      <img id="realmMediaImage" src="" alt="Broadcast Image" style="display:none;width:100%;max-height:520px;object-fit:contain">
+
+      <!-- HTML5 Video Player -->
+      <video id="realmMediaVideo" controls autoplay playsinline style="display:none;width:100%;max-height:520px;background:#000"></video>
+
+      <!-- YouTube / External Iframe -->
+      <iframe id="realmMediaIframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display:none;width:100%;aspect-ratio:16/9;max-height:520px;border:none"></iframe>
+
+      <!-- Error / Fallback placeholder -->
+      <div id="realmMediaFallback" style="display:none;padding:30px;text-align:center;color:#94a3b8">
+        <div style="font-size:36px;margin-bottom:8px">⚠️</div>
+        <div style="font-size:14px;font-weight:700;color:#fca5a5">Unable to load media</div>
+        <div id="realmMediaFallbackMsg" style="font-size:11px;margin-top:4px">Check source URL or format</div>
+      </div>
+    </div>
+
+    <!-- Caption / Subtitle Bar & Live Reactions -->
+    <div style="background:rgba(0,0,0,0.5);border-top:1px solid rgba(255,255,255,0.06);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div id="realmMediaCaption" style="font-size:13px;color:#cbd5e1;font-weight:500;flex:1;min-width:200px">
+        Broadcasted to all players across the realm.
+      </div>
+      
+      <!-- Interactive Live Reaction Emojis -->
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:10px;color:#64748b;font-weight:700;margin-right:2px">React:</span>
+        <button type="button" class="realmReactionBtn" data-emoji="🔥" style="background:rgba(255,255,255,0.08);border:none;border-radius:6px;cursor:pointer;font-size:14px;padding:3px 6px">🔥</button>
+        <button type="button" class="realmReactionBtn" data-emoji="👑" style="background:rgba(255,255,255,0.08);border:none;border-radius:6px;cursor:pointer;font-size:14px;padding:3px 6px">👑</button>
+        <button type="button" class="realmReactionBtn" data-emoji="⚡" style="background:rgba(255,255,255,0.08);border:none;border-radius:6px;cursor:pointer;font-size:14px;padding:3px 6px">⚡</button>
+        <button type="button" class="realmReactionBtn" data-emoji="🎉" style="background:rgba(255,255,255,0.08);border:none;border-radius:6px;cursor:pointer;font-size:14px;padding:3px 6px">🎉</button>
+        <button type="button" class="realmReactionBtn" data-emoji="❤️" style="background:rgba(255,255,255,0.08);border:none;border-radius:6px;cursor:pointer;font-size:14px;padding:3px 6px">❤️</button>
+      </div>
+    </div>
+
   </div>
 </div>
 

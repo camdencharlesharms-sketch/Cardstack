@@ -7101,6 +7101,21 @@ function executeIncomingChaosFx(fxData, sender){
     }
   } else if(fxData.type === "clear_shaders"){
     clearChaosShaders(true);
+  } else if(fxData.type === "broadcast_media"){
+    if(typeof displayBroadcastMediaOnScreen === "function"){
+      displayBroadcastMediaOnScreen(fxData.media, true);
+    }
+    if(typeof showLiveToast === "function"){
+      showLiveToast(`📺 <b>LIVE BROADCAST</b> incoming from <b>${fromName}</b>!`, true);
+    }
+  } else if(fxData.type === "dismiss_broadcast_media"){
+    if(typeof closeBroadcastMediaOnScreen === "function"){
+      closeBroadcastMediaOnScreen();
+    }
+  } else if(fxData.type === "media_reaction"){
+    if(typeof spawnFloatingReaction === "function"){
+      spawnFloatingReaction(fxData.emoji);
+    }
   }
 }
 window.executeIncomingChaosFx = executeIncomingChaosFx;
@@ -9714,3 +9729,402 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+
+// ============================================================
+// LIVE REALM SCREEN MEDIA BROADCASTER (PICTURE & VIDEO STREAM)
+// ============================================================
+
+let loadedBroadcastDataUrl = null;
+let broadcastCountdownTimer = null;
+let isBroadcastPipActive = false;
+
+function extractYouTubeId(url){
+  if(!url) return null;
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i);
+  return m ? m[1] : null;
+}
+
+window.displayBroadcastMediaOnScreen = function(media, isLive = false){
+  if(!media) return;
+  const overlay = document.getElementById("realmMediaBroadcastOverlay");
+  const card = document.getElementById("realmMediaBroadcastCard");
+  const imgEl = document.getElementById("realmMediaImage");
+  const videoEl = document.getElementById("realmMediaVideo");
+  const iframeEl = document.getElementById("realmMediaIframe");
+  const fallbackEl = document.getElementById("realmMediaFallback");
+  const fallbackMsg = document.getElementById("realmMediaFallbackMsg");
+  const titleEl = document.getElementById("realmMediaTitle");
+  const captionEl = document.getElementById("realmMediaCaption");
+  const senderEl = document.getElementById("realmMediaBroadcastSender");
+  const countdownBadge = document.getElementById("realmMediaCountdownBadge");
+
+  if(!overlay || !card) return;
+
+  // Clear previous countdown
+  if(broadcastCountdownTimer){
+    clearInterval(broadcastCountdownTimer);
+    broadcastCountdownTimer = null;
+  }
+
+  // Reset elements
+  if(imgEl){ imgEl.style.display = "none"; imgEl.src = ""; }
+  if(videoEl){ videoEl.style.display = "none"; videoEl.pause(); videoEl.src = ""; }
+  if(iframeEl){ iframeEl.style.display = "none"; iframeEl.src = ""; }
+  if(fallbackEl) fallbackEl.style.display = "none";
+
+  // Text values
+  if(titleEl) titleEl.textContent = media.title || "🚨 LIVE REALM BROADCAST";
+  if(captionEl) captionEl.textContent = media.caption || "Broadcasted across all realm displays.";
+  if(senderEl) senderEl.textContent = `• ${media.sender || "Master Admin Cam"}`;
+
+  // Audio Fanfare
+  if(media.sound && media.sound !== "none" && typeof playChaosSfx === "function"){
+    playChaosSfx(media.sound);
+  }
+
+  // Determine media type
+  let type = media.type || "auto";
+  const url = media.url || "";
+  const ytId = extractYouTubeId(url);
+
+  if(type === "auto"){
+    if(ytId) type = "youtube";
+    else if(/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url) || url.startsWith("data:video/")) type = "video";
+    else type = "image";
+  }
+
+  // Load media stage
+  if(type === "youtube" && ytId){
+    if(iframeEl){
+      iframeEl.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
+      iframeEl.style.display = "block";
+    }
+  } else if(type === "video"){
+    if(videoEl){
+      videoEl.src = url;
+      videoEl.style.display = "block";
+      videoEl.play().catch(() => {
+        // Autoplay may need muted fallback if blocked by browser policy
+        videoEl.muted = true;
+        videoEl.play().catch(e => console.warn("Video playback blocked:", e));
+      });
+      videoEl.onerror = () => {
+        videoEl.style.display = "none";
+        if(fallbackEl){
+          fallbackEl.style.display = "block";
+          if(fallbackMsg) fallbackMsg.textContent = "Could not load video source. Check URL format or CORS permissions.";
+        }
+      };
+    }
+  } else {
+    // Default to Image
+    if(imgEl){
+      imgEl.src = url;
+      imgEl.style.display = "block";
+      imgEl.onerror = () => {
+        imgEl.style.display = "none";
+        if(fallbackEl){
+          fallbackEl.style.display = "block";
+          if(fallbackMsg) fallbackMsg.textContent = "Could not load image. Make sure URL is accessible.";
+        }
+      };
+    }
+  }
+
+  // Apply Display Mode
+  isBroadcastPipActive = (media.mode === "pip");
+  applyBroadcastPipStyles();
+
+  // Auto-dismiss countdown
+  const duration = parseInt(media.durationSec, 10) || 0;
+  if(duration > 0 && countdownBadge){
+    let remaining = duration;
+    countdownBadge.style.display = "inline-block";
+    countdownBadge.textContent = `Closing in ${remaining}s`;
+
+    broadcastCountdownTimer = setInterval(() => {
+      remaining--;
+      if(remaining <= 0){
+        clearInterval(broadcastCountdownTimer);
+        broadcastCountdownTimer = null;
+        closeBroadcastMediaOnScreen();
+      } else {
+        countdownBadge.textContent = `Closing in ${remaining}s`;
+      }
+    }, 1000);
+  } else if(countdownBadge){
+    countdownBadge.style.display = "none";
+  }
+
+  // Confetti flair
+  if(media.sound === "triumph" || media.sound === "ascension"){
+    if(typeof confetti === "function"){
+      confetti({ particleCount: 75, spread: 80, origin: { y: 0.6 } });
+    }
+  }
+
+  overlay.style.display = "flex";
+};
+
+window.closeBroadcastMediaOnScreen = function(){
+  const overlay = document.getElementById("realmMediaBroadcastOverlay");
+  const videoEl = document.getElementById("realmMediaVideo");
+  const iframeEl = document.getElementById("realmMediaIframe");
+  const imgEl = document.getElementById("realmMediaImage");
+
+  if(broadcastCountdownTimer){
+    clearInterval(broadcastCountdownTimer);
+    broadcastCountdownTimer = null;
+  }
+  if(videoEl){ videoEl.pause(); videoEl.src = ""; }
+  if(iframeEl) iframeEl.src = "";
+  if(imgEl) imgEl.src = "";
+
+  if(overlay) overlay.style.display = "none";
+};
+
+function applyBroadcastPipStyles(){
+  const overlay = document.getElementById("realmMediaBroadcastOverlay");
+  const card = document.getElementById("realmMediaBroadcastCard");
+  const pipBtn = document.getElementById("realmMediaTogglePipBtn");
+  if(!overlay || !card) return;
+
+  if(isBroadcastPipActive){
+    overlay.style.background = "transparent";
+    overlay.style.backdropFilter = "none";
+    overlay.style.pointerEvents = "none";
+    overlay.style.alignItems = "flex-end";
+    overlay.style.justifyContent = "flex-end";
+    overlay.style.padding = "20px";
+
+    card.style.maxWidth = "380px";
+    card.style.pointerEvents = "auto";
+    card.style.boxShadow = "0 10px 40px rgba(0,0,0,0.9), 0 0 25px rgba(6,182,212,0.4)";
+    card.style.border = "2px solid #06b6d4";
+    if(pipBtn) pipBtn.textContent = "🗖";
+  } else {
+    overlay.style.background = "rgba(3,7,18,0.88)";
+    overlay.style.backdropFilter = "blur(14px)";
+    overlay.style.pointerEvents = "auto";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.padding = "16px";
+
+    card.style.maxWidth = "800px";
+    card.style.pointerEvents = "auto";
+    card.style.boxShadow = "0 0 60px rgba(6,182,212,0.4), 0 25px 50px rgba(0,0,0,0.9)";
+    card.style.border = "2px solid rgba(6,182,212,0.7)";
+    if(pipBtn) pipBtn.textContent = "📌";
+  }
+}
+
+window.broadcastMediaToRealm = function(isLocalPreview = false){
+  const urlIn = document.getElementById("adminBroadcastMediaUrl");
+  const typeIn = document.getElementById("adminBroadcastMediaType");
+  const titleIn = document.getElementById("adminBroadcastTitle");
+  const captionIn = document.getElementById("adminBroadcastCaption");
+  const modeIn = document.getElementById("adminBroadcastDisplayMode");
+  const durationIn = document.getElementById("adminBroadcastDuration");
+  const soundIn = document.getElementById("adminBroadcastSound");
+  const statusEl = document.getElementById("adminBroadcastStatus");
+
+  const mediaUrl = loadedBroadcastDataUrl || (urlIn ? urlIn.value.trim() : "");
+  if(!mediaUrl){
+    return alert("Please enter an image/video/YouTube URL or upload a local file first.");
+  }
+
+  const payload = {
+    url: mediaUrl,
+    type: typeIn ? typeIn.value : "auto",
+    title: (titleIn ? titleIn.value.trim() : "") || "🚨 SPECIAL ANNOUNCEMENT FROM MASTER CAM",
+    caption: (captionIn ? captionIn.value.trim() : "") || "",
+    mode: modeIn ? modeIn.value : "cinema",
+    durationSec: parseInt(durationIn ? durationIn.value : 15, 10),
+    sound: soundIn ? soundIn.value : "triumph",
+    sender: currentUser || "Master Admin Cam",
+    timestamp: Date.now()
+  };
+
+  if(isLocalPreview){
+    displayBroadcastMediaOnScreen(payload, false);
+    if(statusEl) statusEl.textContent = "👁️ Preview active on your screen.";
+    return;
+  }
+
+  if(typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({
+      type: "broadcast_media",
+      media: payload
+    });
+  }
+
+  // Also display on self
+  displayBroadcastMediaOnScreen(payload, false);
+
+  if(typeof logAdminAudit === "function"){
+    logAdminAudit("BROADCAST", `Broadcasted ${payload.type} media to realm: "${payload.title}"`, { media: payload });
+  }
+
+  if(statusEl){
+    statusEl.textContent = "🚀 Broadcast sent to all connected players!";
+    setTimeout(() => { if(statusEl) statusEl.textContent = ""; }, 5000);
+  }
+  alert("🚀 BROADCAST TRANSMITTED! Your picture/video is now playing on everyone's screen!");
+};
+
+window.dismissBroadcastMediaAcrossRealm = function(){
+  if(typeof broadcastChaosFx === "function"){
+    broadcastChaosFx({ type: "dismiss_broadcast_media" });
+  }
+  closeBroadcastMediaOnScreen();
+
+  if(typeof logAdminAudit === "function"){
+    logAdminAudit("BROADCAST", "Dismissed active media broadcast across the realm");
+  }
+
+  const statusEl = document.getElementById("adminBroadcastStatus");
+  if(statusEl){
+    statusEl.textContent = "⏹️ Broadcast dismissed on all screens.";
+    setTimeout(() => { if(statusEl) statusEl.textContent = ""; }, 4000);
+  }
+};
+
+window.spawnFloatingReaction = function(emoji){
+  if(!emoji) return;
+  const bubble = document.createElement("div");
+  bubble.textContent = emoji;
+  bubble.style.position = "fixed";
+  bubble.style.zIndex = "9999999";
+  bubble.style.fontSize = "32px";
+  bubble.style.pointerEvents = "none";
+  bubble.style.userSelect = "none";
+  bubble.style.left = `${Math.random() * 60 + 20}%`;
+  bubble.style.bottom = "40px";
+  bubble.style.transition = "transform 1.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.8s ease";
+  bubble.style.transform = "translateY(0) scale(0.6)";
+  bubble.style.opacity = "1";
+  document.body.appendChild(bubble);
+
+  requestAnimationFrame(() => {
+    bubble.style.transform = `translateY(-${Math.random() * 250 + 200}px) scale(1.4) rotate(${(Math.random() * 30 - 15)}deg)`;
+    bubble.style.opacity = "0";
+  });
+
+  setTimeout(() => bubble.remove(), 1900);
+};
+
+// Wire Media Broadcaster DOM Listeners
+function initMediaBroadcaster(){
+  if(window._mediaBroadcasterInitialized) return;
+  window._mediaBroadcasterInitialized = true;
+  // Action Buttons
+  const sendBtn = document.getElementById("adminBroadcastMediaSendBtn");
+  if(sendBtn) sendBtn.addEventListener("click", () => broadcastMediaToRealm(false));
+
+  const previewBtn = document.getElementById("adminBroadcastMediaPreviewBtn");
+  if(previewBtn) previewBtn.addEventListener("click", () => broadcastMediaToRealm(true));
+
+  const dismissBtn = document.getElementById("adminBroadcastMediaDismissBtn");
+  if(dismissBtn) dismissBtn.addEventListener("click", () => dismissBroadcastMediaAcrossRealm());
+
+  // Overlay Close and PiP Toggle
+  const closeBtn = document.getElementById("realmMediaCloseBtn");
+  if(closeBtn) closeBtn.addEventListener("click", closeBroadcastMediaOnScreen);
+
+  const pipBtn = document.getElementById("realmMediaTogglePipBtn");
+  if(pipBtn){
+    pipBtn.addEventListener("click", () => {
+      isBroadcastPipActive = !isBroadcastPipActive;
+      applyBroadcastPipStyles();
+    });
+  }
+
+  // Presets
+  document.querySelectorAll(".mediaPresetBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const type = btn.getAttribute("data-type");
+      const url = btn.getAttribute("data-url");
+      const title = btn.getAttribute("data-title");
+      const caption = btn.getAttribute("data-caption");
+
+      const urlIn = document.getElementById("adminBroadcastMediaUrl");
+      const typeIn = document.getElementById("adminBroadcastMediaType");
+      const titleIn = document.getElementById("adminBroadcastTitle");
+      const captionIn = document.getElementById("adminBroadcastCaption");
+
+      if(urlIn) urlIn.value = url || "";
+      if(typeIn) typeIn.value = type || "auto";
+      if(titleIn) titleIn.value = title || "";
+      if(captionIn) captionIn.value = caption || "";
+
+      // Clear any loaded file so URL is used
+      loadedBroadcastDataUrl = null;
+      const status = document.getElementById("adminBroadcastFileStatus");
+      const clearBtn = document.getElementById("adminBroadcastClearFileBtn");
+      if(status) status.textContent = "Preset Loaded: " + (title || "Media");
+      if(clearBtn) clearBtn.style.display = "none";
+    });
+  });
+
+  // Local File Upload
+  const uploadBtn = document.getElementById("adminBroadcastUploadFileBtn");
+  const fileInput = document.getElementById("adminBroadcastFileInput");
+  const fileStatus = document.getElementById("adminBroadcastFileStatus");
+  const clearFileBtn = document.getElementById("adminBroadcastClearFileBtn");
+
+  if(uploadBtn && fileInput){
+    uploadBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        loadedBroadcastDataUrl = re.target.result;
+        if(fileStatus){
+          fileStatus.textContent = `📁 ${file.name} (${Math.round(file.size / 1024)} KB)`;
+          fileStatus.style.color = "#34d399";
+        }
+        if(clearFileBtn) clearFileBtn.style.display = "inline-block";
+
+        const typeIn = document.getElementById("adminBroadcastMediaType");
+        if(typeIn){
+          if(file.type.startsWith("video/")) typeIn.value = "video";
+          else typeIn.value = "image";
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if(clearFileBtn){
+    clearFileBtn.addEventListener("click", () => {
+      loadedBroadcastDataUrl = null;
+      if(fileInput) fileInput.value = "";
+      if(fileStatus){
+        fileStatus.textContent = "No local file loaded";
+        fileStatus.style.color = "#94a3b8";
+      }
+      clearFileBtn.style.display = "none";
+    });
+  }
+
+  // Live Emojis Reaction Buttons
+  document.querySelectorAll(".realmReactionBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const emoji = btn.getAttribute("data-emoji");
+      if(!emoji) return;
+      spawnFloatingReaction(emoji);
+      if(typeof broadcastChaosFx === "function"){
+        broadcastChaosFx({ type: "media_reaction", emoji: emoji });
+      }
+    });
+  });
+}
+
+if(document.readyState !== "loading"){
+  initMediaBroadcaster();
+} else {
+  document.addEventListener("DOMContentLoaded", initMediaBroadcaster);
+}

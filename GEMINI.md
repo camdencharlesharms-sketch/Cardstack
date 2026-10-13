@@ -774,3 +774,30 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
   - When all rainbows and/or golds are gifted, `acc.lastAdminActionTime` and `acc.adminRevision` are incremented.
   - State synchronizes immediately to the Global Cloud Registry (`syncAccountToCloud`) so offline players receive their full Rainbow/Gold collection as soon as they open the app on any device.
   - Broadcasts direct `gift_foil` payload with updated `owned`, `rainbowCards`, `goldCards`, and custom congratulatory banners over WebRTC PeerJS and BroadcastChannel, triggering celebratory confetti and triumph fanfare on the recipient's screen in real time.
+
+### Live Realm Screen Media Broadcaster (Video & Picture Stream)
+- **Live Stream Broadcaster Console (`tabBroadcast`)**:
+  - Located in the **📢 Broadcast & Leaks** tab inside the Master Admin Hub (`#adminModal`).
+  - Allows Master Admin Cam to broadcast pictures, GIFs, HTML5 videos, local media files, or YouTube video embeds directly to everyone's screen simultaneously across the realm via real-time WebRTC PeerJS and BroadcastChannel mesh.
+  - **Media Source Options**:
+    - **🖼️ Pictures & Animated GIFs**: Direct image URL or local photo/meme upload.
+    - **🎥 HTML5 Video (MP4 / WebM / OGG)**: Direct video URL or local video file upload (converts to base64 Data URL with instant playback).
+    - **🔴 YouTube Video Streaming**: Automatic regex extraction of YouTube video IDs from standard links, `youtu.be`, embeds, and YouTube Shorts into an autoplay responsive iframe.
+    - **📁 Local File Uploader**: `FileReader.readAsDataURL` allows uploading any local picture or video file directly from the computer without needing external image hosting.
+    - **🏆 One-Click Presets**: Pre-configured high-impact cards for Champion Trophy, Primordial World Boss, Cinematic Trailer, and Realm Anthem.
+  - **Broadcast Configuration**:
+    - **Title & Headline**: Custom title banner (e.g. `🚨 SPECIAL ANNOUNCEMENT FROM MASTER CAM`).
+    - **Caption / Description**: Subtitle displayed below the media player.
+    - **Display Mode**: Fullscreen Cinema overlay with frosted blur backdrop or floating corner Picture-in-Picture (PiP).
+    - **Auto-Dismiss Timer**: Automatic closing countdown (`10s`, `15s`, `30s`, `60s`, or manual close only).
+    - **Audio Fanfare**: Accompanied by sound FX fanfare (`triumph`, `ascension`, `laser`, `detonation`, `coins`, or silent).
+  - **Actions**:
+    - `🚀 Broadcast to Everyone's Screen`: Instantly streams the media to all active players across the realm.
+    - `👁️ Preview On My Screen`: Test and preview appearance locally before broadcasting.
+    - `⏹️ Dismiss Broadcast On All Screens`: Instantly closes the media broadcast overlay on every connected player's screen.
+- **Client Overlay & Media Player Stage (`#realmMediaBroadcastOverlay`)**:
+  - Responsive, high-z-index overlay (`z-index: 999999`) with neon cyan cyber glow.
+  - Live broadcast indicator with pulsing red beacon (`🔴 LIVE BROADCAST • Master Admin Cam`).
+  - Integrated picture stage, HTML5 video player with controls and autoplay policy fallback, and YouTube player.
+  - Picture-in-Picture toggle button (`📌` / `🗖`) allowing players to pin the stream to the bottom-right corner while continuing to battle or open packs.
+  - Live reaction emoji buttons (`🔥`, `👑`, `⚡`, `🎉`, `❤️`) that broadcast floating rising emoji animations to everyone viewing the stream.
