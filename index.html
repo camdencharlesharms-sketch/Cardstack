@@ -49,6 +49,13 @@
   </div>
 </header>
 
+<div id="globalXpFrenzyBanner" class="global-xp-frenzy-banner" style="display:none">
+  <span class="xp-frenzy-icon">🌟</span>
+  <span id="globalXpFrenzyText">GLOBAL 5X XP FRENZY IS ACTIVE! (+400% Bonus Summoner XP)</span>
+  <span id="globalXpFrenzyTimer" class="xp-frenzy-countdown">05:00</span>
+</div>
+
+
 <div id="packOverlay">
   <div class="anim-pack-container" id="packAnimStage" style="display:flex;flex-direction:column;align-items:center;gap:18px">
     <div id="animPackModel" class="pack-model">
@@ -480,6 +487,7 @@
       <button class="admin-tab-btn" data-tab="tabChaosLab" id="chaosLabTabBtn" style="color:#fbbf24">⚡ Chaos Lab</button>
       <button class="admin-tab-btn" data-tab="tabGodRealm" id="godRealmTabBtn" style="color:#e879f9;font-weight:900">🔮 God Realm & Arcade</button>
       <button class="admin-tab-btn" data-tab="tabPermissions" id="permissionsTabBtn" style="display:none">🛡 Sub-Admin Roles</button>
+      <button class="admin-tab-btn" data-tab="tabAuditLog" id="auditLogTabBtn" style="color:#38bdf8">📜 Audit & Live Log</button>
       <button class="admin-tab-btn" data-tab="tabUnreleased" id="unreleasedTabBtn" style="display:none;color:#fb7185">🔒 Unreleased Vault</button>
     </div>
 
@@ -565,6 +573,102 @@
             <button id="adminWipeOtherAccountsBtn" style="background:#991b1b">Delete All Other Accounts</button>
           </div>
         </div>
+
+        <!-- PLAYER PRESTIGE TITLE & NAME GLOW STUDIO -->
+        <div class="adminCard" style="border:1px solid rgba(245,158,11,0.35);background:radial-gradient(circle at top right, rgba(245,158,11,0.12), rgba(15,23,42,0.75))">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <h4 style="margin:0;color:#fde047;display:flex;align-items:center;gap:6px">
+              <span>👑</span> <span>Player Prestige Title & Name Glow Studio</span>
+            </h4>
+            <span style="font-size:10px;background:rgba(245,158,11,0.25);color:#fde047;padding:2px 8px;border-radius:4px;font-weight:800">PRESTIGE ACCENT</span>
+          </div>
+          <p style="font-size:11px;color:#94a3b8;margin:0 0 8px 0;line-height:1.4">
+            Bestow exclusive prestigious titles and glowing animated color auras to any player. Displays prominently on their Summoner Rank badge, chat, player list, and arena cards.
+          </p>
+          <label style="font-size:12px;color:#94a3b8">Target Player:</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <select id="adminTitlePlayerSelect" class="adminSelect" style="flex:1;margin:0"></select>
+            <input id="adminTitlePlayerInput" class="adminInput" placeholder="Or type username..." style="flex:1;margin:0">
+          </div>
+          <label style="font-size:12px;color:#94a3b8">Prestige Title Preset or Custom Text:</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <select id="adminTitlePresetSelect" class="adminSelect" style="flex:1;margin:0">
+              <option value="">-- Choose Title Preset --</option>
+              <option value="👑 Realm Sovereign">👑 Realm Sovereign</option>
+              <option value="⚡ Thunder God">⚡ Thunder God</option>
+              <option value="🐉 Dragon Knight">🐉 Dragon Knight</option>
+              <option value="💎 Master Collector">💎 Master Collector</option>
+              <option value="🔥 Hellfire Archmage">🔥 Hellfire Archmage</option>
+              <option value="🃏 Cardstack Legend">🃏 Cardstack Legend</option>
+              <option value="🌌 Cosmic Voidwalker">🌌 Cosmic Voidwalker</option>
+              <option value="⚔️ Supreme Gladiator">⚔️ Supreme Gladiator</option>
+              <option value="🌟 Transcendent Deity">🌟 Transcendent Deity</option>
+            </select>
+            <input id="adminTitleCustomInput" class="adminInput" placeholder="Or custom title..." style="flex:1;margin:0">
+          </div>
+          <label style="font-size:12px;color:#94a3b8">Title Glow & Accent Color:</label>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+            <select id="adminTitleColorSelect" class="adminSelect" style="flex:1;margin:0">
+              <option value="#f59e0b">🟡 Solar Gold Glow (#f59e0b)</option>
+              <option value="#a855f7">🟣 Void Violet Glow (#a855f7)</option>
+              <option value="#06b6d4">🔵 Neon Cyan Glow (#06b6d4)</option>
+              <option value="#10b981">🟢 Emerald Radiance (#10b981)</option>
+              <option value="#ef4444">🔴 Crimson Hellfire (#ef4444)</option>
+              <option value="rainbow">🌈 Prismatic Rainbow Shimmer</option>
+            </select>
+            <input type="color" id="adminTitleCustomColorPicker" value="#f59e0b" style="border:0;width:38px;height:38px;border-radius:8px;cursor:pointer;background:transparent" title="Custom color picker">
+          </div>
+          <div class="adminBtnGroup">
+            <button id="adminGrantTitleBtn" type="button" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#000;font-weight:900">
+              👑 Grant Prestige Title
+            </button>
+            <button id="adminRevokeTitleBtn" type="button" class="accountBtn" style="background:#475569;color:#fff">
+              Revoke Title
+            </button>
+          </div>
+        </div>
+
+        <!-- LIVE PLAYER BINDER & INVENTORY INSPECTOR -->
+        <div class="adminCard" style="grid-column:1 / -1;border:1px solid rgba(56,189,248,0.35);background:radial-gradient(circle at top left, rgba(14,165,233,0.12), rgba(15,23,42,0.85))">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+            <div>
+              <h4 style="margin:0;color:#38bdf8;display:flex;align-items:center;gap:6px">
+                <span>🔍</span> <span>Live Player Binder & Inventory Inspector</span>
+              </h4>
+              <span style="font-size:12px;color:#94a3b8">Inspect every card, edition, and enchantment currently owned by any player. Modify their cards live with immediate cloud sync.</span>
+            </div>
+            <div id="adminInspectorUserStats" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px">
+              <span id="adminInspectorStatusBadge" style="background:rgba(100,116,139,0.2);color:#94a3b8;padding:2px 8px;border-radius:6px;font-weight:800">NO PLAYER SELECTED</span>
+              <span id="adminInspectorCardCount" style="color:#cbd5e1;font-weight:700">0 Cards</span>
+              <span id="adminInspectorFoilCount" style="color:#fde047;font-weight:700">0 Foils</span>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+            <div style="flex:2;min-width:200px">
+              <label style="font-size:11px;color:#94a3b8">Inspecting Player:</label>
+              <select id="adminInspectorPlayerSelect" class="adminSelect" style="margin:0"></select>
+            </div>
+            <div style="flex:2;min-width:220px">
+              <label style="font-size:11px;color:#94a3b8">Quick-Add Card to Binder:</label>
+              <div style="display:flex;gap:6px">
+                <select id="adminInspectorAddCardSelect" class="adminSelect" style="margin:0;flex:1"></select>
+                <button id="adminInspectorAddCardBtn" type="button" class="accountBtn" style="background:#059669;color:#fff;font-weight:900;padding:6px 12px;font-size:12px">➕ Add</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;padding-top:16px;flex-wrap:wrap">
+              <button id="adminInspectorAllGoldBtn" type="button" class="accountBtn" style="background:rgba(245,158,11,0.2);border-color:#f59e0b;color:#fde047;font-size:11px">✨ All Gold</button>
+              <button id="adminInspectorAllRainbowBtn" type="button" class="accountBtn" style="background:rgba(236,72,153,0.2);border-color:#ec4899;color:#f472b6;font-size:11px">🌈 All Rainbow</button>
+              <button id="adminInspectorClearFoilsBtn" type="button" class="accountBtn" style="background:#334155;color:#94a3b8;font-size:11px">🧹 Clear Foils</button>
+            </div>
+          </div>
+
+          <!-- Live Card Grid Container -->
+          <div id="adminInspectorCardsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;max-height:360px;overflow-y:auto;padding-right:4px;background:rgba(0,0,0,0.3);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06)">
+            <div style="grid-column:1/-1;text-align:center;padding:24px;color:#64748b">Select a player above to inspect their live inventory.</div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -628,6 +732,47 @@
           <button id="adminSaveLuckBtn" style="background:#10b981">Apply Luck Setting</button>
           <small style="color:#94a3b8">Applies to all booster pack openings across the platform.</small>
         </div>
+
+        <!-- SUMMONER RANK CONTROLLER & GLOBAL XP FRENZY -->
+        <div class="adminCard" style="grid-column:1 / -1;border:1px solid rgba(168,85,247,0.35);background:radial-gradient(circle at top, rgba(168,85,247,0.12), rgba(15,23,42,0.85))">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <h4 style="margin:0;color:#c084fc;display:flex;align-items:center;gap:6px">
+              <span>🌟</span> <span>Summoner Rank Controller & Global XP Frenzy</span>
+            </h4>
+            <span id="adminActiveXpFrenzyBadge" style="font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;background:#475569;color:#fff">NO ACTIVE XP FRENZY</span>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:6px 0 10px 0">
+            Set player Summoner Ranks & XP directly, or initiate a synchronized global XP Frenzy across all connected players with animated on-screen multipliers!
+          </p>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:center;margin-bottom:10px">
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Target Player:</label>
+              <select id="adminRankPlayerSelect" class="adminSelect" style="margin:0"></select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#94a3b8">Target Level (1-50):</label>
+              <input type="number" id="adminRankLevelInput" class="adminInput" min="1" max="50" value="15" style="margin:0">
+            </div>
+            <div style="padding-top:16px">
+              <button id="adminSetRankLevelBtn" type="button" class="accountBtn" style="width:100%;background:linear-gradient(135deg, #a855f7, #6366f1);color:#fff;font-weight:900;padding:10px;font-size:12px">
+                ⚡ Set Summoner Level
+              </button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:11px;font-weight:800;color:#cbd5e1">Timed XP Frenzy:</span>
+            <button id="adminLaunch3xXpBtn" type="button" class="accountBtn" style="background:rgba(245,158,11,0.2);border-color:#f59e0b;color:#fde047;font-size:11px">
+              🔥 5-Min 3x Global XP Surge
+            </button>
+            <button id="adminLaunch5xXpBtn" type="button" class="accountBtn" style="background:rgba(236,72,153,0.2);border-color:#ec4899;color:#f472b6;font-size:11px">
+              🌟 10-Min 5x Transcendent XP Frenzy
+            </button>
+            <button id="adminCancelXpBtn" type="button" class="accountBtn" style="background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fca5a5;font-size:11px">
+              🛑 Cancel XP Frenzy
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1314,6 +1459,52 @@
 
 
 
+    
+        <!-- MASTER AMBIENT SOUNDSCAPE & SYNTH JUKEBOX -->
+        <div class="adminCard" style="grid-column:1 / -1;border:1px solid rgba(6,182,212,0.35);background:radial-gradient(circle at top right, rgba(6,182,212,0.12), rgba(15,23,42,0.85))">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <h4 style="margin:0;color:#22d3ee;display:flex;align-items:center;gap:6px">
+              <span>🎵</span> <span>Master Ambient Soundscape & Synthwave Jukebox</span>
+            </h4>
+            <div style="display:flex;align-items:center;gap:12px">
+              <label style="font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;cursor:pointer">
+                <input type="checkbox" id="adminJukeboxBroadcastToggle" style="accent-color:#06b6d4;cursor:pointer">
+                <span style="font-weight:700;color:#67e8f9">📢 Broadcast Soundtrack to Realm</span>
+              </label>
+              <div style="display:flex;align-items:center;gap:4px">
+                <label style="font-size:11px;color:#94a3b8">Vol:</label>
+                <input type="range" id="adminJukeboxVolume" min="0" max="100" value="40" style="width:70px;accent-color:#06b6d4">
+              </div>
+            </div>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:6px 0 10px 0">
+            Procedural client-side audio synthesis using Web Audio API oscillators, stereo reverbs, and resonant filters. Stream atmospheric background soundtrack loops locally or to all connected peers!
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+            <button type="button" class="accountBtn adminJukeboxTrackBtn" data-track="cyberwave" style="background:rgba(6,182,212,0.15);border-color:#06b6d4;color:#67e8f9;padding:10px;font-size:12px;font-weight:700">
+              🌃 Cyber Synthwave
+            </button>
+            <button type="button" class="accountBtn adminJukeboxTrackBtn" data-track="bossbattle" style="background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5;padding:10px;font-size:12px;font-weight:700">
+              🌋 Hellfire Boss Battle
+            </button>
+            <button type="button" class="accountBtn adminJukeboxTrackBtn" data-track="celestial" style="background:rgba(168,85,247,0.15);border-color:#a855f7;color:#d8b4fe;padding:10px;font-size:12px;font-weight:700">
+              🌌 Celestial Orbit
+            </button>
+            <button type="button" class="accountBtn adminJukeboxTrackBtn" data-track="tavern" style="background:rgba(245,158,11,0.15);border-color:#f59e0b;color:#fcd34d;padding:10px;font-size:12px;font-weight:700">
+              🏰 Citadel Tavern
+            </button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;background:rgba(0,0,0,0.3);padding:8px 12px;border-radius:8px">
+            <span id="adminJukeboxStatusText" style="font-size:12px;color:#94a3b8">Current Track: None (Silent)</span>
+            <button id="adminJukeboxStopBtn" type="button" class="accountBtn" style="background:#334155;color:#f87171;font-size:11px;padding:6px 14px">
+              ⏹️ Silence Music
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <!-- TAB: GOD REALM & ARCADE -->
     <div class="admin-tab-content" id="tabGodRealm">
       <div class="adminGrid">
@@ -1694,6 +1885,43 @@
         </div>
       </div>
     </div>
+
+    <!-- TAB: REALM AUDIT LOG & LIVE ACTIVITY FEED -->
+    <div class="admin-tab-content" id="tabAuditLog">
+      <div class="adminCard" style="background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+          <div>
+            <h4 style="margin:0;color:#38bdf8;display:flex;align-items:center;gap:6px;font-size:16px">
+              <span>📜</span> Master Realm Audit Log & Live Activity Stream
+            </h4>
+            <span style="font-size:12px;color:#94a3b8">Real-time tamper-evident ledger tracking every moderation command, coin grant, card transfer, world event, and chaos invocation.</span>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button id="adminAuditExportJsonBtn" type="button" class="accountBtn" style="background:#0284c7;color:#fff;font-size:11px;padding:6px 12px;font-weight:700">📥 Export JSON</button>
+            <button id="adminAuditExportTxtBtn" type="button" class="accountBtn" style="background:#475569;color:#fff;font-size:11px;padding:6px 12px">📄 Export Text</button>
+            <button id="adminAuditClearBtn" type="button" class="accountBtn" style="background:#991b1b;color:#fca5a5;font-size:11px;padding:6px 12px">🗑️ Clear</button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+          <input type="text" id="adminAuditSearchInput" class="adminInput" placeholder="🔍 Search audit log by user, command, or keyword..." style="flex:2;margin:0;min-width:200px">
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button type="button" class="accountBtn auditCategoryPill active" data-cat="all" style="font-size:11px;padding:5px 10px">All</button>
+            <button type="button" class="accountBtn auditCategoryPill" data-cat="MODERATION" style="font-size:11px;padding:5px 10px;color:#f87171">🛡️ Mod</button>
+            <button type="button" class="accountBtn auditCategoryPill" data-cat="ECONOMY" style="font-size:11px;padding:5px 10px;color:#fde047">🪙 Economy</button>
+            <button type="button" class="accountBtn auditCategoryPill" data-cat="INVENTORY" style="font-size:11px;padding:5px 10px;color:#67e8f9">🃏 Cards</button>
+            <button type="button" class="accountBtn auditCategoryPill" data-cat="CHAOS" style="font-size:11px;padding:5px 10px;color:#e879f9">⚡ Chaos</button>
+            <button type="button" class="accountBtn auditCategoryPill" data-cat="AUDIO" style="font-size:11px;padding:5px 10px;color:#34d399">🎵 Audio</button>
+          </div>
+        </div>
+
+        <!-- Live Log Container -->
+        <div id="adminAuditFeedList" style="display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;font-family:monospace;font-size:12px">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 

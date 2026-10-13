@@ -172,6 +172,19 @@ function selectPlayerInAllAdminDropdowns(name){
   if(subInput) subInput.value = name;
   if(casinoInput) casinoInput.value = name;
 
+  const titleSel = document.getElementById("adminTitlePlayerSelect");
+  const titleInput = document.getElementById("adminTitlePlayerInput");
+  const inspectSel = document.getElementById("adminInspectorPlayerSelect");
+  const rankSel = document.getElementById("adminRankPlayerSelect");
+
+  if(titleSel) titleSel.value = name;
+  if(titleInput) titleInput.value = name;
+  if(inspectSel){
+    inspectSel.value = name;
+    if(typeof renderAdminInspector === "function") renderAdminInspector(name);
+  }
+  if(rankSel) rankSel.value = name;
+
   // Flash highlight target inputs for visual confirmation
   [skinInput, ecoInput, subInput, casinoInput].forEach(inp => {
     if(inp){
@@ -234,6 +247,18 @@ function refreshAdminPlayerData(){
   const casinoSelect = document.getElementById("chaosCasinoTargetSelect");
   const prevCasinoPlayer = casinoSelect ? casinoSelect.value : "";
   if(casinoSelect) casinoSelect.innerHTML = '<option value="">Select Target Beneficiary (Default: Yourself)...</option>';
+
+  const titleSelEl = document.getElementById("adminTitlePlayerSelect");
+  const prevTitlePlayer = titleSelEl ? titleSelEl.value : "";
+  if(titleSelEl) titleSelEl.innerHTML = '<option value="">Select Target Player...</option>';
+
+  const inspectSelEl = document.getElementById("adminInspectorPlayerSelect");
+  const prevInspectPlayer = inspectSelEl ? inspectSelEl.value : "";
+  if(inspectSelEl) inspectSelEl.innerHTML = '<option value="">Select Player to Inspect...</option>';
+
+  const rankSelEl = document.getElementById("adminRankPlayerSelect");
+  const prevRankPlayer = rankSelEl ? rankSelEl.value : "";
+  if(rankSelEl) rankSelEl.innerHTML = '<option value="">Select Target Player...</option>';
 
   if(playerSelect) playerSelect.innerHTML = '<option value="">Select Target Player...</option>';
   if(subAdminSelect) subAdminSelect.innerHTML = '<option value="">Select Player...</option>';
@@ -379,6 +404,27 @@ function refreshAdminPlayerData(){
       directBanSelectEl.appendChild(banOpt);
     }
 
+    if(titleSelEl){
+      const tOpt = document.createElement("option");
+      tOpt.value = name;
+      tOpt.textContent = `${name} [${statusText}]${data.customTitle ? ` (${data.customTitle})` : ""}`;
+      titleSelEl.appendChild(tOpt);
+    }
+
+    if(inspectSelEl){
+      const iOpt = document.createElement("option");
+      iOpt.value = name;
+      iOpt.textContent = `${name} [${statusText}] - ${(data.owned || []).length} cards`;
+      inspectSelEl.appendChild(iOpt);
+    }
+
+    if(rankSelEl){
+      const rOpt = document.createElement("option");
+      rOpt.value = name;
+      rOpt.textContent = `${name} [${statusText}] - Lv. ${data.summonerLevel || 1}`;
+      rankSelEl.appendChild(rOpt);
+    }
+
     // Auto-lift expired timed ban
     if(data.banned && data.banExpires && Date.now() >= data.banExpires){
       data.banned = false;
@@ -416,6 +462,7 @@ function refreshAdminPlayerData(){
       <td>🪙 ${(typeof formatCoins === "function") ? formatCoins(data.coins) : (isInfiniteValue(data.coins) ? "∞" : (data.coins || 0).toLocaleString())}</td>
       <td>${(data.owned || []).length} / ${cards.length}</td>
       <td style="white-space:nowrap">
+        <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#0284c7;color:#fff;margin-right:3px;font-weight:700" onclick="adminInspectPlayer('${name}')" title="Inspect player binder & deck live">🔍 Inspect</button>
         <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#6366f1;color:#fff;margin-right:3px" onclick="adminWhisperPlayerPrompt('${name}')" title="Send direct whisper to player">💬</button>
         <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#059669;color:#fff;margin-right:3px" onclick="quickGiftPlayerCardPrompt('${name}')" title="Gift a card to this player">🎁 Gift</button>
         <button type="button" class="accountBtn" style="padding:4px 6px;font-size:11px;background:#dc2626;color:#fff;margin-right:3px" onclick="quickRevokePlayerCardPrompt('${name}')" title="Take away a card from this player">❌ Take</button>
@@ -443,6 +490,22 @@ function refreshAdminPlayerData(){
   }
   if(prevCasinoPlayer && casinoSelect && Array.from(casinoSelect.options).some(o => o.value === prevCasinoPlayer)){
     casinoSelect.value = prevCasinoPlayer;
+  }
+  if(prevTitlePlayer && titleSelEl && Array.from(titleSelEl.options).some(o => o.value === prevTitlePlayer)){
+    titleSelEl.value = prevTitlePlayer;
+  }
+  if(prevRankPlayer && rankSelEl && Array.from(rankSelEl.options).some(o => o.value === prevRankPlayer)){
+    rankSelEl.value = prevRankPlayer;
+  }
+  if(inspectSelEl){
+    if(prevInspectPlayer && Array.from(inspectSelEl.options).some(o => o.value === prevInspectPlayer)){
+      inspectSelEl.value = prevInspectPlayer;
+    } else if(allNames.length > 0 && !inspectSelEl.value){
+      inspectSelEl.value = allNames[0];
+    }
+    if(inspectSelEl.value && typeof renderAdminInspector === "function"){
+      renderAdminInspector(inspectSelEl.value);
+    }
   }
 
   const casinoInputEl = document.getElementById("chaosCasinoTargetInput");
@@ -7573,3 +7636,865 @@ window.adminFoilPrompt = function(targetUser){
 
   refreshAdminPlayerData();
 };
+
+
+/* ========================================================
+   EXPANDED ADMIN SUITE: AUDIT LEDGER, INSPECTOR, PRESTIGE,
+   XP FRENZY & SYNTH SOUNDSCAPE ENGINE
+   ======================================================== */
+
+// --- 1. MASTER REALM AUDIT LOG & LIVE ACTIVITY FEED ---
+const MAX_AUDIT_LOGS = 250;
+let adminAuditLogs = [];
+try {
+  const storedAudit = localStorage.getItem("cardCollectorAuditLog");
+  if(storedAudit) adminAuditLogs = JSON.parse(storedAudit);
+  if(!Array.isArray(adminAuditLogs)) adminAuditLogs = [];
+} catch(e){
+  adminAuditLogs = [];
+}
+
+window.logAdminAudit = function(category, action, details = {}){
+  const actor = currentUser || "Master Cam";
+  const entry = {
+    id: "audit_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+    time: Date.now(),
+    dateStr: new Date().toLocaleTimeString(),
+    category: category.toUpperCase(), // MODERATION, ECONOMY, INVENTORY, PRESTIGE, EVENTS, CHAOS, AUDIO
+    actor: actor,
+    action: action,
+    details: details
+  };
+
+  adminAuditLogs.unshift(entry);
+  if(adminAuditLogs.length > MAX_AUDIT_LOGS){
+    adminAuditLogs = adminAuditLogs.slice(0, MAX_AUDIT_LOGS);
+  }
+
+  try {
+    localStorage.setItem("cardCollectorAuditLog", JSON.stringify(adminAuditLogs));
+  } catch(e){}
+
+  renderAdminAuditLogs();
+
+  // Mesh broadcast to peer admins if connected
+  if(typeof broadcastAdminActionToTarget === "function"){
+    try {
+      broadcastAdminActionToTarget("*", { type: "admin_audit_entry", entry });
+    } catch(e){}
+  }
+};
+
+let currentAuditFilterCategory = "all";
+
+window.renderAdminAuditLogs = function(){
+  const feed = document.getElementById("adminAuditFeedList");
+  if(!feed) return;
+
+  const searchInput = document.getElementById("adminAuditSearchInput");
+  const query = (searchInput ? searchInput.value.trim().toLowerCase() : "");
+
+  let filtered = adminAuditLogs.slice();
+  if(currentAuditFilterCategory !== "all"){
+    filtered = filtered.filter(item => item.category === currentAuditFilterCategory);
+  }
+  if(query){
+    filtered = filtered.filter(item => {
+      const matchText = `${item.category} ${item.actor} ${item.action} ${JSON.stringify(item.details)}`.toLowerCase();
+      return matchText.includes(query);
+    });
+  }
+
+  if(filtered.length === 0){
+    feed.innerHTML = '<div style="color:#64748b;text-align:center;padding:16px">No audit entries matching filter or query.</div>';
+    return;
+  }
+
+  feed.innerHTML = filtered.map(log => {
+    const detailParts = [];
+    if(log.details && typeof log.details === "object"){
+      for(const k in log.details){
+        detailParts.push(`${k}: <span style="color:#e2e8f0;font-weight:700">${log.details[k]}</span>`);
+      }
+    }
+    const detailStr = detailParts.length > 0 ? ` <span style="color:#94a3b8">(${detailParts.join(", ")})</span>` : "";
+
+    return `
+      <div class="audit-log-row audit-cat-${log.category}">
+        <span class="audit-time">[${log.dateStr}]</span>
+        <span class="audit-badge audit-badge-${log.category}">${log.category}</span>
+        <span class="audit-actor">${log.actor}</span>
+        <span style="color:#cbd5e1">${log.action}</span>
+        ${detailStr}
+      </div>
+    `;
+  }).join("");
+};
+
+// Wire Audit Log Controls
+document.querySelectorAll(".auditCategoryPill").forEach(pill => {
+  pill.addEventListener("click", () => {
+    document.querySelectorAll(".auditCategoryPill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    currentAuditFilterCategory = pill.getAttribute("data-cat");
+    renderAdminAuditLogs();
+  });
+});
+
+const auditSearchInput = document.getElementById("adminAuditSearchInput");
+if(auditSearchInput){
+  auditSearchInput.addEventListener("input", renderAdminAuditLogs);
+}
+
+const auditClearBtn = document.getElementById("adminAuditClearBtn");
+if(auditClearBtn){
+  auditClearBtn.addEventListener("click", () => {
+    if(!isMasterAdmin()) return alert("Only Master Admin Cam can purge the audit ledger.");
+    if(!confirm("Are you sure you want to clear the entire Master Audit Log?")) return;
+    adminAuditLogs = [];
+    localStorage.removeItem("cardCollectorAuditLog");
+    renderAdminAuditLogs();
+  });
+}
+
+const auditExportJsonBtn = document.getElementById("adminAuditExportJsonBtn");
+if(auditExportJsonBtn){
+  auditExportJsonBtn.addEventListener("click", () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(adminAuditLogs, null, 2));
+    const dlAnchor = document.createElement("a");
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `cardstack_audit_log_${Date.now()}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+  });
+}
+
+const auditExportTxtBtn = document.getElementById("adminAuditExportTxtBtn");
+if(auditExportTxtBtn){
+  auditExportTxtBtn.addEventListener("click", () => {
+    const lines = adminAuditLogs.map(l => `[${l.dateStr}] [${l.category}] ${l.actor}: ${l.action} ${JSON.stringify(l.details || {})}`);
+    const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent(lines.join("\n"));
+    const dlAnchor = document.createElement("a");
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `cardstack_audit_log_${Date.now()}.txt`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+  });
+}
+
+
+// --- 2. LIVE PLAYER BINDER & INVENTORY INSPECTOR ---
+window.adminInspectPlayer = function(username){
+  const inspectSel = document.getElementById("adminInspectorPlayerSelect");
+  if(inspectSel){
+    inspectSel.value = username;
+  }
+  renderAdminInspector(username);
+  // Switch to Player Manager tab if not already on it
+  const playersTabBtn = document.querySelector('.admin-tab-btn[data-tab="tabPlayers"]');
+  if(playersTabBtn) playersTabBtn.click();
+  const inspectCard = document.getElementById("adminInspectorCardsGrid");
+  if(inspectCard) inspectCard.scrollIntoView({ behavior: "smooth", block: "center" });
+};
+
+window.renderAdminInspector = function(targetUser){
+  const grid = document.getElementById("adminInspectorCardsGrid");
+  const addSelect = document.getElementById("adminInspectorAddCardSelect");
+  const statsBadge = document.getElementById("adminInspectorStatusBadge");
+  const cardCountEl = document.getElementById("adminInspectorCardCount");
+  const foilCountEl = document.getElementById("adminInspectorFoilCount");
+  if(!grid) return;
+
+  if(!targetUser){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#64748b">Select a player above to inspect their live inventory.</div>';
+    if(statsBadge) statsBadge.textContent = "NO PLAYER SELECTED";
+    return;
+  }
+
+  const acc = accounts[targetUser] || {};
+  const isOnline = isAccountOnline(targetUser);
+  const ownedList = Array.isArray(acc.owned) ? acc.owned.map(x => parseInt(x, 10)).filter(n => !isNaN(n)) : [];
+  const goldList = Array.isArray(acc.goldCards) ? acc.goldCards.map(x => parseInt(x, 10)) : [];
+  const rainbowList = Array.isArray(acc.rainbowCards) ? acc.rainbowCards.map(x => parseInt(x, 10)) : [];
+  const totalFoils = goldList.length + rainbowList.length;
+
+  if(statsBadge){
+    statsBadge.textContent = `${targetUser} (${isOnline ? "🟢 ONLINE" : "⚪ OFFLINE"})`;
+    statsBadge.style.color = isOnline ? "#4ade80" : "#94a3b8";
+    statsBadge.style.background = isOnline ? "rgba(74,222,128,0.15)" : "rgba(100,116,139,0.2)";
+  }
+  if(cardCountEl) cardCountEl.textContent = `${ownedList.length} Cards Owned`;
+  if(foilCountEl) foilCountEl.textContent = `${totalFoils} Foils (${goldList.length} Gold, ${rainbowList.length} Rainbow)`;
+
+  // Populate quick-add dropdown with all available cards
+  if(addSelect && addSelect.options.length <= 1){
+    addSelect.innerHTML = '<option value="">-- Choose Card to Add --</option>';
+    if(typeof cards !== "undefined" && Array.isArray(cards)){
+      cards.forEach((c, idx) => {
+        const opt = document.createElement("option");
+        opt.value = idx;
+        opt.textContent = `#${idx} ${c.name} [${c.rarity}]`;
+        addSelect.appendChild(opt);
+      });
+    }
+  }
+
+  if(ownedList.length === 0){
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:24px;color:#64748b">[${targetUser}] currently owns 0 cards. Use Quick-Add above to grant cards!</div>`;
+    return;
+  }
+
+  grid.innerHTML = ownedList.map(cardIdx => {
+    const card = (typeof cards !== "undefined" && cards[cardIdx]) ? cards[cardIdx] : { name: `Card #${cardIdx}`, rarity: "common", hp: 80, image: "" };
+    const isGold = goldList.includes(cardIdx);
+    const isRainbow = rainbowList.includes(cardIdx);
+    const cardKey = card.id || card.name;
+    const enchantKey = (acc.cardEnchantments && acc.cardEnchantments[cardKey]) || "";
+
+    return `
+      <div class="admin-inspector-card-tile">
+        <div class="admin-inspector-card-header">
+          <img src="${card.image || ''}" class="admin-inspector-thumb" alt="${card.name}">
+          <div class="admin-inspector-info">
+            <div class="admin-inspector-name" title="${card.name}">${card.name}</div>
+            <div class="admin-inspector-meta">
+              <span style="color:#38bdf8">#${cardIdx}</span>
+              <span style="color:#e2e8f0">[${card.rarity}]</span>
+              ${enchantKey ? `<span style="color:#a855f7">(${enchantKey})</span>` : ""}
+            </div>
+          </div>
+        </div>
+        <div class="admin-inspector-actions">
+          <button type="button" class="accountBtn admin-inspector-btn ${isGold ? 'active-gold' : ''}" onclick="togglePlayerCardFoil('${targetUser}', ${cardIdx}, 'gold')" title="Toggle 24K Gold Edition">
+            ${isGold ? '✨ Gold' : 'Gold'}
+          </button>
+          <button type="button" class="accountBtn admin-inspector-btn ${isRainbow ? 'active-rainbow' : ''}" onclick="togglePlayerCardFoil('${targetUser}', ${cardIdx}, 'rainbow')" title="Toggle Prismatic Rainbow Edition">
+            ${isRainbow ? '🌈 Rainbow' : 'Rainbow'}
+          </button>
+          <button type="button" class="accountBtn admin-inspector-btn" style="background:#7f1d1d;color:#fca5a5" onclick="revokePlayerCardFromInspector('${targetUser}', ${cardIdx})" title="Remove card from player inventory">
+            ❌
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+};
+
+window.togglePlayerCardFoil = function(targetUser, cardIdx, foilType){
+  const acc = accounts[targetUser];
+  if(!acc) return;
+  if(!Array.isArray(acc.goldCards)) acc.goldCards = [];
+  if(!Array.isArray(acc.rainbowCards)) acc.rainbowCards = [];
+
+  if(foilType === "gold"){
+    if(acc.goldCards.includes(cardIdx)){
+      acc.goldCards = acc.goldCards.filter(x => x !== cardIdx);
+      logAdminAudit("PRESTIGE", `Removed Gold foil for card #${cardIdx} from [${targetUser}]`, { user: targetUser, cardIdx });
+    } else {
+      acc.goldCards.push(cardIdx);
+      logAdminAudit("PRESTIGE", `Granted Gold foil for card #${cardIdx} to [${targetUser}]`, { user: targetUser, cardIdx });
+    }
+  } else if(foilType === "rainbow"){
+    if(acc.rainbowCards.includes(cardIdx)){
+      acc.rainbowCards = acc.rainbowCards.filter(x => x !== cardIdx);
+      logAdminAudit("PRESTIGE", `Removed Rainbow foil for card #${cardIdx} from [${targetUser}]`, { user: targetUser, cardIdx });
+    } else {
+      acc.rainbowCards.push(cardIdx);
+      logAdminAudit("PRESTIGE", `Granted Rainbow foil for card #${cardIdx} to [${targetUser}]`, { user: targetUser, cardIdx });
+    }
+  }
+
+  acc.lastAdminActionTime = Date.now();
+  acc.adminRevision = (acc.adminRevision || 0) + 1;
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+  if(targetUser === currentUser){
+    if(typeof goldCards !== "undefined") window.goldCards = acc.goldCards;
+    if(typeof rainbowCards !== "undefined") window.rainbowCards = acc.rainbowCards;
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+  }
+
+  renderAdminInspector(targetUser);
+};
+
+window.revokePlayerCardFromInspector = function(targetUser, cardIdx){
+  if(!isMasterAdmin()) return alert("Only Master Admin Cam can revoke cards.");
+  const acc = accounts[targetUser];
+  if(!acc || !Array.isArray(acc.owned)) return;
+
+  const cardName = (typeof cards !== "undefined" && cards[cardIdx]) ? cards[cardIdx].name : `Card #${cardIdx}`;
+  if(!confirm(`Revoke "${cardName}" from [${targetUser}]?`)) return;
+
+  acc.owned = acc.owned.filter(x => parseInt(x, 10) !== cardIdx);
+  if(Array.isArray(acc.goldCards)) acc.goldCards = acc.goldCards.filter(x => parseInt(x, 10) !== cardIdx);
+  if(Array.isArray(acc.rainbowCards)) acc.rainbowCards = acc.rainbowCards.filter(x => parseInt(x, 10) !== cardIdx);
+
+  acc.lastAdminActionTime = Date.now();
+  acc.adminRevision = (acc.adminRevision || 0) + 1;
+  localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+  if(targetUser === currentUser){
+    if(typeof owned !== "undefined") window.owned = acc.owned;
+    if(typeof save === "function") save();
+    if(typeof render === "function") render();
+  }
+
+  logAdminAudit("INVENTORY", `Revoked card #${cardIdx} (${cardName}) from [${targetUser}]`, { user: targetUser, card: cardName });
+  renderAdminInspector(targetUser);
+  refreshAdminPlayerData();
+};
+
+const inspectorSelect = document.getElementById("adminInspectorPlayerSelect");
+if(inspectorSelect){
+  inspectorSelect.addEventListener("change", () => {
+    renderAdminInspector(inspectorSelect.value);
+  });
+}
+
+const inspectorAddCardBtn = document.getElementById("adminInspectorAddCardBtn");
+if(inspectorAddCardBtn){
+  inspectorAddCardBtn.addEventListener("click", () => {
+    const targetUser = inspectorSelect ? inspectorSelect.value : "";
+    const addSelect = document.getElementById("adminInspectorAddCardSelect");
+    if(!targetUser) return alert("Select a player to add a card to.");
+    if(!addSelect || addSelect.value === "") return alert("Select a card from the dropdown.");
+
+    const cardIdx = parseInt(addSelect.value, 10);
+    if(isNaN(cardIdx)) return;
+
+    const acc = accounts[targetUser];
+    if(!acc) return alert(`Account [${targetUser}] not found.`);
+    if(!Array.isArray(acc.owned)) acc.owned = [];
+
+    if(!acc.owned.includes(cardIdx)){
+      acc.owned.push(cardIdx);
+      acc.lastAdminActionTime = Date.now();
+      acc.adminRevision = (acc.adminRevision || 0) + 1;
+      localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+      if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+      if(targetUser === currentUser){
+        if(typeof owned !== "undefined") window.owned = acc.owned;
+        if(typeof save === "function") save();
+        if(typeof render === "function") render();
+      }
+
+      const cName = (typeof cards !== "undefined" && cards[cardIdx]) ? cards[cardIdx].name : `#${cardIdx}`;
+      logAdminAudit("INVENTORY", `Added card #${cardIdx} (${cName}) to [${targetUser}]`, { user: targetUser, card: cName });
+      renderAdminInspector(targetUser);
+      refreshAdminPlayerData();
+    } else {
+      alert(`[${targetUser}] already possesses this card.`);
+    }
+  });
+}
+
+const inspectorAllGoldBtn = document.getElementById("adminInspectorAllGoldBtn");
+if(inspectorAllGoldBtn){
+  inspectorAllGoldBtn.addEventListener("click", () => {
+    const targetUser = inspectorSelect ? inspectorSelect.value : "";
+    if(!targetUser || !accounts[targetUser]) return alert("Select a player first.");
+    const acc = accounts[targetUser];
+    const ownedList = Array.isArray(acc.owned) ? acc.owned : [];
+    if(ownedList.length === 0) return alert("Player has no cards to upgrade.");
+
+    acc.goldCards = Array.from(new Set([...(acc.goldCards || []), ...ownedList]));
+    acc.lastAdminActionTime = Date.now();
+    acc.adminRevision = (acc.adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+    if(targetUser === currentUser){
+      if(typeof goldCards !== "undefined") window.goldCards = acc.goldCards;
+      if(typeof save === "function") save();
+      if(typeof render === "function") render();
+    }
+
+    logAdminAudit("PRESTIGE", `Upgraded all ${ownedList.length} cards to 24K Gold for [${targetUser}]`, { user: targetUser });
+    renderAdminInspector(targetUser);
+  });
+}
+
+const inspectorAllRainbowBtn = document.getElementById("adminInspectorAllRainbowBtn");
+if(inspectorAllRainbowBtn){
+  inspectorAllRainbowBtn.addEventListener("click", () => {
+    const targetUser = inspectorSelect ? inspectorSelect.value : "";
+    if(!targetUser || !accounts[targetUser]) return alert("Select a player first.");
+    const acc = accounts[targetUser];
+    const ownedList = Array.isArray(acc.owned) ? acc.owned : [];
+    if(ownedList.length === 0) return alert("Player has no cards to upgrade.");
+
+    acc.rainbowCards = Array.from(new Set([...(acc.rainbowCards || []), ...ownedList]));
+    acc.lastAdminActionTime = Date.now();
+    acc.adminRevision = (acc.adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+    if(targetUser === currentUser){
+      if(typeof rainbowCards !== "undefined") window.rainbowCards = acc.rainbowCards;
+      if(typeof save === "function") save();
+      if(typeof render === "function") render();
+    }
+
+    logAdminAudit("PRESTIGE", `Upgraded all ${ownedList.length} cards to Prismatic Rainbow for [${targetUser}]`, { user: targetUser });
+    renderAdminInspector(targetUser);
+  });
+}
+
+const inspectorClearFoilsBtn = document.getElementById("adminInspectorClearFoilsBtn");
+if(inspectorClearFoilsBtn){
+  inspectorClearFoilsBtn.addEventListener("click", () => {
+    const targetUser = inspectorSelect ? inspectorSelect.value : "";
+    if(!targetUser || !accounts[targetUser]) return alert("Select a player first.");
+    if(!confirm(`Clear all Gold and Rainbow foil editions for [${targetUser}]?`)) return;
+
+    const acc = accounts[targetUser];
+    acc.goldCards = [];
+    acc.rainbowCards = [];
+    acc.lastAdminActionTime = Date.now();
+    acc.adminRevision = (acc.adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+    if(targetUser === currentUser){
+      if(typeof goldCards !== "undefined") window.goldCards = [];
+      if(typeof rainbowCards !== "undefined") window.rainbowCards = [];
+      if(typeof save === "function") save();
+      if(typeof render === "function") render();
+    }
+
+    logAdminAudit("PRESTIGE", `Cleared all foil editions for [${targetUser}]`, { user: targetUser });
+    renderAdminInspector(targetUser);
+  });
+}
+
+
+// --- 3. PRESTIGE TITLE & NAME GLOW STUDIO ---
+const grantTitleBtn = document.getElementById("adminGrantTitleBtn");
+if(grantTitleBtn){
+  grantTitleBtn.addEventListener("click", () => {
+    const targetInput = document.getElementById("adminTitlePlayerInput");
+    const targetSelect = document.getElementById("adminTitlePlayerSelect");
+    const targetUser = (targetInput && targetInput.value.trim()) || (targetSelect ? targetSelect.value : "");
+    if(!targetUser) return alert("Select or type target player username.");
+
+    const presetSelect = document.getElementById("adminTitlePresetSelect");
+    const customInput = document.getElementById("adminTitleCustomInput");
+    const titleText = (customInput && customInput.value.trim()) || (presetSelect ? presetSelect.value : "");
+    if(!titleText) return alert("Select a title preset or enter custom title text.");
+
+    const colorSelect = document.getElementById("adminTitleColorSelect");
+    const customColor = document.getElementById("adminTitleCustomColorPicker");
+    let chosenColor = colorSelect ? colorSelect.value : "#f59e0b";
+    if(customColor && customColor.value && chosenColor !== "rainbow"){
+      chosenColor = customColor.value;
+    }
+
+    if(!accounts[targetUser]){
+      accounts[targetUser] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+    }
+
+    accounts[targetUser].customTitle = titleText;
+    accounts[targetUser].customTitleColor = chosenColor;
+    accounts[targetUser].lastAdminActionTime = Date.now();
+    accounts[targetUser].adminRevision = (accounts[targetUser].adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+    if(targetUser === currentUser){
+      if(typeof updateSummonerRankBadge === "function") updateSummonerRankBadge();
+    }
+
+    logAdminAudit("PRESTIGE", `Bestowed Prestige Title "${titleText}" (${chosenColor}) to [${targetUser}]`, { user: targetUser, title: titleText, color: chosenColor });
+    alert(`👑 Bestowed Prestige Title "${titleText}" to [${targetUser}]!`);
+    refreshAdminPlayerData();
+  });
+}
+
+const revokeTitleBtn = document.getElementById("adminRevokeTitleBtn");
+if(revokeTitleBtn){
+  revokeTitleBtn.addEventListener("click", () => {
+    const targetInput = document.getElementById("adminTitlePlayerInput");
+    const targetSelect = document.getElementById("adminTitlePlayerSelect");
+    const targetUser = (targetInput && targetInput.value.trim()) || (targetSelect ? targetSelect.value : "");
+    if(!targetUser || !accounts[targetUser]) return alert("Select a valid target player.");
+
+    delete accounts[targetUser].customTitle;
+    delete accounts[targetUser].customTitleColor;
+    accounts[targetUser].lastAdminActionTime = Date.now();
+    accounts[targetUser].adminRevision = (accounts[targetUser].adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+    if(targetUser === currentUser){
+      if(typeof updateSummonerRankBadge === "function") updateSummonerRankBadge();
+    }
+
+    logAdminAudit("PRESTIGE", `Revoked Prestige Title from [${targetUser}]`, { user: targetUser });
+    alert(`Revoked title from [${targetUser}]. Standard level rank title restored.`);
+    refreshAdminPlayerData();
+  });
+}
+
+
+// --- 4. SUMMONER RANK CONTROLLER & GLOBAL XP FRENZY ---
+const setRankBtn = document.getElementById("adminSetRankLevelBtn");
+if(setRankBtn){
+  setRankBtn.addEventListener("click", () => {
+    const targetSelect = document.getElementById("adminRankPlayerSelect");
+    const levelInput = document.getElementById("adminRankLevelInput");
+    const targetUser = targetSelect ? targetSelect.value : "";
+    if(!targetUser || !accounts[targetUser]) return alert("Select a target player.");
+
+    const lvl = parseInt(levelInput ? levelInput.value : 1, 10);
+    if(isNaN(lvl) || lvl < 1 || lvl > 50) return alert("Summoner Level must be between 1 and 50.");
+
+    accounts[targetUser].summonerLevel = lvl;
+    accounts[targetUser].summonerXp = (lvl - 1) * 350 + 10;
+    accounts[targetUser].lastAdminActionTime = Date.now();
+    accounts[targetUser].adminRevision = (accounts[targetUser].adminRevision || 0) + 1;
+    localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+    if(typeof syncAccountToCloud === "function") syncAccountToCloud(targetUser, true, true);
+
+    if(targetUser === currentUser){
+      if(typeof updateSummonerRankBadge === "function") updateSummonerRankBadge();
+    }
+
+    logAdminAudit("PRESTIGE", `Set Summoner Level to Lv. ${lvl} for [${targetUser}]`, { user: targetUser, level: lvl });
+    alert(`⚡ Summoner Level updated to Lv. ${lvl} for [${targetUser}]!`);
+    refreshAdminPlayerData();
+  });
+}
+
+function triggerXpFrenzy(multiplier, durationMinutes, title){
+  const expiresAt = Date.now() + durationMinutes * 60 * 1000;
+  const frenzyData = {
+    multiplier: multiplier,
+    durationMinutes: durationMinutes,
+    expiresAt: expiresAt,
+    activatedBy: currentUser || "Master Cam",
+    title: title
+  };
+
+  localStorage.setItem("cardCollectorXpFrenzy", JSON.stringify(frenzyData));
+  if(typeof updateXpFrenzyBanner === "function") updateXpFrenzyBanner();
+  if(typeof playChaosSfx === "function") playChaosSfx("ascension");
+
+  if(typeof broadcastAdminActionToTarget === "function"){
+    broadcastAdminActionToTarget("*", { type: "xp_frenzy_activated", frenzy: frenzyData });
+  }
+
+  logAdminAudit("EVENTS", `Initiated ${multiplier}x Global XP Frenzy for ${durationMinutes} minutes`, frenzyData);
+  if(typeof showLiveToast === "function"){
+    showLiveToast(`🌟 <b>${multiplier}X GLOBAL XP FRENZY INITIATED!</b> All pack openings & arena duels grant massive bonus XP!`, true);
+  }
+}
+
+const launch3xXpBtn = document.getElementById("adminLaunch3xXpBtn");
+if(launch3xXpBtn){
+  launch3xXpBtn.addEventListener("click", () => {
+    triggerXpFrenzy(3, 5, "5-Min 3x Global XP Surge");
+  });
+}
+
+const launch5xXpBtn = document.getElementById("adminLaunch5xXpBtn");
+if(launch5xXpBtn){
+  launch5xXpBtn.addEventListener("click", () => {
+    triggerXpFrenzy(5, 10, "10-Min 5x Transcendent XP Frenzy");
+  });
+}
+
+const cancelXpBtn = document.getElementById("adminCancelXpBtn");
+if(cancelXpBtn){
+  cancelXpBtn.addEventListener("click", () => {
+    localStorage.removeItem("cardCollectorXpFrenzy");
+    if(typeof updateXpFrenzyBanner === "function") updateXpFrenzyBanner();
+    logAdminAudit("EVENTS", "Cancelled active Global XP Frenzy");
+    alert("Global XP Frenzy has been deactivated.");
+  });
+}
+
+
+// --- 5. MASTER AMBIENT SOUNDSCAPE & SYNTH JUKEBOX ENGINE ---
+let activeJukeboxNodes = [];
+let jukeboxIntervalId = null;
+let currentJukeboxTrack = null;
+
+function stopJukeboxAudio(){
+  if(jukeboxIntervalId){
+    clearInterval(jukeboxIntervalId);
+    jukeboxIntervalId = null;
+  }
+  activeJukeboxNodes.forEach(node => {
+    try {
+      if(node.stop) node.stop();
+      if(node.disconnect) node.disconnect();
+    } catch(e){}
+  });
+  activeJukeboxNodes = [];
+  currentJukeboxTrack = null;
+
+  const statusEl = document.getElementById("adminJukeboxStatusText");
+  if(statusEl) statusEl.textContent = "Current Track: None (Silent)";
+
+  document.querySelectorAll(".adminJukeboxTrackBtn").forEach(btn => {
+    btn.style.boxShadow = "none";
+    btn.style.filter = "brightness(1)";
+  });
+}
+window.stopJukeboxAudio = stopJukeboxAudio;
+
+function playProceduralSoundscape(trackType){
+  stopJukeboxAudio();
+
+  const ctx = (typeof getChaosAudioCtx === "function") ? getChaosAudioCtx() : null;
+  if(!ctx) return;
+
+  const volSlider = document.getElementById("adminJukeboxVolume");
+  const baseVol = volSlider ? (parseInt(volSlider.value, 10) / 100) * 0.18 : 0.08;
+  currentJukeboxTrack = trackType;
+
+  const statusEl = document.getElementById("adminJukeboxStatusText");
+  const trackLabels = {
+    cyberwave: "🌃 Cyber Synthwave (118 BPM Electro Loop)",
+    bossbattle: "🌋 Hellfire Boss Battle (Aggressive Drone & Pulse)",
+    celestial: "🌌 Celestial Orbit (Ethereal Ambient Space Chords)",
+    tavern: "🏰 Citadel Tavern (Lively Medieval Folk Groove)"
+  };
+  if(statusEl) statusEl.textContent = `Current Track: ${trackLabels[trackType] || trackType}`;
+
+  // Highlight active button
+  document.querySelectorAll(".adminJukeboxTrackBtn").forEach(btn => {
+    if(btn.getAttribute("data-track") === trackType){
+      btn.style.boxShadow = "0 0 15px rgba(6, 182, 212, 0.7)";
+      btn.style.filter = "brightness(1.2)";
+    } else {
+      btn.style.boxShadow = "none";
+      btn.style.filter = "brightness(0.85)";
+    }
+  });
+
+  const masterMusicGain = ctx.createGain();
+  masterMusicGain.gain.setValueAtTime(baseVol, ctx.currentTime);
+  masterMusicGain.connect(ctx.destination);
+  activeJukeboxNodes.push(masterMusicGain);
+
+  if(trackType === "celestial"){
+    // Lush shifting celestial chord pads (C Major 9 / A Minor 9 chords)
+    const freqs = [130.81, 196.00, 246.94, 329.63, 392.00, 523.25];
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+
+      osc.type = idx % 2 === 0 ? "sine" : "triangle";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+      // Subtle slow frequency vibrato LFO
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.setValueAtTime(0.2 + idx * 0.05, ctx.currentTime);
+      lfoGain.gain.setValueAtTime(2.5, ctx.currentTime);
+      lfo.connect(osc.frequency);
+      lfo.start();
+      activeJukeboxNodes.push(lfo);
+
+      oscGain.gain.setValueAtTime(0.12, ctx.currentTime);
+      osc.connect(oscGain);
+
+      if(panner){
+        panner.pan.setValueAtTime((idx / freqs.length) * 1.6 - 0.8, ctx.currentTime);
+        oscGain.connect(panner);
+        panner.connect(masterMusicGain);
+      } else {
+        oscGain.connect(masterMusicGain);
+      }
+
+      osc.start();
+      activeJukeboxNodes.push(osc);
+    });
+
+  } else if(trackType === "cyberwave"){
+    // Cyberpunk synthwave bassline sequencer + bright arpeggio
+    const bassScale = [65.41, 73.42, 82.41, 87.31, 98.00, 110.00]; // Low C/D/E/F/G/A
+    const leadScale = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99]; // Arp notes
+    let step = 0;
+
+    jukeboxIntervalId = setInterval(() => {
+      if(!ctx || ctx.state === "suspended") return;
+      const now = ctx.currentTime;
+
+      // 1. Synth Bass note
+      const bassFreq = bassScale[step % bassScale.length];
+      const bassOsc = ctx.createOscillator();
+      const bassGain = ctx.createGain();
+      const bassFilter = ctx.createBiquadFilter();
+
+      bassOsc.type = "sawtooth";
+      bassOsc.frequency.setValueAtTime(bassFreq, now);
+
+      bassFilter.type = "lowpass";
+      bassFilter.frequency.setValueAtTime(600, now);
+      bassFilter.frequency.exponentialRampToValueAtTime(140, now + 0.18);
+
+      bassGain.gain.setValueAtTime(0.25, now);
+      bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+      bassOsc.connect(bassFilter);
+      bassFilter.connect(bassGain);
+      bassGain.connect(masterMusicGain);
+
+      bassOsc.start(now);
+      bassOsc.stop(now + 0.24);
+
+      // 2. High Cyber Arp note
+      if(step % 2 === 0){
+        const leadFreq = leadScale[(step * 3) % leadScale.length];
+        const leadOsc = ctx.createOscillator();
+        const leadGain = ctx.createGain();
+
+        leadOsc.type = "square";
+        leadOsc.frequency.setValueAtTime(leadFreq, now);
+
+        leadGain.gain.setValueAtTime(0.08, now);
+        leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+        leadOsc.connect(leadGain);
+        leadGain.connect(masterMusicGain);
+
+        leadOsc.start(now);
+        leadOsc.stop(now + 0.16);
+      }
+
+      step++;
+    }, 135);
+
+  } else if(trackType === "bossbattle"){
+    // Heavy detuned Sawtooth Drone + Menacing Sub-Bass Pulses
+    const droneFreqs = [55.00, 55.45, 110.00, 164.81]; // Dark detuned A1/A2
+    droneFreqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      const distFilter = ctx.createBiquadFilter();
+
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+      distFilter.type = "lowpass";
+      distFilter.frequency.setValueAtTime(450, ctx.currentTime);
+      distFilter.Q.setValueAtTime(4, ctx.currentTime);
+
+      oscGain.gain.setValueAtTime(0.18, ctx.currentTime);
+
+      osc.connect(distFilter);
+      distFilter.connect(oscGain);
+      oscGain.connect(masterMusicGain);
+
+      osc.start();
+      activeJukeboxNodes.push(osc);
+    });
+
+    let pulseStep = 0;
+    jukeboxIntervalId = setInterval(() => {
+      if(!ctx || ctx.state === "suspended") return;
+      const now = ctx.currentTime;
+
+      // Heavy bass drum impact thud
+      const kickOsc = ctx.createOscillator();
+      const kickGain = ctx.createGain();
+      kickOsc.type = "sine";
+      kickOsc.frequency.setValueAtTime(120, now);
+      kickOsc.frequency.exponentialRampToValueAtTime(32, now + 0.28);
+
+      kickGain.gain.setValueAtTime(0.45, now);
+      kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+      kickOsc.connect(kickGain);
+      kickGain.connect(masterMusicGain);
+
+      kickOsc.start(now);
+      kickOsc.stop(now + 0.32);
+      pulseStep++;
+    }, 420);
+
+  } else if(trackType === "tavern"){
+    // Upbeat tavern flute / lute arpeggios
+    const tavernNotes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25];
+    let noteIdx = 0;
+    jukeboxIntervalId = setInterval(() => {
+      if(!ctx || ctx.state === "suspended") return;
+      const now = ctx.currentTime;
+      const freq = tavernNotes[(noteIdx * 2 + Math.floor(noteIdx / 4)) % tavernNotes.length];
+
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now);
+
+      oscGain.gain.setValueAtTime(0.18, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+      osc.connect(oscGain);
+      oscGain.connect(masterMusicGain);
+
+      osc.start(now);
+      osc.stop(now + 0.2);
+      noteIdx++;
+    }, 180);
+  }
+
+  // Check if broadcast to realm peers is requested
+  const broadcastToggle = document.getElementById("adminJukeboxBroadcastToggle");
+  if(broadcastToggle && broadcastToggle.checked){
+    if(typeof broadcastAdminActionToTarget === "function"){
+      broadcastAdminActionToTarget("*", { type: "admin_ambient_track", track: trackType });
+    }
+    logAdminAudit("AUDIO", `Broadcasted Ambient Soundtrack "${trackType}" to all connected players in the realm`, { track: trackType });
+  } else {
+    logAdminAudit("AUDIO", `Playing local Ambient Soundtrack "${trackType}"`, { track: trackType });
+  }
+}
+window.playProceduralSoundscape = playProceduralSoundscape;
+
+document.querySelectorAll(".adminJukeboxTrackBtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const track = btn.getAttribute("data-track");
+    playProceduralSoundscape(track);
+  });
+});
+
+const stopJukeboxBtn = document.getElementById("adminJukeboxStopBtn");
+if(stopJukeboxBtn){
+  stopJukeboxBtn.addEventListener("click", () => {
+    stopJukeboxAudio();
+    const broadcastToggle = document.getElementById("adminJukeboxBroadcastToggle");
+    if(broadcastToggle && broadcastToggle.checked){
+      if(typeof broadcastAdminActionToTarget === "function"){
+        broadcastAdminActionToTarget("*", { type: "admin_ambient_stop" });
+      }
+      logAdminAudit("AUDIO", "Silenced Realm Ambient Soundtrack across all connected players");
+    } else {
+      logAdminAudit("AUDIO", "Silenced local Ambient Soundtrack");
+    }
+  });
+}
+
+// Receive broadcasted ambient tracks from peer admins
+window.addEventListener("cardstackPeerMessage", (e) => {
+  if(!e || !e.detail) return;
+  const data = e.detail;
+  if(data.type === "admin_ambient_track" && data.track){
+    playProceduralSoundscape(data.track);
+  } else if(data.type === "admin_ambient_stop"){
+    stopJukeboxAudio();
+  } else if(data.type === "admin_audit_entry" && data.entry){
+    adminAuditLogs.unshift(data.entry);
+    if(adminAuditLogs.length > MAX_AUDIT_LOGS) adminAuditLogs.pop();
+    renderAdminAuditLogs();
+  }
+});

@@ -93,8 +93,20 @@ Cardstack/
   2. **Custom Match (PVP)**: Decentralized 1v1 multiplayer using a 6-digit room code over WebRTC via PeerJS, supported by Google STUN servers (`stun:stun.l.google.com:19302`) and a local `BroadcastChannel` bridge for same-machine/multi-tab instantaneous dueling. Supports attack sync, live HP updates, animations, forfeit detection, disconnect handling, and rematch negotiation.
 
 ### C. Admin Hub Suite & Creator Studio
-1. `👥 Player Manager`: Grant/revoke card skins, unlock all cards, wipe player cards, and manage registered accounts via dropdown or typed username.
-2. `🪙 Economy & RNG`: Gift coins, set exact coin balances, drain accounts, deposit master coins, and adjust pack luck RNG multipliers (1x–10x) via dropdown or typed username.
+1. `👥 Player Manager & Live Binder Inspector`:
+   - **Gift & Revoke Dispatcher**: Grant/revoke cards and vault skins, unlock all cards, wipe cards, and ban/unban with custom banners and timers.
+   - **🔍 Live Player Binder & Inventory Inspector**: Live visual card grid inspecting any player's full collection inside the Admin Hub. Features on-card Gold / Rainbow foil toggles, enchantment viewer, single-card revocation, quick-add card selector, and bulk foil upgrade/clear utilities with instant cloud sync.
+   - **👑 Player Prestige Title & Name Glow Studio**: Bestow custom prestigious titles (e.g. `👑 Realm Sovereign`, `⚡ Thunder God`, `🐉 Dragon Knight`, `💎 Master Collector`, `🔥 Hellfire Archmage`) with glowing accent colors (`#f59e0b`, `#a855f7`, `#06b6d4`, `#10b981`, `#ef4444`, or `🌈 Rainbow gradient`) displayed on player summoner badges and rosters.
+2. `🪙 Economy & RNG`:
+   - Gift coins, set exact coin balances, drain accounts, deposit master coins, and adjust pack luck RNG multipliers (1x–10x).
+   - **🌟 Summoner Rank Controller & Global XP Frenzy**: Set any player's Summoner Level directly (Lv 1–50) and launch synchronized timed Global XP Frenzies (`🔥 5-Min 3x Global XP Surge` or `🌟 10-Min 5x Transcendent XP Frenzy`) with real-time countdown banners boosting XP gains from packs and arena duels.
+3. `📜 Master Realm Audit Log & Live Activity Stream`:
+   - Tamper-evident administrative ledger tracking moderation commands, coin modifications, card transfers, foil upgrades, title bestowals, world events, and chaos lab activations.
+   - Includes real-time search, category filter pills (`ALL`, `MOD`, `ECONOMY`, `CARDS`, `CHAOS`, `AUDIO`), Clear Log, and instant JSON / Text export.
+4. `🎵 Master Ambient Soundscape & Synthwave Jukebox` (in `⚡ Chaos Lab`):
+   - Built directly on the Web Audio API with oscillators, filters, and stereo convolution reverb.
+   - 4 procedural synth tracks: *🌃 Cyber Synthwave*, *🌋 Hellfire Boss Battle*, *🌌 Celestial Orbit*, and *🏰 Citadel Tavern*.
+   - Features volume control, stop controls, and a toggle to broadcast ambient music across the realm to all connected peers.
 3. `🎨 Card Studio`: In-browser card designer and publisher:
    - **Canvas & Art Tools**: Draw custom art on canvas, upload local image file, or provide an image URL. If no art is provided, a procedural SVG is automatically generated matching the chosen rarity theme.
    - **Multi-Attack & Stats Builder**: Configure custom HP and 2 unique attacks with customizable DMG yields.

@@ -1218,7 +1218,12 @@ function mergeAccountData(localAcc, cloudAcc){
     banExpires: (cloudAcc.banned && (!cloudAcc.banExpires || Date.now() < cloudAcc.banExpires)) ? (cloudAcc.banExpires || null) : (cloudAdminTime > localAdminTime ? (cloudAcc.banExpires || null) : (localAcc.banExpires || cloudAcc.banExpires || null)),
     lastAdminActionTime: Math.max(localAdminTime, cloudAdminTime),
     adminRevision: Math.max(localAcc.adminRevision || 0, cloudAcc.adminRevision || 0),
-    lastActive: Math.max(localAcc.lastActive || 0, cloudAcc.lastActive || 0, Date.now())
+    lastActive: Math.max(localAcc.lastActive || 0, cloudAcc.lastActive || 0, Date.now()),
+    customTitle: (cloudAdminTime >= localAdminTime) ? (cloudAcc.customTitle !== undefined ? cloudAcc.customTitle : localAcc.customTitle || '') : (localAcc.customTitle !== undefined ? localAcc.customTitle : cloudAcc.customTitle || ''),
+    customTitleColor: (cloudAdminTime >= localAdminTime) ? (cloudAcc.customTitleColor !== undefined ? cloudAcc.customTitleColor : localAcc.customTitleColor || '') : (localAcc.customTitleColor !== undefined ? localAcc.customTitleColor : cloudAcc.customTitleColor || ''),
+    cardEnchantments: Object.assign({}, localAcc.cardEnchantments || {}, cloudAcc.cardEnchantments || {}),
+    summonerLevel: Math.max(localAcc.summonerLevel || 1, cloudAcc.summonerLevel || 1),
+    summonerXp: Math.max(localAcc.summonerXp || 0, cloudAcc.summonerXp || 0)
   };
 }
 window.mergeAccountData = mergeAccountData;
@@ -2608,6 +2613,61 @@ function updateSummonerRankBadge(){
   badge.title = `Summoner Level ${level} (${title})\nXP: ${xp} (Cards: ${ownedCount}, Arena Wins: ${wins})`;
 }
 window.updateSummonerRankBadge = updateSummonerRankBadge;
+
+function getXpMultiplier(){
+  try {
+    const raw = localStorage.getItem("cardCollectorXpFrenzy");
+    if(raw){
+      const frenzy = JSON.parse(raw);
+      if(frenzy && frenzy.expiresAt && Date.now() < frenzy.expiresAt){
+        return frenzy.multiplier || 1;
+      }
+    }
+  } catch(e){}
+  return 1;
+}
+window.getXpMultiplier = getXpMultiplier;
+
+function updateXpFrenzyBanner(){
+  const banner = document.getElementById("globalXpFrenzyBanner");
+  const textEl = document.getElementById("globalXpFrenzyText");
+  const timerEl = document.getElementById("globalXpFrenzyTimer");
+  const badgeEl = document.getElementById("adminActiveXpFrenzyBadge");
+  if(!banner) return;
+
+  try {
+    const raw = localStorage.getItem("cardCollectorXpFrenzy");
+    if(raw){
+      const frenzy = JSON.parse(raw);
+      if(frenzy && frenzy.expiresAt && Date.now() < frenzy.expiresAt){
+        const remainingSec = Math.max(0, Math.ceil((frenzy.expiresAt - Date.now()) / 1000));
+        const mins = String(Math.floor(remainingSec / 60)).padStart(2, "0");
+        const secs = String(remainingSec % 60).padStart(2, "0");
+        const timeStr = `${mins}:${secs}`;
+
+        banner.style.display = "flex";
+        if(textEl) textEl.textContent = `GLOBAL ${frenzy.multiplier}X XP FRENZY IS ACTIVE! (+${(frenzy.multiplier - 1) * 100}% Bonus Summoner XP on Packs & Battles)`;
+        if(timerEl) timerEl.textContent = timeStr;
+        if(badgeEl){
+          badgeEl.textContent = `ACTIVE: ${frenzy.multiplier}X (${timeStr})`;
+          badgeEl.style.background = "linear-gradient(135deg, #ec4899, #8b5cf6)";
+          badgeEl.style.color = "#fff";
+        }
+        return;
+      }
+    }
+  } catch(e){}
+
+  banner.style.display = "none";
+  if(badgeEl){
+    badgeEl.textContent = "NO ACTIVE XP FRENZY";
+    badgeEl.style.background = "#475569";
+    badgeEl.style.color = "#fff";
+  }
+}
+window.updateXpFrenzyBanner = updateXpFrenzyBanner;
+setInterval(updateXpFrenzyBanner, 1000);
+
 
 function updateDisplay(){
   if(typeof render === "function") render();
