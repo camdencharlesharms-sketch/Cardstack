@@ -826,3 +826,43 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
     - The recurring 4-second cloud checker now synchronizes `lastActive` for all players from `cloudAccs`, ensuring multi-device parity even in environments where WebSockets and WebRTC are restricted.
   - **Activity Throttling**:
     - Throttled `touchUserActive` pointer and keyboard activity events to 5-second intervals, preventing unnecessary storage churn and redundant network calls.
+
+### Zero-G Physics & Floating Cards Engine ("All Your Cards Float Everywhere")
+- **Core Architecture & Philosophy**:
+  - Activated via Chaos Lab (`#chaosZeroGBtn` / `launchChaosZeroG`) or God Realm Reality Warp (`#toggleZeroGravityBtn` / `applyRealityWarp("zeroGravity")`).
+  - Gathers the player's authentic owned card collection (`getUserOwnedCardsForZeroG()`), including standard cards, custom cards created in Card Studio, and unlocked vault cards.
+  - Dynamically renders true trading card entities (`.chaos-zero-g-card`):
+    - Full high-definition card art image with smooth object fit and dark cosmic backing.
+    - Rarity tag and colored glow border based on rarity (Common, Uncommon, Rare, Epic, Legendary, Mythic, Divine, Transcendent, Void).
+    - Authentic HP badge and signature attack power preview.
+    - Real-time animated Rainbow foil gradient loop for Rainbow edition cards (`rainbowCards`).
+    - 24K Gold foil metallic shimmer and golden aura for Gold edition cards (`goldCards`).
+  - **Full 3D Tumbling & Inertial Physics**:
+    - Each floating card has independent linear velocity (`vx`, `vy`) and 3D rotational angular velocity (`rotX`, `rotY`, `rotZ`).
+    - Rendered via GPU-accelerated `translate3d(x, y, 0) perspective(700px) rotateX(rotX deg) rotateY(rotY deg) rotateZ(rotZ deg)`.
+    - Soft elastic boundary bounce with momentum retention when colliding with viewport edges.
+    - **Interactive Grab & Throw**: Click or touch any floating card to grab it (`cursor: grabbing`), drag it across the screen, and fling it with release velocity!
+    - **Click Sparkles**: Clicking a card without dragging detonates celebratory confetti and sound effects.
+    - **Cosmic Singularity Black Hole**: Seamlessly integrates with `#chaosSingularityVortex`, pulling all floating cards gravitationally toward the event horizon.
+    - **Matrix Bullet-Time**: Drifts at 0.3x speed in slow-motion when bullet-time is active.
+  - **Staggered Collection Binder Zero-G Float**:
+    - Cards in `#grid .card` on the collection screen float weightlessly with organic multi-axis orbital trajectories and staggered animation delays.
+
+### Mac / WebKit Zero Blackout Screen Shaders & CRT Architecture
+- **Problem Statement & Root Cause**:
+  - On macOS (Safari and Chrome on Apple Silicon / macOS), activating Shaders like **Blood Moon** (`.shader-blood-moon`) or **Retro VHS** (`.shader-vhs-retro`), or Reality Warp **80s Retro CRT** (`.crt-arcade-active`) caused the entire screen to render pitch black, while working normally on other platforms.
+  - Root causes identified:
+    1. **Mac Metal / CoreGraphics Layer Invalidation**: Applying CSS `filter: contrast(...) sepia(...) hue-rotate(...)` directly to `<body>` while child elements contain `backdrop-filter: blur()`, sticky positioning, and 3D canvas context caused macOS GPU compositors to fail or clamp dark backgrounds to solid black.
+    2. **Background Overwrite without Fallback**: `.shader-vhs-retro` set `background-image: repeating-linear-gradient(...) !important` on `body`, overwriting the page's radial gradient without a fallback background color, resulting in an undefined black root surface.
+    3. **Fixed Pseudo-Element Stacking Context Trap**: `body.crt-arcade-active::before` with `position: fixed` and `z-index: 99995` inside a `filter`-ed `body` produced broken viewport clipping in WebKit.
+- **Architectural Enhancements**:
+  - **Dedicated Viewport Atmosphere Overlay (`#realmScreenShaderOverlay`)**:
+    - Created a non-intrusive, hardware-accelerated fixed overlay (`z-index: 99992; pointer-events: none;`) that provides atmospheric lighting, vignette, and scanlines without touching `body` filter properties.
+    - Dynamically initialized via `getOrCreateShaderOverlay()` in `js/admin.js` and defined in `index.html`.
+  - **Blood Moon Eclipse**:
+    - Replaced GPU-crashing `filter` and inset shadows on `body` with a luminous crimson atmospheric celestial aura (`radial-gradient` + `box-shadow: inset 0 0 130px rgba(220, 38, 38, 0.55)`).
+    - Adjusts UI theme variables (`--panel-border: rgba(239, 68, 68, 0.4) !important`, `--accent-blue: #ef4444 !important`).
+    - 100% visible, vibrant, and completely eliminates black screens across macOS and all browsers.
+  - **80s Retro CRT & Retro VHS**:
+    - Rendered via safe scanline overlay gradients on `#realmScreenShaderOverlay` with retro chromatic text shadow (`text-shadow: 1px 0 rgba(239, 68, 68, 0.45), -1px 0 rgba(59, 130, 246, 0.45)`).
+    - Retains crisp, legible text and full UI visibility with zero display blackouts.

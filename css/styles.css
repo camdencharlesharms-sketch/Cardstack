@@ -972,32 +972,60 @@ body.disco-mode-active header {
 /* ========================================================
    GOD REALM, REALITY WARP & ARCADE STYLING
    ======================================================== */
-@keyframes zeroGravityFloat {
-  0% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-14px) rotate(1.5deg); }
-  66% { transform: translateY(10px) rotate(-1.5deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
+/* Collection Binder & UI Staggered Zero-G Float Animations */
+@keyframes zeroGravityFloatA {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(-8px, -24px, 0) rotate(-3deg); }
+  100% { transform: translate3d(10px, 16px, 0) rotate(2.5deg); }
 }
+@keyframes zeroGravityFloatB {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(12px, -30px, 0) rotate(3.5deg); }
+  100% { transform: translate3d(-6px, 18px, 0) rotate(-2.8deg); }
+}
+@keyframes zeroGravityFloatC {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(-14px, -18px, 0) rotate(2.8deg); }
+  100% { transform: translate3d(14px, -28px, 0) rotate(-3.5deg); }
+}
+@keyframes zeroGravityFloatD {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(8px, -32px, 0) rotate(-4deg); }
+  100% { transform: translate3d(-12px, 20px, 0) rotate(3deg); }
+}
+
 body.zero-gravity-active .card,
 body.zero-gravity-active .pack-card,
 body.zero-gravity-active .adminCard,
 body.zero-gravity-active header,
 body.zero-gravity-active .battleBox {
-  animation: zeroGravityFloat 6s ease-in-out infinite alternate !important;
+  animation: zeroGravityFloatA 7s ease-in-out infinite alternate !important;
+}
+body.zero-gravity-active #grid .card:nth-child(2n) {
+  animation: zeroGravityFloatB 8.2s ease-in-out infinite alternate !important;
+  animation-delay: -2s !important;
+}
+body.zero-gravity-active #grid .card:nth-child(3n) {
+  animation: zeroGravityFloatC 6.6s ease-in-out infinite alternate !important;
+  animation-delay: -4s !important;
+}
+body.zero-gravity-active #grid .card:nth-child(5n) {
+  animation: zeroGravityFloatD 9s ease-in-out infinite alternate !important;
+  animation-delay: -1.5s !important;
 }
 
-body.crt-arcade-active::before {
-  content: " ";
-  display: block;
-  position: fixed;
-  top: 0; left: 0; bottom: 0; right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
-  z-index: 99995;
-  background-size: 100% 3px, 6px 100%;
-  pointer-events: none;
+/* 80s Retro CRT Effect - Mac WebKit Safe, Zero Blackout */
+#realmScreenShaderOverlay.crt-arcade-active,
+body.crt-arcade-active #realmScreenShaderOverlay {
+  opacity: 1 !important;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%),
+              repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.08) 0px, rgba(0, 0, 0, 0.08) 1px, transparent 1px, transparent 3px) !important;
+  background-size: 100% 4px, 100% 3px !important;
+  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.5) !important;
 }
 body.crt-arcade-active {
-  filter: contrast(1.15) brightness(1.1) saturate(1.2);
+  /* Safe text illumination without crushing root body filter */
+  text-shadow: 0.5px 0.5px 1px rgba(6, 182, 212, 0.35);
 }
 
 body.mirror-dimension-active {
@@ -1775,33 +1803,137 @@ body.turbo-speed-active * {
   100% { opacity: 0; transform: translateY(-60px) scale(1); }
 }
 
-/* Zero-G Floating Cards */
+/* Zero-G Authentic Floating Card Entities */
 .chaos-zero-g-card {
   position: fixed;
-  width: 60px;
-  height: 85px;
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.85);
+  width: 100px;
+  height: 144px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.94), rgba(9, 13, 22, 0.96));
   border: 2px solid #38bdf8;
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.65), 0 0 16px rgba(56, 189, 248, 0.4);
   z-index: 99990;
   pointer-events: auto;
   cursor: grab;
   user-select: none;
+  -webkit-user-select: none;
   display: flex;
   flex-direction: column;
+  padding: 6px;
+  box-sizing: border-box;
+  text-align: center;
+  will-change: transform;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  .chaos-zero-g-card {
+    width: 78px;
+    height: 114px;
+    padding: 4px;
+  }
+}
+
+.chaos-zero-g-card:hover {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.85), 0 0 30px rgba(168, 85, 247, 0.85);
+  border-color: #c084fc;
+  z-index: 99994;
+}
+
+.chaos-zero-g-card.is-dragging {
+  cursor: grabbing !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.95), 0 0 40px rgba(56, 189, 248, 0.9) !important;
+  border-color: #38bdf8 !important;
+  z-index: 99995 !important;
+}
+
+/* Zero-G Card Inner Sections */
+.zero-g-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.zero-g-rarity {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  max-width: 65px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.zero-g-hp {
+  color: #fca5a5;
+  font-weight: 900;
+}
+
+.zero-g-card-art {
+  flex: 1;
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  background: #020617;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  text-align: center;
-  transition: box-shadow 0.2s;
 }
-.chaos-zero-g-card:hover {
-  box-shadow: 0 0 25px rgba(168, 85, 247, 0.8);
-  border-color: #c084fc;
+.zero-g-card-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  display: block;
 }
-.chaos-zero-g-card:active {
-  cursor: grabbing;
+
+.zero-g-card-bot {
+  margin-top: 4px;
+  line-height: 1.2;
+}
+.zero-g-name {
+  font-size: 9px;
+  font-weight: 900;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+.zero-g-atk {
+  font-size: 7.5px;
+  color: #94a3b8;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Rarity specific glow borders for zero-G floaters */
+.chaos-zero-g-card.common { border-color: #94a3b8; }
+.chaos-zero-g-card.uncommon { border-color: #10b981; box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 14px rgba(16, 185, 129, 0.4); }
+.chaos-zero-g-card.rare { border-color: #3b82f6; box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 14px rgba(59, 130, 246, 0.4); }
+.chaos-zero-g-card.epic { border-color: #a855f7; box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 16px rgba(168, 85, 247, 0.5); }
+.chaos-zero-g-card.legendary { border-color: #f59e0b; box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 18px rgba(245, 158, 11, 0.6); }
+.chaos-zero-g-card.mythic { border-color: #ec4899; box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 20px rgba(236, 72, 153, 0.65); }
+.chaos-zero-g-card.divine { border-color: #38bdf8; box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 22px rgba(56, 189, 248, 0.8), 0 0 10px rgba(250, 204, 21, 0.6); }
+.chaos-zero-g-card.transcendent { border-color: #c084fc; box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 24px rgba(192, 132, 252, 0.8); }
+.chaos-zero-g-card.void { border-color: #818cf8; box-shadow: 0 8px 20px rgba(0,0,0,0.7), inset 0 0 15px #312e81, 0 0 22px #4f46e5; }
+
+/* Rainbow & Gold Foil editions for zero-G floaters */
+.chaos-zero-g-card.rainbow-edition-card {
+  border-color: #f43f5e !important;
+  animation: rainbowBorderCycle 4s linear infinite;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 25px rgba(244, 63, 94, 0.7) !important;
+}
+.chaos-zero-g-card.gold-edition-card {
+  border-color: #f59e0b !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 25px rgba(245, 158, 11, 0.8), inset 0 0 12px rgba(253, 224, 71, 0.4) !important;
 }
 
 /* Cosmic Singularity (Black Hole) */
@@ -1875,31 +2007,63 @@ body.turbo-speed-active * {
   100% { transform: rotate(15deg); }
 }
 
-/* Screen Shaders */
-body.shader-cyber-neon {
-  filter: contrast(1.18) saturate(1.6) brightness(1.02) !important;
-  box-shadow: inset 0 0 100px rgba(6, 182, 212, 0.4), inset 0 0 150px rgba(236, 72, 153, 0.3) !important;
+/* ========================================================
+   SCREEN SHADERS & ATMOSPHERE (Mac WebKit Safe, Zero Blackout)
+   ======================================================== */
+#realmScreenShaderOverlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 99992;
+  opacity: 0;
+  transition: opacity 0.4s ease, background 0.4s ease;
+  overflow: hidden;
+}
+
+/* Blood Moon Eclipse - Mac Safe, Radiant Crimson Atmospheric Aura */
+#realmScreenShaderOverlay.shader-blood-moon,
+body.shader-blood-moon #realmScreenShaderOverlay {
+  opacity: 1 !important;
+  background: radial-gradient(circle at 80% 20%, rgba(220, 38, 38, 0.26) 0%, rgba(153, 27, 27, 0.18) 35%, rgba(15, 23, 42, 0.1) 75%, rgba(0, 0, 0, 0.25) 100%) !important;
+  box-shadow: inset 0 0 130px rgba(220, 38, 38, 0.55), inset 0 0 50px rgba(0, 0, 0, 0.35) !important;
 }
 
 body.shader-blood-moon {
-  filter: contrast(1.2) sepia(0.65) hue-rotate(320deg) saturate(2.2) !important;
-  box-shadow: inset 0 0 120px rgba(220, 38, 38, 0.65), inset 0 0 40px #000 !important;
+  --panel-border: rgba(239, 68, 68, 0.4) !important;
+  --accent-blue: #ef4444 !important;
+}
+
+/* Retro VHS Shader - Mac Safe, Zero Blackout */
+#realmScreenShaderOverlay.shader-vhs-retro,
+body.shader-vhs-retro #realmScreenShaderOverlay {
+  opacity: 1 !important;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0px, rgba(0, 0, 0, 0.12) 1px, transparent 1px, transparent 3px) !important;
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.45) !important;
 }
 
 body.shader-vhs-retro {
-  filter: contrast(1.1) brightness(1.05) saturate(1.3) !important;
-  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 3px) !important;
-  text-shadow: 1px 0 #ef4444, -1px 0 #3b82f6;
+  text-shadow: 1px 0 rgba(239, 68, 68, 0.45), -1px 0 rgba(59, 130, 246, 0.45);
 }
 
-body.shader-prismatic {
-  filter: contrast(1.08) hue-rotate(60deg) saturate(1.5) !important;
-  animation: chromaticPulse 8s infinite alternate ease-in-out;
+/* Cyber Neon Shader - Mac Safe */
+#realmScreenShaderOverlay.shader-cyber-neon,
+body.shader-cyber-neon #realmScreenShaderOverlay {
+  opacity: 1 !important;
+  box-shadow: inset 0 0 90px rgba(6, 182, 212, 0.3), inset 0 0 140px rgba(236, 72, 153, 0.25) !important;
 }
-@keyframes chromaticPulse {
-  0% { filter: contrast(1.08) hue-rotate(0deg) saturate(1.5); }
-  50% { filter: contrast(1.15) hue-rotate(180deg) saturate(1.8); }
-  100% { filter: contrast(1.08) hue-rotate(360deg) saturate(1.5); }
+
+/* Prismatic Chroma Shift - Mac Safe */
+#realmScreenShaderOverlay.shader-prismatic,
+body.shader-prismatic #realmScreenShaderOverlay {
+  opacity: 1 !important;
+  animation: safeChromaticShift 8s infinite alternate ease-in-out !important;
+}
+@keyframes safeChromaticShift {
+  0% { box-shadow: inset 0 0 90px rgba(168, 85, 247, 0.35); }
+  50% { box-shadow: inset 0 0 110px rgba(6, 182, 212, 0.4); }
+  100% { box-shadow: inset 0 0 90px rgba(236, 72, 153, 0.35); }
 }
 
 /* Instant God Pack Mini Card */

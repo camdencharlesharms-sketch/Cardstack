@@ -5914,63 +5914,311 @@ window.spawnChaosLootGoblin = spawnChaosLootGoblin;
 let zeroGAnimId = null;
 let zeroGCardsList = [];
 
+// Helper to retrieve all cards the user currently owns or has access to
+function getUserOwnedCardsForZeroG(){
+  const userAcc = (typeof getUserAccount === "function" && typeof currentUser !== "undefined")
+    ? getUserAccount(currentUser)
+    : (typeof accounts !== "undefined" && accounts && currentUser ? accounts[currentUser] : null);
+
+  const isCam = (typeof isMasterAdmin === "function") && isMasterAdmin();
+  let rawOwned = [];
+
+  if(isCam || (userAcc && userAcc.ownedAll)){
+    if(typeof cards !== "undefined" && Array.isArray(cards)){
+      rawOwned = cards.map((_, i) => i);
+    }
+  } else if(typeof owned !== "undefined" && Array.isArray(owned) && owned.length > 0){
+    rawOwned = owned;
+  } else if(userAcc && Array.isArray(userAcc.owned) && userAcc.owned.length > 0){
+    rawOwned = userAcc.owned;
+  }
+
+  const collectedCards = [];
+  const seenKeys = new Set();
+
+  rawOwned.forEach(idx => {
+    const num = parseInt(idx, 10);
+    if(!isNaN(num) && typeof cards !== "undefined" && cards[num]){
+      const c = cards[num];
+      const key = c.id || (c.name + "_" + num);
+      if(!seenKeys.has(key)){
+        seenKeys.add(key);
+        collectedCards.push({ ...c, deckIndex: num });
+      }
+    }
+  });
+
+  // Gifted vault cards
+  const curUserVaultOwned = (userAcc && Array.isArray(userAcc.unreleasedOwned)) ? userAcc.unreleasedOwned : [];
+  if(Array.isArray(unreleasedCards)){
+    curUserVaultOwned.forEach(id => {
+      const vCard = (typeof findVaultCardByIdOrName === "function") ? findVaultCardByIdOrName(id) : null;
+      if(vCard && !seenKeys.has(vCard.id || vCard.name)){
+        seenKeys.add(vCard.id || vCard.name);
+        collectedCards.push({ ...vCard, isVault: true, deckIndex: -1 });
+      }
+    });
+  }
+
+  // Fallback to sample cards if collection is empty
+  if(collectedCards.length === 0 && typeof cards !== "undefined" && cards.length > 0){
+    cards.slice(0, 12).forEach((c, i) => {
+      collectedCards.push({ ...c, deckIndex: i });
+    });
+  }
+
+  return collectedCards;
+}
+
 function launchChaosZeroG(isRemote = false){
   clearChaosPhysics(true);
   playChaosSfx("warp");
 
-  const numCards = 16;
+  document.body.classList.add("zero-gravity-active");
+
+  const myCards = getUserOwnedCardsForZeroG();
   const cardsContainer = [];
 
-  for(let i = 0; i < numCards; i++){
+  // Determine cards to float:
+  // If user has <= 24 cards: float all of them, cycling if needed to fill screen.
+  // If user has many cards (up to 210): float up to 40 cards prioritized across top rarities & deck categories.
+  let cardsToFloat = [];
+  if(myCards.length <= 24){
+    cardsToFloat = [...myCards];
+    while(cardsToFloat.length < 18 && myCards.length > 0){
+      cardsToFloat.push({ ...myCards[cardsToFloat.length % myCards.length] });
+    }
+  } else {
+    const rarityWeights = {
+      void: 10,
+      transcendent: 9,
+      divine: 8,
+      mythic: 7,
+      legendary: 6,
+      epic: 5,
+      rare: 4,
+      uncommon: 3,
+      common: 2
+    };
+
+    const sorted = [...myCards].sort((a, b) => {
+      const rA = rarityWeights[(a.rarity || "").toLowerCase()] || 1;
+      const rB = rarityWeights[(b.rarity || "").toLowerCase()] || 1;
+      return rB - rA;
+    });
+
+    const topCards = sorted.slice(0, 24);
+    const remaining = sorted.slice(24);
+    const step = Math.max(1, Math.floor(remaining.length / 16));
+    const sampled = [];
+    for(let i = 0; i < remaining.length && sampled.length < 16; i += step){
+      sampled.push(remaining[i]);
+    }
+    cardsToFloat = [...topCards, ...sampled];
+  }
+
+  const userAcc = (typeof getUserAccount === "function" && typeof currentUser !== "undefined")
+    ? getUserAccount(currentUser)
+    : (typeof accounts !== "undefined" && accounts && currentUser ? accounts[currentUser] : null);
+
+  const cardW = window.innerWidth <= 600 ? 78 : 100;
+  const cardH = window.innerWidth <= 600 ? 114 : 144;
+
+  cardsToFloat.forEach((card, idx) => {
     const cardEl = document.createElement("div");
-    cardEl.className = "chaos-zero-g-card";
-    const sampleCard = cards[i % cards.length] || { name: "Cosmic", rarity: "Mythic" };
+    const rarityClass = (card.rarity || "common").toLowerCase().replace(/\s+/g, "-");
+    const dIdx = card.deckIndex;
+
+    const isRainbow = (dIdx >= 0) && (
+      (typeof rainbowCards !== "undefined" && Array.isArray(rainbowCards) && rainbowCards.includes(dIdx)) ||
+      (userAcc && Array.isArray(userAcc.rainbowCards) && userAcc.rainbowCards.includes(dIdx))
+    );
+
+    const isGold = !isRainbow && (dIdx >= 0) && (
+      (typeof goldCards !== "undefined" && Array.isArray(goldCards) && goldCards.includes(dIdx)) ||
+      (userAcc && Array.isArray(userAcc.goldCards) && userAcc.goldCards.includes(dIdx))
+    );
+
+    let classes = `chaos-zero-g-card ${rarityClass}`;
+    if(isRainbow) classes += " rainbow-edition-card";
+    else if(isGold) classes += " gold-edition-card";
+    cardEl.className = classes;
+
+    const attackObj = (Array.isArray(card.attacks) && card.attacks[0]) ? card.attacks[0] : { name: card.attack || "Strike", dmg: card.dmg || 20 };
+    const atkDmgFormatted = (typeof formatDmg === "function") ? formatDmg(attackObj.dmg) : (attackObj.dmg + " DMG");
+    const hpFormatted = (typeof formatHp === "function") ? formatHp(card.hp || 80) : ((card.hp || 80) + " HP");
+
     cardEl.innerHTML = `
-      <div style="font-size:16px">🃏</div>
-      <div style="font-size:9px;font-weight:900;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%">${sampleCard.name}</div>
-      <div style="font-size:8px;color:#38bdf8">${sampleCard.rarity}</div>
+      <div class="zero-g-card-top">
+        <span class="zero-g-rarity">${card.rarity || "Card"}</span>
+        <span class="zero-g-hp">${hpFormatted}</span>
+      </div>
+      <div class="zero-g-card-art">
+        <img src="${card.image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80'}" alt="${card.name}" draggable="false" />
+      </div>
+      <div class="zero-g-card-bot">
+        <div class="zero-g-name">${card.name || "Artifact"}</div>
+        <div class="zero-g-atk">⚔️ ${attackObj.name} (${atkDmgFormatted})</div>
+      </div>
     `;
 
-    const x = Math.random() * (window.innerWidth - 80);
-    const y = Math.random() * (window.innerHeight - 100);
-    const vx = (Math.random() - 0.5) * 4;
-    const vy = (Math.random() - 0.5) * 4;
-    const rot = Math.random() * 360;
-    const vrot = (Math.random() - 0.5) * 2;
+    const x = Math.random() * Math.max(20, window.innerWidth - cardW - 20) + 10;
+    const y = Math.random() * Math.max(20, window.innerHeight - cardH - 20) + 10;
+    const speed = Math.random() * 2.2 + 0.8;
+    const angle = Math.random() * Math.PI * 2;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+
+    const rotX = (Math.random() - 0.5) * 30;
+    const rotY = (Math.random() - 0.5) * 30;
+    const rotZ = Math.random() * 360;
+    const vrotX = (Math.random() - 0.5) * 0.8;
+    const vrotY = (Math.random() - 0.5) * 0.8;
+    const vrotZ = (Math.random() - 0.5) * 1.5;
 
     document.body.appendChild(cardEl);
-    cardsContainer.push({ el: cardEl, x, y, vx, vy, rot, vrot });
-  }
+
+    const cardObj = {
+      el: cardEl,
+      x, y, vx, vy,
+      rotX, rotY, rotZ,
+      vrotX, vrotY, vrotZ,
+      isDragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      cardStartX: 0,
+      cardStartY: 0,
+      lastDragX: 0,
+      lastDragY: 0,
+      dragVx: 0,
+      dragVy: 0
+    };
+
+    // Interactive mouse / touch dragging & flinging
+    const onPointerDown = (e) => {
+      e.preventDefault();
+      const pointer = e.touches ? e.touches[0] : e;
+      cardObj.isDragging = true;
+      cardObj.dragStartX = pointer.clientX;
+      cardObj.dragStartY = pointer.clientY;
+      cardObj.lastDragX = pointer.clientX;
+      cardObj.lastDragY = pointer.clientY;
+      cardObj.cardStartX = cardObj.x;
+      cardObj.cardStartY = cardObj.y;
+      cardObj.dragVx = 0;
+      cardObj.dragVy = 0;
+      cardEl.classList.add("is-dragging");
+
+      const onPointerMove = (ev) => {
+        if(!cardObj.isDragging) return;
+        const p = ev.touches ? ev.touches[0] : ev;
+        const dx = p.clientX - cardObj.dragStartX;
+        const dy = p.clientY - cardObj.dragStartY;
+        cardObj.x = cardObj.cardStartX + dx;
+        cardObj.y = cardObj.cardStartY + dy;
+        cardObj.dragVx = (p.clientX - cardObj.lastDragX) * 0.8;
+        cardObj.dragVy = (p.clientY - cardObj.lastDragY) * 0.8;
+        cardObj.lastDragX = p.clientX;
+        cardObj.lastDragY = p.clientY;
+        cardEl.style.transform = `translate3d(${cardObj.x}px, ${cardObj.y}px, 0) perspective(700px) rotateX(${cardObj.rotX}deg) rotateY(${cardObj.rotY}deg) rotateZ(${cardObj.rotZ}deg) scale3d(1.1, 1.1, 1.1)`;
+      };
+
+      const onPointerUp = () => {
+        if(!cardObj.isDragging) return;
+        cardObj.isDragging = false;
+        cardEl.classList.remove("is-dragging");
+        cardObj.vx = Math.max(-16, Math.min(16, cardObj.dragVx || (Math.random() - 0.5) * 4));
+        cardObj.vy = Math.max(-16, Math.min(16, cardObj.dragVy || (Math.random() - 0.5) * 4));
+        cardObj.vrotZ = (Math.random() - 0.5) * 3;
+        try { playChaosSfx("laser"); } catch(err){}
+        window.removeEventListener("mousemove", onPointerMove);
+        window.removeEventListener("mouseup", onPointerUp);
+        window.removeEventListener("touchmove", onPointerMove);
+        window.removeEventListener("touchend", onPointerUp);
+      };
+
+      window.addEventListener("mousemove", onPointerMove);
+      window.addEventListener("mouseup", onPointerUp);
+      window.addEventListener("touchmove", onPointerMove, { passive: false });
+      window.addEventListener("touchend", onPointerUp);
+    };
+
+    cardEl.addEventListener("mousedown", onPointerDown);
+    cardEl.addEventListener("touchstart", onPointerDown, { passive: false });
+
+    // Click sparkle inspection
+    cardEl.addEventListener("click", (e) => {
+      if(Math.abs(cardObj.dragVx) > 2 || Math.abs(cardObj.dragVy) > 2) return;
+      if(typeof playChaosSfx === "function") playChaosSfx("coins");
+      if(typeof confetti === "function"){
+        confetti({
+          particleCount: 15,
+          spread: 45,
+          origin: {
+            x: (cardObj.x + cardW / 2) / window.innerWidth,
+            y: (cardObj.y + cardH / 2) / window.innerHeight
+          }
+        });
+      }
+    });
+
+    cardsContainer.push(cardObj);
+  });
 
   zeroGCardsList = cardsContainer;
 
   function updatePhysics(){
     const vortex = document.getElementById("chaosSingularityVortex");
     const vCenter = vortex ? { x: window.innerWidth / 2, y: window.innerHeight / 2 } : null;
+    const isSlomo = document.body.classList.contains("matrix-slomo-active");
+    const timeScale = isSlomo ? 0.3 : 1.0;
+
+    const curCardW = window.innerWidth <= 600 ? 78 : 100;
+    const curCardH = window.innerWidth <= 600 ? 114 : 144;
 
     zeroGCardsList.forEach(c => {
+      if(c.isDragging) return;
+
       if(vCenter){
         // Singularity gravitational pull
-        const dx = vCenter.x - c.x;
-        const dy = vCenter.y - c.y;
+        const dx = vCenter.x - (c.x + curCardW / 2);
+        const dy = vCenter.y - (c.y + curCardH / 2);
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const force = Math.min(8, 250 / dist);
-        c.vx += (dx / dist) * force * 0.1;
-        c.vy += (dy / dist) * force * 0.1;
-        c.vrot += 0.2;
+        const force = Math.min(10, 320 / dist);
+        c.vx += (dx / dist) * force * 0.12 * timeScale;
+        c.vy += (dy / dist) * force * 0.12 * timeScale;
+        c.vrotZ += 0.3 * timeScale;
       }
 
-      c.x += c.vx;
-      c.y += c.vy;
-      c.rot += c.vrot;
+      c.x += c.vx * timeScale;
+      c.y += c.vy * timeScale;
+      c.rotX += c.vrotX * timeScale;
+      c.rotY += c.vrotY * timeScale;
+      c.rotZ += c.vrotZ * timeScale;
 
       // Bounce off screen boundaries
-      if(c.x < 10){ c.x = 10; c.vx = Math.abs(c.vx); }
-      if(c.x > window.innerWidth - 70){ c.x = window.innerWidth - 70; c.vx = -Math.abs(c.vx); }
-      if(c.y < 10){ c.y = 10; c.vy = Math.abs(c.vy); }
-      if(c.y > window.innerHeight - 95){ c.y = window.innerHeight - 95; c.vy = -Math.abs(c.vy); }
+      if(c.x < 5){
+        c.x = 5;
+        c.vx = Math.abs(c.vx) * 0.92;
+        c.vrotZ *= -0.8;
+      }
+      if(c.x > window.innerWidth - curCardW - 5){
+        c.x = window.innerWidth - curCardW - 5;
+        c.vx = -Math.abs(c.vx) * 0.92;
+        c.vrotZ *= -0.8;
+      }
+      if(c.y < 5){
+        c.y = 5;
+        c.vy = Math.abs(c.vy) * 0.92;
+        c.vrotX *= -0.8;
+      }
+      if(c.y > window.innerHeight - curCardH - 5){
+        c.y = window.innerHeight - curCardH - 5;
+        c.vy = -Math.abs(c.vy) * 0.92;
+        c.vrotX *= -0.8;
+      }
 
-      c.el.style.transform = `translate(${c.x}px, ${c.y}px) rotate(${c.rot}deg)`;
+      c.el.style.transform = `translate3d(${c.x}px, ${c.y}px, 0) perspective(700px) rotateX(${c.rotX}deg) rotateY(${c.rotY}deg) rotateZ(${c.rotZ}deg)`;
     });
 
     zeroGAnimId = requestAnimationFrame(updatePhysics);
@@ -5979,7 +6227,7 @@ function launchChaosZeroG(isRemote = false){
   zeroGAnimId = requestAnimationFrame(updatePhysics);
 
   const gravStatus = document.getElementById("chaosGravityStatus");
-  if(gravStatus) gravStatus.textContent = `🚀 Zero-G Anti-Gravity active (${numCards} drifting cards).`;
+  if(gravStatus) gravStatus.textContent = `🚀 Zero-G Anti-Gravity active (${cardsToFloat.length} of your cards floating).`;
 
   if(!isRemote && typeof broadcastChaosFx === "function"){
     broadcastChaosFx({ type: "zero_g" });
@@ -6036,7 +6284,7 @@ function clearChaosPhysics(isRemote = false){
   const vortex = document.getElementById("chaosSingularityVortex");
   if(vortex) vortex.remove();
 
-  document.body.classList.remove("matrix-slomo-active");
+  document.body.classList.remove("matrix-slomo-active", "zero-gravity-active");
 
   const gravStatus = document.getElementById("chaosGravityStatus");
   if(gravStatus) gravStatus.textContent = "Standard Earth gravity (1.0G).";
@@ -6614,22 +6862,42 @@ async function runChaosBossRushGauntlet(){
 }
 window.runChaosBossRushGauntlet = runChaosBossRushGauntlet;
 
-// --- 8. PRISMATIC REALITY SHADERS & ATMOSPHERE ---
+function getOrCreateShaderOverlay(){
+  let el = document.getElementById("realmScreenShaderOverlay");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "realmScreenShaderOverlay";
+    el.setAttribute("aria-hidden", "true");
+    document.body.appendChild(el);
+  }
+  return el;
+}
+window.getOrCreateShaderOverlay = getOrCreateShaderOverlay;
+
+// --- 8. PRISMATIC REALITY SHADERS & ATMOSPHERE (Zero Blackout / Mac WebKit Safe) ---
 function setChaosShader(shaderKey, isRemote = false){
+  const overlay = getOrCreateShaderOverlay();
   document.body.classList.remove("shader-cyber-neon", "shader-blood-moon", "shader-vhs-retro", "shader-prismatic");
+  if(overlay){
+    overlay.classList.remove("shader-cyber-neon", "shader-blood-moon", "shader-vhs-retro", "shader-prismatic");
+  }
   const badge = document.getElementById("chaosShaderBadge");
 
   if(shaderKey === "neon"){
     document.body.classList.add("shader-cyber-neon");
+    if(overlay) overlay.classList.add("shader-cyber-neon");
     if(badge) badge.textContent = "CYBER NEON";
   } else if(shaderKey === "blood"){
     document.body.classList.add("shader-blood-moon");
+    if(overlay) overlay.classList.add("shader-blood-moon");
     if(badge) badge.textContent = "BLOOD MOON";
   } else if(shaderKey === "vhs"){
     document.body.classList.add("shader-vhs-retro");
+    if(overlay) overlay.classList.add("shader-vhs-retro");
     if(badge) badge.textContent = "RETRO VHS";
   } else if(shaderKey === "chroma"){
     document.body.classList.add("shader-prismatic");
+    if(overlay) overlay.classList.add("shader-prismatic");
     if(badge) badge.textContent = "CHROMA SHIFT";
   }
 
@@ -6643,6 +6911,10 @@ window.setChaosShader = setChaosShader;
 
 function clearChaosShaders(isRemote = false){
   document.body.classList.remove("shader-cyber-neon", "shader-blood-moon", "shader-vhs-retro", "shader-prismatic");
+  const overlay = document.getElementById("realmScreenShaderOverlay");
+  if(overlay){
+    overlay.classList.remove("shader-cyber-neon", "shader-blood-moon", "shader-vhs-retro", "shader-prismatic");
+  }
   const badge = document.getElementById("chaosShaderBadge");
   if(badge) badge.textContent = "STANDARD";
   playChaosSfx("laser");
@@ -7478,25 +7750,52 @@ if(document.readyState === "complete" || document.readyState === "interactive"){
    - Secret Promo Codes & Easter Egg Cheats
    ======================================================== */
 
+function updateRealityWarpBadge(){
+  const badge = document.getElementById("realityWarpBadge");
+  if(!badge) return;
+  const activeCount = [
+    document.body.classList.contains("zero-gravity-active"),
+    document.body.classList.contains("turbo-speed-active"),
+    document.body.classList.contains("crt-arcade-active"),
+    document.body.classList.contains("mirror-dimension-active")
+  ].filter(Boolean).length;
+
+  badge.textContent = activeCount > 0 ? `WARPED (${activeCount} MODS)` : "NORMAL SPACE";
+  badge.style.background = activeCount > 0 ? "#e879f9" : "#475569";
+}
+window.updateRealityWarpBadge = updateRealityWarpBadge;
+
 // 1. REALITY WARP ENGINE
 function applyRealityWarp(warpType, active, isRemote = false){
-  const badge = document.getElementById("realityWarpBadge");
+  const overlay = getOrCreateShaderOverlay();
 
   if(warpType === "resetAll"){
+    clearChaosPhysics(isRemote);
     document.body.classList.remove("zero-gravity-active", "turbo-speed-active", "crt-arcade-active", "mirror-dimension-active");
-    if(badge){
-      badge.textContent = "NORMAL SPACE";
-      badge.style.background = "#475569";
-    }
+    if(overlay) overlay.classList.remove("crt-arcade-active");
+    updateRealityWarpBadge();
     if(!isRemote && typeof broadcastChaosFx === "function"){
       broadcastChaosFx({ type: "reality_warp", warpType: "resetAll", active: false });
     }
     return;
   }
 
+  if(warpType === "zeroGravity"){
+    const willBeActive = active !== undefined ? active : !document.body.classList.contains("zero-gravity-active");
+    if(willBeActive){
+      launchChaosZeroG(isRemote);
+    } else {
+      clearChaosPhysics(isRemote);
+    }
+    updateRealityWarpBadge();
+    if(!isRemote && typeof broadcastChaosFx === "function"){
+      broadcastChaosFx({ type: "reality_warp", warpType, active: willBeActive });
+    }
+    return;
+  }
+
   let className = "";
-  if(warpType === "zeroGravity") className = "zero-gravity-active";
-  else if(warpType === "turboSpeed") className = "turbo-speed-active";
+  if(warpType === "turboSpeed") className = "turbo-speed-active";
   else if(warpType === "crtArcade") className = "crt-arcade-active";
   else if(warpType === "mirrorWorld") className = "mirror-dimension-active";
 
@@ -7504,18 +7803,11 @@ function applyRealityWarp(warpType, active, isRemote = false){
 
   const willBeActive = active !== undefined ? active : !document.body.classList.contains(className);
   document.body.classList.toggle(className, willBeActive);
-
-  if(badge){
-    const activeCount = [
-      document.body.classList.contains("zero-gravity-active"),
-      document.body.classList.contains("turbo-speed-active"),
-      document.body.classList.contains("crt-arcade-active"),
-      document.body.classList.contains("mirror-dimension-active")
-    ].filter(Boolean).length;
-
-    badge.textContent = activeCount > 0 ? `WARPED (${activeCount} MODS)` : "NORMAL SPACE";
-    badge.style.background = activeCount > 0 ? "#e879f9" : "#475569";
+  if(overlay && className === "crt-arcade-active"){
+    overlay.classList.toggle("crt-arcade-active", willBeActive);
   }
+
+  updateRealityWarpBadge();
 
   if(typeof playChaosSfx === "function") playChaosSfx("warp");
 
