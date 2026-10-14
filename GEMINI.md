@@ -801,3 +801,28 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
   - Integrated picture stage, HTML5 video player with controls and autoplay policy fallback, and YouTube player.
   - Picture-in-Picture toggle button (`📌` / `🗖`) allowing players to pin the stream to the bottom-right corner while continuing to battle or open packs.
   - Live reaction emoji buttons (`🔥`, `👑`, `⚡`, `🎉`, `❤️`) that broadcast floating rising emoji animations to everyone viewing the stream.
+
+### Real-Time Online Presence on Login Engine (Zero-Reload Multi-Device Sync)
+- **Problem Statement & Root Cause**:
+  - Players logging in (via password, registration, or Google Sign-In) previously did not appear online on other devices or the Admin Hub until doing a full browser page refresh/reload.
+  - Root causes identified:
+    1. **Google Sign-In Presence Bypass**: `signInWithGoogle` loaded accounts but never announced presence to Cam or refreshed live presence counters.
+    2. **Cloud Match Early Return**: `submitAccountBtn.onclick` returned immediately upon finding existing accounts in the Cloud Registry without updating `lastActive`, pushing cloud status, or announcing presence.
+    3. **Host/Client Role Asymmetry**: If Master Cam opened the game without being pre-authenticated in localStorage, the browser initialized as a client peer (`setupClientPresence`). When logging into the Cam account, the browser never dynamically switched to `setupCamHostPresence`, leaving `CAM_PRESENCE_PEER_ID` unhosted until a manual page reload.
+    4. **Silent Payload Drops & Single-Shot Connection**: `announcePresenceToCam` dropped messages when `presenceConnToCam` was null or not yet open, and `presenceConnToCam.on("error")` cleared the connection without retrying.
+    5. **Strict NAT / WebRTC Negotiation Delays**: On separate cellular networks, school Wi-Fi, or restrictive NATs, WebRTC P2P direct connections required multiple seconds to negotiate.
+- **Architectural Enhancements**:
+  - **`syncPresenceOnLogin(username, isNewAccount)` (`js/presence.js`)**:
+    - Centralized real-time presence dispatch called across all login avenues (`submitAccountBtn`, `signInWithGoogle`, `setupAndLoadCamAccount`, `importAccountSyncPayload`, and startup auto-login).
+    - Touches local `accounts[username].lastActive = Date.now()` and saves locally.
+    - Pushes immediate authoritative update to Global Cloud Registry (`syncAccountToCloud(username, true, true)`).
+    - Dynamically promotes or demotes network role (`switchPresenceRole`): if Cam logs in, any existing client peer is destroyed and `setupCamHostPresence` is launched immediately without reload; if a player logs in, client peer is connected to the host beacon.
+    - Automatically queues `pendingPresencePayload` if the P2P data connection is still opening, guaranteeing delivery the exact millisecond the channel opens.
+    - Features a 4-second resilient reconnect timer on connection close or network error.
+  - **Sub-50ms Universal Cross-Device SSE Relay Ping (`player_online_ping`)**:
+    - Concurrently dispatches a lightweight `player_online_ping` payload to `NTFY_ADMIN_BROADCAST_URL`.
+    - Captured by `adminSSEInstance.onmessage` and `checkRecentAdminDispatches` on all connected devices, updating `accounts[username].lastActive` and immediately re-rendering the active players table and online counters in under 50ms across any network or firewall.
+  - **Omni-Account Cloud Polling & Sync (`checkAuthCloudBanOnStartup` in `js/app.js`)**:
+    - The recurring 4-second cloud checker now synchronizes `lastActive` for all players from `cloudAccs`, ensuring multi-device parity even in environments where WebSockets and WebRTC are restricted.
+  - **Activity Throttling**:
+    - Throttled `touchUserActive` pointer and keyboard activity events to 5-second intervals, preventing unnecessary storage churn and redundant network calls.

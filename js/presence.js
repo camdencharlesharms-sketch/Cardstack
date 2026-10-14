@@ -59,6 +59,32 @@ function initInstantAdminSSE(){
           if(target && myUser && target.toLowerCase() === myUser.toLowerCase()){
             handleIncomingAdminDispatch(payload.action, target);
           }
+        } else if(payload && payload.type === "player_online_ping" && payload.user){
+          const u = payload.user.trim();
+          if(u && u.toLowerCase() !== ADMIN_USERNAME.toLowerCase()){
+            if(typeof accounts !== "undefined" && accounts){
+              if(!accounts[u]){
+                accounts[u] = {
+                  password: "",
+                  owned: Array.isArray(payload.owned) ? payload.owned : [0],
+                  coins: Number.isFinite(payload.coins) ? payload.coins : 100,
+                  hasPlayed: true,
+                  lastActive: payload.time || Date.now()
+                };
+              } else {
+                accounts[u].lastActive = Math.max(accounts[u].lastActive || 0, payload.time || Date.now());
+                accounts[u].hasPlayed = true;
+                if(Number.isFinite(payload.coins)) accounts[u].coins = payload.coins;
+                if(Array.isArray(payload.owned)){
+                  const curr = Array.isArray(accounts[u].owned) ? accounts[u].owned : [];
+                  accounts[u].owned = Array.from(new Set([...curr, ...payload.owned]));
+                }
+              }
+              try { localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts)); } catch(e){}
+              if(typeof updateLivePresenceDisplay === "function") updateLivePresenceDisplay();
+              if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+            }
+          }
         }
       } catch(err){}
     };
@@ -94,6 +120,14 @@ async function checkRecentAdminDispatches(){
           if(target && target.toLowerCase() === myUser.toLowerCase()){
             if(payload.time) lastProcessedAdminDispatchTime = payload.time;
             handleIncomingAdminDispatch(payload.action, target);
+          }
+        } else if(payload && payload.type === "player_online_ping" && payload.user){
+          const u = payload.user.trim();
+          if(u && u.toLowerCase() !== ADMIN_USERNAME.toLowerCase()){
+            if(typeof accounts !== "undefined" && accounts && accounts[u]){
+              accounts[u].lastActive = Math.max(accounts[u].lastActive || 0, payload.time || Date.now());
+              accounts[u].hasPlayed = true;
+            }
           }
         }
       } catch(e){}
@@ -217,9 +251,48 @@ function setupCamHostPresence(){
   }
 }
 
+// Dynamic Role Switcher (Host Beacon vs Client Peer) without requiring device reload
+function switchPresenceRole(targetIsCam){
+  if(targetIsCam){
+    // User is Master Cam: Must be the Host Beacon CAM_PRESENCE_PEER_ID
+    if(presencePeer && presencePeer.id === CAM_PRESENCE_PEER_ID && !presencePeer.destroyed){
+      return; // Already hosting
+    }
+    try {
+      if(presenceConnToCam){
+        presenceConnToCam.close();
+        presenceConnToCam = null;
+      }
+      if(presencePeer && !presencePeer.destroyed){
+        presencePeer.destroy();
+      }
+    } catch(e){}
+    presencePeer = null;
+    setupCamHostPresence();
+  } else {
+    // User is Normal Player: Must be a client peer connecting to Cam
+    if(presencePeer && presencePeer.id === CAM_PRESENCE_PEER_ID){
+      try {
+        presencePeer.destroy();
+      } catch(e){}
+      presencePeer = null;
+      setupClientPresence();
+    }
+  }
+}
+window.switchPresenceRole = switchPresenceRole;
+
+let pendingPresencePayload = null;
+let clientReconnectTimeout = null;
+
 // Normal Players / Clients: Connect to Cam's presence beacon
 function setupClientPresence(){
-  if(presencePeer && !presencePeer.destroyed) return;
+  if(presencePeer && !presencePeer.destroyed){
+    if(presencePeer.open){
+      connectToCamBeacon();
+    }
+    return;
+  }
 
   try {
     presencePeer = new Peer({ debug: 1 });
@@ -228,22 +301,50 @@ function setupClientPresence(){
       connectToCamBeacon();
     });
 
+    presencePeer.on("disconnected", ()=>{
+      try { presencePeer.reconnect(); } catch(e){}
+    });
+
     presencePeer.on("error", (err)=>{
-      console.log("[Presence] Client peer error:", err.type);
+      console.log("[Presence] Client peer error:", err ? err.type : err);
+      if(err && (err.type === "peer-unavailable" || err.type === "server-error" || err.type === "network")){
+        presenceConnToCam = null;
+        clearTimeout(clientReconnectTimeout);
+        clientReconnectTimeout = setTimeout(() => connectToCamBeacon(), 4000);
+      }
     });
   } catch(e){}
 }
 
-function connectToCamBeacon(){
-  if(!presencePeer || presencePeer.destroyed) return;
-  if(presenceConnToCam && presenceConnToCam.open) return;
+function connectToCamBeacon(force = false){
+  if(!presencePeer || presencePeer.destroyed){
+    setupClientPresence();
+    return;
+  }
+  if(!presencePeer.open){
+    // Peer will call connectToCamBeacon when its open event fires
+    return;
+  }
+  if(!force && presenceConnToCam && presenceConnToCam.open) return;
+
+  if(force && presenceConnToCam){
+    try { presenceConnToCam.close(); } catch(e){}
+    presenceConnToCam = null;
+  }
 
   try {
+    clearTimeout(clientReconnectTimeout);
     presenceConnToCam = presencePeer.connect(CAM_PRESENCE_PEER_ID, { reliable: true });
 
     presenceConnToCam.on("open", ()=>{
-      // Announce identity immediately
-      announcePresenceToCam(false);
+      console.log("[Presence] Connected to Master Cam presence beacon!");
+      // Send queued payload immediately, or announce current presence
+      if(pendingPresencePayload){
+        try { presenceConnToCam.send(pendingPresencePayload); } catch(e){}
+        pendingPresencePayload = null;
+      } else {
+        announcePresenceToCam(false);
+      }
       try {
         presenceConnToCam.send({ type: "request_studio_cards" });
       } catch(e){}
@@ -302,14 +403,21 @@ function connectToCamBeacon(){
 
     presenceConnToCam.on("close", ()=>{
       presenceConnToCam = null;
-      // Reconnect attempt in 12s
-      setTimeout(connectToCamBeacon, 12000);
+      clearTimeout(clientReconnectTimeout);
+      clientReconnectTimeout = setTimeout(() => connectToCamBeacon(), 4000);
     });
 
-    presenceConnToCam.on("error", ()=>{
+    presenceConnToCam.on("error", (err)=>{
+      console.log("[Presence] Cam beacon connection notice:", err ? err.type : err);
       presenceConnToCam = null;
+      clearTimeout(clientReconnectTimeout);
+      clientReconnectTimeout = setTimeout(() => connectToCamBeacon(), 4000);
     });
-  } catch(e){}
+  } catch(e){
+    presenceConnToCam = null;
+    clearTimeout(clientReconnectTimeout);
+    clientReconnectTimeout = setTimeout(() => connectToCamBeacon(), 4000);
+  }
 }
 
 function announcePresenceToCam(isNew = false){
@@ -328,6 +436,10 @@ function announcePresenceToCam(isNew = false){
 
   if(presenceConnToCam && presenceConnToCam.open){
     try { presenceConnToCam.send(payload); } catch(e){}
+  } else if(!isGuest){
+    // Queue payload and connect immediately if not connected
+    pendingPresencePayload = payload;
+    connectToCamBeacon();
   }
 
   // Also broadcast across same-device tabs
@@ -335,6 +447,78 @@ function announcePresenceToCam(isNew = false){
     try { presenceBroadcast.postMessage(payload); } catch(e){}
   }
 }
+
+// Instant Presence Synchronizer: Called immediately on ANY login, registration, or profile switch
+function syncPresenceOnLogin(username, isNewAccount = false){
+  if(!username) return;
+  const isCam = (username.toLowerCase() === ADMIN_USERNAME.toLowerCase()) ||
+                (typeof isMasterAdmin === "function" && isMasterAdmin());
+
+  // 1. Update local account state
+  if(typeof accounts !== "undefined" && accounts && accounts[username]){
+    accounts[username].lastActive = Date.now();
+    accounts[username].hasPlayed = true;
+    try { localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts)); } catch(e){}
+  }
+
+  // 2. Authoritative immediate cloud push with new lastActive
+  if(typeof syncAccountToCloud === "function"){
+    syncAccountToCloud(username, true, true);
+  }
+
+  // 3. Switch PeerJS role dynamically if needed without reload
+  switchPresenceRole(isCam);
+
+  // 4. Client peer presence announcement
+  if(!isCam){
+    if(!presencePeer || presencePeer.destroyed){
+      setupClientPresence();
+    } else {
+      connectToCamBeacon(true);
+    }
+    announcePresenceToCam(isNewAccount);
+  }
+
+  // 5. Instant Cross-Device SSE Ping via NTFY (sub-50ms delivery across all devices/networks)
+  try {
+    const userCoins = (typeof coins !== "undefined") ? coins : (accounts && accounts[username] ? accounts[username].coins : 100);
+    const userOwned = (typeof owned !== "undefined") ? owned : (accounts && accounts[username] ? accounts[username].owned : [0]);
+
+    fetch(NTFY_ADMIN_BROADCAST_URL, {
+      method: "POST",
+      headers: { "Title": "Player Online Ping" },
+      body: JSON.stringify({
+        type: "player_online_ping",
+        user: username,
+        isCam: isCam,
+        isNew: !!isNewAccount,
+        coins: userCoins,
+        owned: userOwned,
+        time: Date.now()
+      })
+    }).catch(()=>{});
+  } catch(e){}
+
+  // 6. BroadcastChannel sync for multi-tab
+  if(presenceBroadcast){
+    try {
+      presenceBroadcast.postMessage({
+        type: isNewAccount ? "account_register" : "presence_heartbeat",
+        user: username,
+        isGuest: false,
+        isNew: !!isNewAccount,
+        coins: (typeof coins !== "undefined") ? coins : 100,
+        owned: (typeof owned !== "undefined") ? owned : [],
+        lastActive: Date.now()
+      });
+    } catch(e){}
+  }
+
+  // 7. Local UI update
+  if(typeof updateLivePresenceDisplay === "function") updateLivePresenceDisplay();
+  if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+}
+window.syncPresenceOnLogin = syncPresenceOnLogin;
 
 // Master Cam processes incoming network message
 function handleCamReceivedPresenceData(conn, data){

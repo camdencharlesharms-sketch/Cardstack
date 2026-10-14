@@ -1421,6 +1421,9 @@ async function signInWithGoogle(email, displayName = "", photoUrl = ""){
         showLiveToast("🎉 Signed in with Google as <b>" + targetUser + "</b> (" + cleanEmail + ")!", true);
       }
       if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+      if(typeof syncPresenceOnLogin === "function"){
+        syncPresenceOnLogin(targetUser, false);
+      }
       return;
     }
 
@@ -1459,6 +1462,9 @@ async function signInWithGoogle(email, displayName = "", photoUrl = ""){
       showLiveToast("🎉 Welcome to Cardstack! Profile created for Google account (" + cleanEmail + ")!", true);
     }
     if(typeof playChaosSfx === "function") playChaosSfx("triumph");
+    if(typeof syncPresenceOnLogin === "function"){
+      syncPresenceOnLogin(accountNameToUse, true);
+    }
   } catch(e){
     console.error("Google sign-in error:", e);
     if(errEl) errEl.textContent = "Google sign-in error. Please try again.";
@@ -1697,6 +1703,9 @@ function importAccountSyncPayload(syncStr){
     }
     syncAccountToCloud(username, true);
     loadAccount(username);
+    if(typeof syncPresenceOnLogin === "function"){
+      syncPresenceOnLogin(username, false);
+    }
     return { success: true, username };
   } catch(e){
     return { success: false, error: "Could not decode sync data." };
@@ -2069,6 +2078,10 @@ function setupAndLoadCamAccount(newPassword){
     const adminSuiteBtn = document.getElementById("adminSuiteBtn");
     if(adminSuiteBtn) adminSuiteBtn.style.display = "inline-flex";
   }
+
+  if(typeof syncPresenceOnLogin === "function"){
+    syncPresenceOnLogin("Cam", false);
+  }
 }
 if(typeof window !== "undefined") window.setupAndLoadCamAccount = setupAndLoadCamAccount;
 
@@ -2154,11 +2167,17 @@ document.getElementById("accountSubmit").onclick = async () => {
           return;
         }
         accounts[cloudMatchKey] = cloudAcc;
+        accounts[cloudMatchKey].lastActive = Date.now();
+        accounts[cloudMatchKey].hasPlayed = true;
         localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
         loadAccount(cloudMatchKey);
+        syncAccountToCloud(cloudMatchKey, true);
         document.getElementById("accountModal").classList.remove("show");
         if(typeof showLiveToast === "function"){
           showLiveToast("☁️ Cloud account loaded! Welcome back, <b>" + cloudMatchKey + "</b>!", true);
+        }
+        if(typeof syncPresenceOnLogin === "function"){
+          syncPresenceOnLogin(cloudMatchKey, false);
         }
         return;
       }
@@ -2199,7 +2218,9 @@ document.getElementById("accountSubmit").onclick = async () => {
     showLiveToast("✅ Signed in as <b>" + actualUser + "</b>!", true);
   }
 
-  if(typeof announcePresenceToCam === "function"){
+  if(typeof syncPresenceOnLogin === "function"){
+    syncPresenceOnLogin(actualUser, isNewAccount);
+  } else if(typeof announcePresenceToCam === "function"){
     announcePresenceToCam(isNewAccount);
   }
   if(typeof updateLivePresenceDisplay === "function"){
@@ -2477,31 +2498,61 @@ if(changeNewEl && changeConfEl){
   });
 }
 
-// Authoritative ban and admin action check for players starting or awakening
+// Authoritative ban and online sync check across all connected devices
 async function checkAuthCloudBanOnStartup(){
   const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
-  if(!myUser || (typeof isCamUsername === "function" && isCamUsername(myUser))) return;
 
   try {
     const cloudAccs = await fetchCloudAccounts();
-    if(cloudAccs && cloudAccs[myUser]){
-      const cloudAcc = cloudAccs[myUser];
-      const isCloudBanned = !!(cloudAcc.banned && (!cloudAcc.banExpires || Date.now() < cloudAcc.banExpires));
-      if(isCloudBanned){
-        if(!accounts) accounts = {};
-        accounts[myUser] = (typeof mergeAccountData === "function") ? mergeAccountData(accounts[myUser] || {}, cloudAcc) : cloudAcc;
-        accounts[myUser].banned = true;
-        accounts[myUser].banReason = cloudAcc.banReason || "Your account has been temporarily suspended by Master Cam.";
-        accounts[myUser].banExpires = cloudAcc.banExpires || null;
-        accounts[myUser].lastAdminActionTime = cloudAcc.lastAdminActionTime || Date.now();
-        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-        if(typeof showBannedScreen === "function") showBannedScreen(cloudAcc, myUser);
-      } else if(cloudAcc.banned === false && accounts[myUser] && accounts[myUser].banned){
-        accounts[myUser].banned = false;
-        accounts[myUser].banReason = "";
-        accounts[myUser].banExpires = null;
-        localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-        if(typeof hideBannedScreen === "function") hideBannedScreen();
+    if(cloudAccs && typeof cloudAccs === "object"){
+      let hasUpdates = false;
+      for(const u in cloudAccs){
+        if(!u) continue;
+        const cAcc = cloudAccs[u];
+        if(!cAcc) continue;
+        if(!accounts[u]){
+          accounts[u] = cAcc;
+          hasUpdates = true;
+        } else {
+          const cActive = cAcc.lastActive || 0;
+          const lActive = accounts[u].lastActive || 0;
+          if(cActive > lActive){
+            accounts[u].lastActive = cActive;
+            hasUpdates = true;
+          }
+          if(cAcc.hasPlayed && !accounts[u].hasPlayed){
+            accounts[u].hasPlayed = true;
+            hasUpdates = true;
+          }
+        }
+      }
+      if(hasUpdates){
+        try { localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts)); } catch(e){}
+        if(typeof updateLivePresenceDisplay === "function") updateLivePresenceDisplay();
+        if(typeof refreshAdminPlayerData === "function") refreshAdminPlayerData();
+      }
+    }
+
+    if(myUser && !(typeof isCamUsername === "function" && isCamUsername(myUser))){
+      if(cloudAccs && cloudAccs[myUser]){
+        const cloudAcc = cloudAccs[myUser];
+        const isCloudBanned = !!(cloudAcc.banned && (!cloudAcc.banExpires || Date.now() < cloudAcc.banExpires));
+        if(isCloudBanned){
+          if(!accounts) accounts = {};
+          accounts[myUser] = (typeof mergeAccountData === "function") ? mergeAccountData(accounts[myUser] || {}, cloudAcc) : cloudAcc;
+          accounts[myUser].banned = true;
+          accounts[myUser].banReason = cloudAcc.banReason || "Your account has been temporarily suspended by Master Cam.";
+          accounts[myUser].banExpires = cloudAcc.banExpires || null;
+          accounts[myUser].lastAdminActionTime = cloudAcc.lastAdminActionTime || Date.now();
+          localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+          if(typeof showBannedScreen === "function") showBannedScreen(cloudAcc, myUser);
+        } else if(cloudAcc.banned === false && accounts[myUser] && accounts[myUser].banned){
+          accounts[myUser].banned = false;
+          accounts[myUser].banReason = "";
+          accounts[myUser].banExpires = null;
+          localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
+          if(typeof hideBannedScreen === "function") hideBannedScreen();
+        }
       }
     }
   } catch(e){}
@@ -2547,9 +2598,14 @@ setTimeout(() => {
 }, 1500);
 
 
+let _lastUserTouchTime = 0;
 function touchUserActive(){
+  const now = Date.now();
+  if(now - _lastUserTouchTime < 5000) return; // Throttled to 5s to eliminate unnecessary storage churn
+  _lastUserTouchTime = now;
+
   if(currentUser && accounts[currentUser]){
-    accounts[currentUser].lastActive = Date.now();
+    accounts[currentUser].lastActive = now;
     accounts[currentUser].hasPlayed = true;
     localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     if(typeof announcePresenceToCam === "function"){
@@ -2567,6 +2623,9 @@ window.addEventListener("keydown", touchUserActive);
 
 if(currentUser && accounts[currentUser]){
   loadAccount(currentUser);
+  if(typeof syncPresenceOnLogin === "function"){
+    syncPresenceOnLogin(currentUser, false);
+  }
 } else {
   try {
     const savedGuestOwned = JSON.parse(localStorage.getItem("cardCollectorGuestOwned"));
