@@ -608,6 +608,14 @@ function startPackOpening(tierKey){
     model.classList.remove("shaking");
     model.classList.add("burst");
 
+    const shockwave = document.getElementById("packEnergyShockwave");
+    if(shockwave){
+      shockwave.classList.remove("active");
+      void shockwave.offsetWidth;
+      shockwave.classList.add("active");
+    }
+    if(typeof playChaosSfx === "function") playChaosSfx("detonation");
+
     setTimeout(()=>{
       stage.style.display = "none";
       results.style.display = "flex";
@@ -1022,7 +1030,7 @@ function render(){
             ${attacksHtml}
           </div>
         </div>
-        ${has ? '<div class="holo-glint"></div>' : ''}
+        ${has ? '<div class="holo-glint"></div><div class="card-holo-glare"></div>' : ''}
       </div>
     `;
 
@@ -1039,22 +1047,45 @@ function render(){
         const y = e.clientY - rect.top;
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
-        const rotX = ((y - centerY) / centerY) * -14;
-        const rotY = ((x - centerX) / centerX) * 14;
-        el.style.transform = `perspective(900px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) translateY(-8px) scale3d(1.025, 1.025, 1.025)`;
+        const rotX = ((y - centerY) / centerY) * -15;
+        const rotY = ((x - centerX) / centerX) * 15;
+        el.style.transform = `perspective(900px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) translateY(-8px) scale3d(1.03, 1.03, 1.03)`;
+
+        // 3D Lenticular Parallax Depth for Card Art
+        const artImg = el.querySelector(".card-art-img");
+        if(artImg){
+          artImg.style.transform = `scale(1.08) translate3d(${(-rotY * 0.5).toFixed(1)}px, ${(-rotX * 0.5).toFixed(1)}px, 12px)`;
+        }
+
         const glint = el.querySelector(".holo-glint");
+        const glare = el.querySelector(".card-holo-glare");
+        const xPct = Math.round((x / rect.width) * 100);
+        const yPct = Math.round((y / rect.height) * 100);
+        const angle = Math.round(rotY * 12 + 45);
+
         if(glint){
-          const xPct = Math.round((x / rect.width) * 100);
-          const yPct = Math.round((y / rect.height) * 100);
-          const angle = Math.round(rotY * 12 + 45);
           glint.style.background = `radial-gradient(circle at ${xPct}% ${yPct}%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 28%, transparent 70%), repeating-linear-gradient(${angle}deg, rgba(255,0,128,0.2) 0%, rgba(0,255,255,0.2) 25%, rgba(255,255,0,0.2) 50%, rgba(255,0,128,0.2) 75%)`;
           glint.style.opacity = "1";
+        }
+        if(glare){
+          glare.style.opacity = "0.75";
+          if(isRainbowCard){
+            glare.style.background = `linear-gradient(${angle + 90}deg, rgba(255,0,128,0.4) 0%, rgba(255,154,0,0.4) 20%, rgba(208,222,33,0.4) 40%, rgba(79,220,74,0.4) 60%, rgba(63,218,216,0.4) 80%, rgba(149,0,255,0.4) 100%)`;
+          } else if(isGoldCard){
+            glare.style.background = `radial-gradient(circle at ${xPct}% ${yPct}%, rgba(254,240,138,0.85) 0%, rgba(234,179,8,0.5) 45%, transparent 75%)`;
+          } else {
+            glare.style.background = `radial-gradient(circle at ${xPct}% ${yPct}%, rgba(255,255,255,0.4) 0%, transparent 60%)`;
+          }
         }
       });
       el.addEventListener("mouseleave", () => {
         el.style.transform = "";
+        const artImg = el.querySelector(".card-art-img");
+        if(artImg) artImg.style.transform = "";
         const glint = el.querySelector(".holo-glint");
         if(glint) glint.style.opacity = "0";
+        const glare = el.querySelector(".card-holo-glare");
+        if(glare) glare.style.opacity = "0";
       });
     }
 
@@ -3547,6 +3578,25 @@ window.claimDailyReward = claimDailyReward;
 
 function initSuperCoolDom(){
   initAmbientCosmosCanvas();
+  initStardustTrailCanvas();
+
+  const headerViz = document.getElementById("headerAudioVisualizer");
+  if(headerViz){
+    headerViz.onclick = () => {
+      if(typeof currentJukeboxTrack !== "undefined" && currentJukeboxTrack){
+        if(typeof stopJukeboxAudio === "function") stopJukeboxAudio();
+        updateHeaderVisualizer(false);
+      } else {
+        if(typeof playProceduralSoundscape === "function"){
+          playProceduralSoundscape("arcade");
+          updateHeaderVisualizer(true, "8-BIT ARCADE");
+        } else {
+          const audioModal = document.getElementById("customAudioModal");
+          if(audioModal) audioModal.style.display = "flex";
+        }
+      }
+    };
+  }
 
   const closeDetailBtn = document.getElementById("closeCardDetailBtn");
   if(closeDetailBtn) closeDetailBtn.onclick = closeCardDetailModal;
@@ -3685,3 +3735,122 @@ window.addEventListener("storage", (e) => {
     } catch(err){}
   }
 });
+
+
+/* ========================================================
+   INTERACTIVE CYBER STARDUST CURSOR TRAIL & PARTICLES
+   ======================================================== */
+function initStardustTrailCanvas(){
+  const canvas = document.getElementById("stardustTrailCanvas");
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+
+  function resize(){
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  const particles = [];
+  const colors = [
+    { r: 56, g: 189, b: 248 },   // Electric Cyan
+    { r: 192, g: 132, b: 252 },  // Amethyst Purple
+    { r: 250, g: 204, b: 21 },   // Celestial Gold
+    { r: 244, g: 63, b: 94 },    // Cosmic Rose
+    { r: 255, g: 255, b: 255 }   // Starlight White
+  ];
+
+  function spawnMote(x, y, count = 1, speedMult = 1, sizeMult = 1){
+    for(let i = 0; i < count; i++){
+      if(particles.length >= 80) particles.shift();
+      const col = colors[Math.floor(Math.random() * colors.length)];
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (Math.random() * 2.2 + 0.6) * speedMult;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.4,
+        size: (Math.random() * 2.6 + 1.2) * sizeMult,
+        color: col,
+        life: 1.0,
+        decay: Math.random() * 0.035 + 0.025,
+        twinkle: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  // Pointer movement trail
+  window.addEventListener("pointermove", (e) => {
+    spawnMote(e.clientX, e.clientY, 1, 0.9, 1);
+  }, { passive: true });
+
+  // Click explosive sparkle burst
+  window.addEventListener("pointerdown", (e) => {
+    spawnMote(e.clientX, e.clientY, 12, 2.5, 1.3);
+  }, { passive: true });
+
+  function renderTrail(){
+    ctx.clearRect(0, 0, width, height);
+
+    for(let i = particles.length - 1; i >= 0; i--){
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      p.life -= p.decay;
+      p.twinkle += 0.2;
+
+      if(p.life <= 0){
+        particles.splice(i, 1);
+        continue;
+      }
+
+      const alpha = Math.max(0, p.life);
+      const radius = p.size * (0.6 + 0.4 * Math.sin(p.twinkle));
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${alpha})`;
+      ctx.shadowColor = `rgb(${p.color.r}, ${p.color.g}, ${p.color.b})`;
+      ctx.shadowBlur = 8;
+      ctx.fill();
+
+      // Mini flare star on prominent sparks
+      if(p.size > 2.4 && alpha > 0.5){
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.6})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(p.x - 4, p.y);
+        ctx.lineTo(p.x + 4, p.y);
+        ctx.moveTo(p.x, p.y - 4);
+        ctx.lineTo(p.x, p.y + 4);
+        ctx.stroke();
+      }
+    }
+
+    requestAnimationFrame(renderTrail);
+  }
+
+  requestAnimationFrame(renderTrail);
+}
+
+function updateHeaderVisualizer(isPlaying, trackName = "Soundtrack"){
+  const viz = document.getElementById("headerAudioVisualizer");
+  const label = document.getElementById("headerAudioTrackLabel");
+  if(!viz) return;
+
+  if(isPlaying){
+    viz.classList.add("is-playing");
+    if(label) label.textContent = (trackName && trackName !== "Soundtrack") ? trackName.toUpperCase() : "PLAYING";
+  } else {
+    viz.classList.remove("is-playing");
+    if(label) label.textContent = "SOUNDTRACK";
+  }
+}
+window.updateHeaderVisualizer = updateHeaderVisualizer;

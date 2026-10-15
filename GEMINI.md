@@ -866,3 +866,24 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
   - **80s Retro CRT & Retro VHS**:
     - Rendered via safe scanline overlay gradients on `#realmScreenShaderOverlay` with retro chromatic text shadow (`text-shadow: 1px 0 rgba(239, 68, 68, 0.45), -1px 0 rgba(59, 130, 246, 0.45)`).
     - Retains crisp, legible text and full UI visibility with zero display blackouts.
+
+### Dynamic Visual & Experiential Polish Suite ("Cooler Site" Overhaul)
+- **Interactive Cyber Stardust Cursor Trail (`#stardustTrailCanvas`)**:
+  - High-performance, GPU-accelerated 60fps canvas layer (`z-index: 99998; pointer-events: none;`) that renders silky smooth celestial stardust motes trailing behind the cursor.
+  - Generates multi-colored glowing particles (electric cyan, amethyst purple, celestial gold, cosmic rose, and starlight white) with organic decay and twinkling diffraction flares.
+  - On pointer click/tap, emits an explosive radial burst of 12 sparkling stardust motes with lingering deceleration.
+- **Audio Reactive Neon Equalizer in Header (`#headerAudioVisualizer`)**:
+  - Positioned directly in the top navigation bar next to the Card Stack brand emblem.
+  - Features 5 reactive neon equalizer bars (`.eq-bar`) with fluctuating heights and dynamic cyan/purple glowing gradients that dance to the rhythm of the game soundtrack.
+  - Synchronized with `playProceduralSoundscape` and `stopJukeboxAudio` across all tracks (8-Bit Retro Arcade, Cyber Synthwave, Hellfire Boss Battle, Celestial Orbit, Citadel Tavern).
+  - Clicking the visualizer toggles soundtrack playback or starts the 8-Bit Retro Arcade soundtrack instantly.
+- **3D Lenticular Parallax Depth & Dynamic Specular Foil Glare on Collection Cards**:
+  - Enhanced all cards in the collection binder grid (`#grid .card`) with true stereoscopic lenticular depth:
+    - Tilts toward pointer coordinates in 3D perspective (`perspective(900px) rotateX(...) rotateY(...) scale3d(1.03, 1.03, 1.03)`).
+    - Translates the card art (`.card-art-img`) in opposite parallax (`translate3d(-rotY * 0.5px, -rotX * 0.5px, 12px)`), making the character art pop out in front of the frame.
+    - Integrated physical specular foil glare (`.card-holo-glare` & `.holo-glint`) that traces pointer position across the surface.
+    - Custom chromatic rainbow spectrum sheen on Rainbow Edition cards and molten 24K gold reflections on Gold Edition cards.
+- **High-Energy Booster Pack Opening Shockwave (`#packEnergyShockwave`)**:
+  - Opening booster packs now triggers a cinematic energy shockwave ring expanding across the screen upon unsealing, accompanied by laser tear sizzles and golden spark confetti.
+- **Summoner Rank Badge Shimmer Sweep**:
+  - Summoner rank badge in the header features a continuous metallic light-sweep animation (`@keyframes rankShimmer`), glowing hover elevation, and immediate access to the Mastery Modal.

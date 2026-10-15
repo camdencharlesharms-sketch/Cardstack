@@ -9378,6 +9378,10 @@ function stopJukeboxAudio(){
     btn.style.boxShadow = "none";
     btn.style.filter = "brightness(1)";
   });
+
+  if(typeof updateHeaderVisualizer === "function"){
+    updateHeaderVisualizer(false);
+  }
 }
 window.stopJukeboxAudio = stopJukeboxAudio;
 
@@ -9417,6 +9421,10 @@ function playProceduralSoundscape(trackType){
   masterMusicGain.gain.setValueAtTime(baseVol, ctx.currentTime);
   masterMusicGain.connect(ctx.destination);
   activeJukeboxNodes.push(masterMusicGain);
+
+  if(typeof updateHeaderVisualizer === "function"){
+    updateHeaderVisualizer(true, trackType);
+  }
 
   if(trackType === "arcade"){
     // Authentic 8-Bit / 16-Bit Retro Video Game Adventure Theme (132 BPM)

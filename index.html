@@ -30,6 +30,16 @@
       <h1>Card Stack</h1>
     </div>
   </div>
+  <div id="headerAudioVisualizer" class="header-audio-visualizer" title="🎵 Reactive Audio Visualizer — Click to Play 8-Bit Music or Open Sound Studio">
+    <div class="eq-bars">
+      <span class="eq-bar bar-1"></span>
+      <span class="eq-bar bar-2"></span>
+      <span class="eq-bar bar-3"></span>
+      <span class="eq-bar bar-4"></span>
+      <span class="eq-bar bar-5"></span>
+    </div>
+    <span class="eq-label" id="headerAudioTrackLabel">Soundtrack</span>
+  </div>
   <div class="accountArea">
     <div style="display:flex;align-items:center;gap:6px">
       <span class="accountName" id="accountLabel">Guest</span>
@@ -71,6 +81,7 @@
       </div>
       <div class="pack-tear-line" id="packTearLine"></div>
       <div class="pack-crimp pack-crimp-bottom"></div>
+      <div id="packEnergyShockwave" class="pack-energy-shockwave"></div>
     </div>
     <h3 id="packOpeningStatus" style="font-weight:700;color:#94a3b8;margin:0">Unsealing Booster Pack...</h3>
   </div>
@@ -2438,6 +2449,8 @@
 
 <!-- AMBIENT COSMOS PARTICLES CANVAS -->
 <canvas id="ambientCosmosCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:-2;opacity:0.65"></canvas>
+<!-- INTERACTIVE CYBER STARDUST CURSOR TRAIL CANVAS -->
+<canvas id="stardustTrailCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:99998;opacity:0.9"></canvas>
 
 
 <!-- CUSTOM AUDIO & VIDEO GAME SOUND STUDIO MODAL -->
