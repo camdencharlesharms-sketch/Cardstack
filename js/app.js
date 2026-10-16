@@ -1054,14 +1054,14 @@ function render(){
         const y = e.clientY - rect.top;
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
-        const rotX = ((y - centerY) / centerY) * -15;
-        const rotY = ((x - centerX) / centerX) * 15;
-        el.style.transform = `perspective(900px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) translateY(-8px) scale3d(1.03, 1.03, 1.03)`;
+        const rotX = ((y - centerY) / centerY) * -22;
+        const rotY = ((x - centerX) / centerX) * 22;
+        el.style.transform = `perspective(850px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) translateY(-12px) scale3d(1.05, 1.05, 1.05)`;
 
         // 3D Lenticular Parallax Depth for Card Art
         const artImg = el.querySelector(".card-art-img");
         if(artImg){
-          artImg.style.transform = `scale(1.08) translate3d(${(-rotY * 0.5).toFixed(1)}px, ${(-rotX * 0.5).toFixed(1)}px, 12px)`;
+          artImg.style.transform = `scale(1.14) translate3d(${(-rotY * 0.85).toFixed(1)}px, ${(-rotX * 0.85).toFixed(1)}px, 22px)`;
         }
 
         const glint = el.querySelector(".holo-glint");
@@ -3191,22 +3191,22 @@ function initAmbientCosmosCanvas(){
   const meteorEmbers = [];
 
   function spawnMeteor(){
-    const startX = Math.random() * width * 0.85;
-    const startY = Math.random() * height * 0.45;
-    const speed = Math.random() * 16 + 12;
-    const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.35;
+    const startX = Math.random() * width * 0.9;
+    const startY = Math.random() * height * 0.5;
+    const speed = Math.random() * 24 + 16;
+    const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.4;
     shootingStars.push({
       x: startX,
       y: startY,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       life: 1.0,
-      decay: Math.random() * 0.03 + 0.02,
-      length: Math.random() * 140 + 90
+      decay: Math.random() * 0.025 + 0.015,
+      length: Math.random() * 220 + 130
     });
   }
   function scheduleNextMeteor(){
-    const delay = Math.random() * 2200 + 2000;
+    const delay = Math.random() * 950 + 650;
     setTimeout(() => {
       spawnMeteor();
       scheduleNextMeteor();
@@ -3466,7 +3466,7 @@ function initAmbientCosmosCanvas(){
       ss.life -= ss.decay;
 
       // Spawn falling embers along trail
-      if(Math.random() > 0.45 && meteorEmbers.length < 50){
+      if(Math.random() > 0.18 && meteorEmbers.length < 120){
         meteorEmbers.push({
           x: ss.x,
           y: ss.y,
@@ -4038,31 +4038,31 @@ function initStardustTrailCanvas(){
 
   function spawnMote(x, y, count = 1, speedMult = 1, sizeMult = 1){
     for(let i = 0; i < count; i++){
-      if(particles.length >= 80) particles.shift();
+      if(particles.length >= 220) particles.shift();
       const col = colors[Math.floor(Math.random() * colors.length)];
       const angle = Math.random() * Math.PI * 2;
-      const speed = (Math.random() * 2.2 + 0.6) * speedMult;
+      const speed = (Math.random() * 2.8 + 0.8) * speedMult;
       particles.push({
         x, y,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 0.4,
-        size: (Math.random() * 2.6 + 1.2) * sizeMult,
+        vy: Math.sin(angle) * speed - 0.5,
+        size: (Math.random() * 3.2 + 1.5) * sizeMult,
         color: col,
         life: 1.0,
-        decay: Math.random() * 0.035 + 0.025,
+        decay: Math.random() * 0.028 + 0.018,
         twinkle: Math.random() * Math.PI * 2
       });
     }
   }
 
-  // Pointer movement trail
+  // Pointer movement trail (multi-spark stardust stream)
   window.addEventListener("pointermove", (e) => {
-    spawnMote(e.clientX, e.clientY, 1, 0.9, 1);
+    spawnMote(e.clientX, e.clientY, 3, 1.3, 1.2);
   }, { passive: true });
 
-  // Click explosive sparkle burst
+  // Click explosive sparkle burst (fireworks blast)
   window.addEventListener("pointerdown", (e) => {
-    spawnMote(e.clientX, e.clientY, 12, 2.5, 1.3);
+    spawnMote(e.clientX, e.clientY, 28, 3.6, 1.5);
   }, { passive: true });
 
   function renderTrail(){
@@ -4114,9 +4114,9 @@ function initStardustTrailCanvas(){
   window.addEventListener("cardstackCombatHit", (e) => {
     if(!e || !e.detail) return;
     const { x, y, isCrit } = e.detail;
-    const count = isCrit ? 32 : 18;
-    const speed = isCrit ? 4.2 : 2.5;
-    spawnMote(x, y, count, speed, isCrit ? 1.5 : 1.2);
+    const count = isCrit ? 68 : 36;
+    const speed = isCrit ? 5.8 : 3.8;
+    spawnMote(x, y, count, speed, isCrit ? 1.8 : 1.4);
   });
 }
 
@@ -4147,10 +4147,10 @@ function initPackCards3D(){
       const y = e.clientY - rect.top;
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
-      const rotX = ((y - centerY) / centerY) * -12;
-      const rotY = ((x - centerX) / centerX) * 12;
+      const rotX = ((y - centerY) / centerY) * -18;
+      const rotY = ((x - centerX) / centerX) * 18;
 
-      card.style.transform = `perspective(800px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) translateY(-8px) scale3d(1.025, 1.025, 1.025)`;
+      card.style.transform = `perspective(800px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) translateY(-14px) scale3d(1.045, 1.045, 1.045)`;
       card.style.setProperty("--glare-x", `${Math.round((x / rect.width) * 100)}%`);
       card.style.setProperty("--glare-y", `${Math.round((y / rect.height) * 100)}%`);
       card.style.setProperty("--glare-opacity", "0.85");

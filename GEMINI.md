@@ -936,3 +936,23 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
   - Collection cards in the binder hover and float weightlessly in microgravity with subtle organic multi-axis orbital trajectories and staggered animation delays.
 - **Deep Space Orbital Outpost Theming**:
   - Updated navigation and hero headers with Deep Space Orbital Station telemetry, `● DEEP SPACE OBSERVATORY` live radar beacon, and crystalline space-glass UI surfaces.
+
+### Increased Animation Intensity & Velocity ("Increase All Animations")
+- **Dynamic 3D Tilt & Parallax Depth Amplified**:
+  - Binder Cards: Max tilt angle increased from 15° to 22° (`rotX/rotY * 22`) and lenticular card art depth increased to 22px pop-out parallax.
+  - Booster Packs: 3D perspective tilt increased to 18° with ambient idle breathing floating motion (`@keyframes packCardFloat`).
+- **High-Frequency Meteor Showers & Ember Density**:
+  - Cosmic meteor spawn rate tripled: now spawns every 0.7–1.6 seconds across the stellar void.
+  - Meteor velocity increased to 24–40px/frame with luminous 350px gradient tail sweeps.
+  - Tripled spark ember emission chance with capacity expanded to 120 live falling ember particles.
+- **Explosive Stardust Trail & Click Fireworks**:
+  - Pointer movement now emits 3 stardust motes per movement event (capacity expanded to 220 live particles).
+  - Pointer click detonates a 28-mote radial firework burst with accelerated velocity (3.6x speed multiplier).
+- **Combat Arena Impact & Kinetic Shake**:
+  - Attack Lunge: Increased lunge travel from 55px to 75px with 1.15x scale pop and 4.5° dynamic rotational tilt.
+  - Defender Hit Shake: Dramatic high-intensity impact shake with red neon flash (`filter: brightness(3.2) drop-shadow(0 0 40px #ef4444)`) and multi-directional shudder.
+  - Combat Hit Sparks: Upgraded to 36 motes on normal impact and 68 motes on critical strikes with 5.8x velocity.
+  - VS Arena Ring Spin: Accelerated from 8s to 3.2s with bright neon pulse cycles (0.9s).
+- **Accelerated Zero-G Floating Cadence**:
+  - Card orbital floating travel increased to 13px with rotational sway up to 1.8° across faster 4.2s–5.4s cycles.
+  - Brand holographic text shimmer accelerated to 2.8s and breathing emblem aura accelerated to 1.8s.

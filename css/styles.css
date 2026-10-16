@@ -56,13 +56,14 @@ header{
   inset: -8px;
   background: radial-gradient(circle, rgba(56, 189, 248, 0.5) 0%, rgba(168, 85, 247, 0.25) 45%, transparent 70%);
   border-radius: 50%;
-  animation: brandGlowBreath 3.5s infinite alternate ease-in-out;
+  animation: brandGlowBreath 1.8s infinite ease-in-out;
   pointer-events: none;
   z-index: 1;
 }
 @keyframes brandGlowBreath {
-  0% { transform: scale(0.85); opacity: 0.45; }
-  100% { transform: scale(1.25); opacity: 0.9; }
+  0% { transform: scale(0.8); opacity: 0.4; }
+  50% { transform: scale(1.4); opacity: 1.0; filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.9)); }
+  100% { transform: scale(0.8); opacity: 0.4; }
 }
 .brand-badge {
   font-size: 9px;
@@ -85,11 +86,12 @@ h1{
   background-size: 200% auto;
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
-  animation: brandTextShimmer 6s linear infinite alternate;
+  animation: brandTextShimmer 2.8s linear infinite;
 }
 @keyframes brandTextShimmer {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 100% 50%; }
+  0% { background-position: 0% 50%; filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.4)); }
+  50% { background-position: 100% 50%; filter: drop-shadow(0 0 14px rgba(192, 132, 252, 0.9)); }
+  100% { background-position: 0% 50%; filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.4)); }
 }
 
 .stats{display:flex;gap:14px;align-items:center}
@@ -163,11 +165,12 @@ main{max-width:1250px;margin:auto;padding:32px 24px}
   border-radius:50%;
   background:#38bdf8;
   box-shadow:0 0 8px #38bdf8;
-  animation:heroRadarPulse 1.8s infinite alternate ease-in-out;
+  animation:heroRadarPulse 0.9s infinite ease-in-out;
 }
 @keyframes heroRadarPulse{
-  0%{transform:scale(0.8);opacity:0.5}
-  100%{transform:scale(1.3);opacity:1}
+  0%{transform:scale(0.7);opacity:0.4;box-shadow:0 0 4px #38bdf8}
+  50%{transform:scale(1.5);opacity:1;box-shadow:0 0 16px #38bdf8}
+  100%{transform:scale(0.7);opacity:0.4;box-shadow:0 0 4px #38bdf8}
 }
 .hero h2{font-size:32px;font-weight:900;margin:0 0 10px;letter-spacing:-0.5px}
 .hero p{color:#94a3b8;margin:0 0 24px;max-width:680px;font-size:15px}
@@ -178,11 +181,17 @@ main{max-width:1250px;margin:auto;padding:32px 24px}
   gap:18px;
   margin-top:20px;
 }
+@keyframes packCardFloat {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+}
 .pack-card{
   --glare-x: 50%;
   --glare-y: 50%;
   --glare-opacity: 0;
   background:linear-gradient(170deg, rgba(26, 36, 68, 0.7) 0%, rgba(13, 19, 39, 0.85) 100%);
+  animation: packCardFloat 4s ease-in-out infinite;
   border:1px solid rgba(120, 150, 220, 0.25);
   border-radius:22px;
   padding:22px;
@@ -344,28 +353,30 @@ button:active{transform:translateY(0)}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:24px}
 @keyframes spaceCardFloat {
-  0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-5px) rotate(0.4deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
+  0% { transform: translateY(0px) rotate(0deg) scale(1); }
+  25% { transform: translateY(-13px) rotate(1.8deg) scale(1.02); }
+  50% { transform: translateY(-4px) rotate(-1.2deg) scale(0.995); }
+  75% { transform: translateY(-11px) rotate(-1.6deg) scale(1.015); }
+  100% { transform: translateY(0px) rotate(0deg) scale(1); }
 }
 .card{
   height:380px;
   border-radius:20px;
   position:relative;
-  transition:transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
-  animation: spaceCardFloat 6.5s ease-in-out infinite;
+  transition:transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
+  animation: spaceCardFloat 4.2s ease-in-out infinite;
 }
 .card:nth-child(2n){
-  animation-duration: 7.5s;
-  animation-delay: -1.8s;
+  animation-duration: 4.8s;
+  animation-delay: -1.2s;
 }
 .card:nth-child(3n){
-  animation-duration: 8.5s;
-  animation-delay: -3.4s;
+  animation-duration: 5.4s;
+  animation-delay: -2.3s;
 }
 .card:nth-child(5n){
-  animation-duration: 6.8s;
-  animation-delay: -4.8s;
+  animation-duration: 4.5s;
+  animation-delay: -3.1s;
 }
 .card:hover{
   animation-play-state: paused;
@@ -816,6 +827,14 @@ button:active{transform:translateY(0)}
   0%{transform:rotate(0deg)}
   100%{transform:rotate(360deg)}
 }
+.arena-vs-energy-ring{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  border:2px dashed #f43f5e;
+  box-shadow:0 0 24px rgba(244, 63, 94, 0.75), inset 0 0 18px rgba(56, 189, 248, 0.5);
+  animation:vsRingSpin 3.2s linear infinite;
+}
 .arena-vs-glow-text{
   font-size:24px;
   font-weight:900;
@@ -823,35 +842,37 @@ button:active{transform:translateY(0)}
   background:linear-gradient(135deg, #f43f5e, #facc15, #38bdf8);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 0 12px rgba(244, 63, 94, 0.8));
-  animation:vsPulse 1.8s ease-in-out infinite alternate;
+  filter:drop-shadow(0 0 14px rgba(244, 63, 94, 0.9));
+  animation:vsPulse 0.9s ease-in-out infinite alternate;
 }
 @keyframes vsPulse{
-  0%{transform:scale(0.95);filter:drop-shadow(0 0 8px rgba(244, 63, 94, 0.6))}
-  100%{transform:scale(1.1);filter:drop-shadow(0 0 18px rgba(250, 204, 21, 0.9))}
+  0%{transform:scale(0.9);filter:drop-shadow(0 0 8px rgba(244, 63, 94, 0.6))}
+  100%{transform:scale(1.22);filter:drop-shadow(0 0 25px rgba(250, 204, 21, 1))}
 }
 
-.lunge-right{animation:animLungeRight 0.35s ease forwards}
-.lunge-left{animation:animLungeLeft 0.35s ease forwards}
-.hit-shake{animation:animHitShake 0.4s ease forwards}
+.lunge-right{animation:animLungeRight 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards}
+.lunge-left{animation:animLungeLeft 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards}
+.hit-shake{animation:animHitShake 0.42s ease forwards}
 
 @keyframes animLungeRight{
   0%{transform:translateX(0) scale(1)}
-  45%{transform:translateX(55px) scale(1.08)}
+  40%{transform:translateX(75px) scale(1.15) rotate(4.5deg)}
   100%{transform:translateX(0) scale(1)}
 }
 @keyframes animLungeLeft{
   0%{transform:translateX(0) scale(1)}
-  45%{transform:translateX(-55px) scale(1.08)}
+  40%{transform:translateX(-75px) scale(1.15) rotate(-4.5deg)}
   100%{transform:translateX(0) scale(1)}
 }
 @keyframes animHitShake{
-  0%{transform:translate(0,0);filter:brightness(1)}
-  20%{transform:translate(-10px, -6px);filter:brightness(2.2) drop-shadow(0 0 15px #ef4444)}
-  40%{transform:translate(10px, 6px);filter:brightness(2.5) drop-shadow(0 0 20px #ef4444)}
-  60%{transform:translate(-6px, 4px);filter:brightness(1.8)}
-  80%{transform:translate(6px, -4px);filter:brightness(1.3)}
-  100%{transform:translate(0,0);filter:brightness(1)}
+  0%{transform:translate(0,0) rotate(0);filter:brightness(1)}
+  15%{transform:translate(-18px, -10px) rotate(-4deg);filter:brightness(2.8) drop-shadow(0 0 30px #ef4444)}
+  30%{transform:translate(18px, 10px) rotate(4deg);filter:brightness(3.2) drop-shadow(0 0 40px #ef4444)}
+  45%{transform:translate(-14px, 8px) rotate(-3deg);filter:brightness(2.2)}
+  60%{transform:translate(14px, -8px) rotate(3deg);filter:brightness(1.8)}
+  75%{transform:translate(-8px, 4px) rotate(-1deg);filter:brightness(1.3)}
+  90%{transform:translate(8px, -4px) rotate(1deg)}
+  100%{transform:translate(0,0) rotate(0);filter:brightness(1)}
 }
 
 .health-bar-container{
