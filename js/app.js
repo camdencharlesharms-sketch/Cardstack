@@ -3083,7 +3083,7 @@ function claimMasteryAchievement(id){
 window.claimMasteryAchievement = claimMasteryAchievement;
 
 /* ========================================================
-   AMBIENT COSMOS BACKGROUND PARTICLES
+   AMBIENT DEEP SPACE COSMOS ENGINE (PLANETS, 3D PARALLAX, NEBULAE & METEORS)
    ======================================================== */
 function initAmbientCosmosCanvas(){
   const canvas = document.getElementById("ambientCosmosCanvas");
@@ -3101,164 +3101,427 @@ function initAmbientCosmosCanvas(){
   window.addEventListener("resize", resize);
   resize();
 
-  // Multi-tier Starfield
-  const stars = [];
-  for(let i = 0; i < 140; i++){
-    stars.push({
+  // Mouse Parallax Physics
+  let targetParallaxX = 0, targetParallaxY = 0;
+  let curParallaxX = 0, curParallaxY = 0;
+  window.addEventListener("pointermove", (e) => {
+    targetParallaxX = (e.clientX - width / 2) / (width / 2);
+    targetParallaxY = (e.clientY - height / 2) / (height / 2);
+  }, { passive: true });
+
+  // 1. Far Deep Starfield (280 stars - subtle tiny pinpricks)
+  const starsFar = [];
+  for(let i = 0; i < 280; i++){
+    starsFar.push({
       x: Math.random() * width,
       y: Math.random() * height,
-      baseRadius: Math.random() * 1.4 + 0.3,
-      alpha: Math.random() * 0.6 + 0.25,
-      twinkleSpeed: Math.random() * 0.03 + 0.01,
-      twinkleOffset: Math.random() * Math.PI * 2,
-      speedX: (Math.random() - 0.5) * 0.15,
-      speedY: (Math.random() - 0.5) * 0.15,
-      hasFlare: Math.random() > 0.82
+      r: Math.random() * 0.7 + 0.3,
+      alpha: Math.random() * 0.55 + 0.2,
+      twinkleSpeed: Math.random() * 0.02 + 0.008,
+      offset: Math.random() * Math.PI * 2,
+      driftX: (Math.random() - 0.5) * 0.04,
+      driftY: (Math.random() - 0.5) * 0.04
     });
   }
 
-  // Drifting Nebula Gas Clouds
+  // 2. Midfield Stellar Spectra (140 stars - vivid colored stars)
+  const spectralColors = [
+    { r: 224, g: 242, b: 254 }, // White
+    { r: 96, g: 165, b: 250 },  // Blue Giant
+    { r: 56, g: 189, b: 248 },  // Cyan
+    { r: 253, g: 224, b: 71 },  // Yellow Sun
+    { r: 248, g: 113, b: 113 }, // Red Dwarf
+    { r: 192, g: 132, b: 252 }  // Violet
+  ];
+  const starsMid = [];
+  for(let i = 0; i < 140; i++){
+    const col = spectralColors[Math.floor(Math.random() * spectralColors.length)];
+    starsMid.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: Math.random() * 1.1 + 0.8,
+      col: col,
+      alpha: Math.random() * 0.6 + 0.35,
+      twinkleSpeed: Math.random() * 0.035 + 0.015,
+      offset: Math.random() * Math.PI * 2,
+      driftX: (Math.random() - 0.5) * 0.08,
+      driftY: (Math.random() - 0.5) * 0.08
+    });
+  }
+
+  // 3. Foreground Bright Stars with Diffraction Spikes (36 stars)
+  const starsNear = [];
+  for(let i = 0; i < 36; i++){
+    starsNear.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: Math.random() * 1.6 + 1.8,
+      alpha: Math.random() * 0.45 + 0.55,
+      twinkleSpeed: Math.random() * 0.04 + 0.02,
+      offset: Math.random() * Math.PI * 2,
+      spikeSize: Math.random() * 7 + 7
+    });
+  }
+
+  // 4. Volumetric Drifting Nebulae
   const nebulae = [
-    { x: width * 0.2, y: height * 0.25, r: 350, color: "rgba(59, 130, 246, 0.08)", vx: 0.1, vy: 0.06 },
-    { x: width * 0.8, y: height * 0.3, r: 420, color: "rgba(168, 85, 247, 0.09)", vx: -0.08, vy: 0.07 },
-    { x: width * 0.5, y: height * 0.75, r: 380, color: "rgba(236, 72, 153, 0.07)", vx: 0.07, vy: -0.09 },
-    { x: width * 0.85, y: height * 0.8, r: 320, color: "rgba(245, 158, 11, 0.06)", vx: -0.06, vy: -0.05 }
+    { x: width * 0.18, y: height * 0.22, r: 420, color: "rgba(6, 182, 212, 0.13)", vx: 0.06, vy: 0.04 },
+    { x: width * 0.82, y: height * 0.28, r: 480, color: "rgba(147, 51, 234, 0.14)", vx: -0.05, vy: 0.05 },
+    { x: width * 0.52, y: height * 0.78, r: 440, color: "rgba(244, 63, 94, 0.11)", vx: 0.05, vy: -0.06 },
+    { x: width * 0.88, y: height * 0.82, r: 380, color: "rgba(245, 158, 11, 0.09)", vx: -0.04, vy: -0.04 },
+    { x: width * 0.12, y: height * 0.85, r: 400, color: "rgba(59, 130, 246, 0.12)", vx: 0.04, vy: -0.03 }
   ];
 
-  // Shooting Stars
+  // 5. Zero-G Cosmic Dust Motes (40 microscopic particles)
+  const dustMotes = [];
+  for(let i = 0; i < 40; i++){
+    dustMotes.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: Math.random() * 1.5 + 0.6,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25 - 0.1,
+      alpha: Math.random() * 0.5 + 0.25,
+      pulse: Math.random() * Math.PI * 2
+    });
+  }
+
+  // 6. Meteors / Shooting Stars & Falling Embers
   const shootingStars = [];
-  function spawnShootingStar(){
-    const startX = Math.random() * width * 0.8;
-    const startY = Math.random() * height * 0.4;
-    const length = Math.random() * 120 + 80;
-    const speed = Math.random() * 12 + 10;
-    const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.3;
+  const meteorEmbers = [];
+
+  function spawnMeteor(){
+    const startX = Math.random() * width * 0.85;
+    const startY = Math.random() * height * 0.45;
+    const speed = Math.random() * 16 + 12;
+    const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.35;
     shootingStars.push({
       x: startX,
       y: startY,
-      length: length,
-      speed: speed,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: 1,
-      decay: Math.random() * 0.025 + 0.02
+      life: 1.0,
+      decay: Math.random() * 0.03 + 0.02,
+      length: Math.random() * 140 + 90
     });
   }
-  setInterval(spawnShootingStar, 7000);
-
-  // Mouse Stardust Particles
-  const stardust = [];
-  window.addEventListener("pointermove", (e) => {
-    if(stardust.length < 40 && Math.random() > 0.4){
-      stardust.push({
-        x: e.clientX,
-        y: e.clientY,
-        vx: (Math.random() - 0.5) * 1.5,
-        vy: (Math.random() - 0.5) * 1.5 - 0.5,
-        radius: Math.random() * 2 + 0.8,
-        life: 1,
-        color: Math.random() > 0.5 ? "rgba(56, 189, 248, " : "rgba(236, 72, 153, "
-      });
-    }
-  });
+  function scheduleNextMeteor(){
+    const delay = Math.random() * 2200 + 2000;
+    setTimeout(() => {
+      spawnMeteor();
+      scheduleNextMeteor();
+    }, delay);
+  }
+  scheduleNextMeteor();
 
   let t = 0;
   function loop(){
     t += 0.016;
+
+    // Smooth Parallax
+    curParallaxX += (targetParallaxX - curParallaxX) * 0.04;
+    curParallaxY += (targetParallaxY - curParallaxY) * 0.04;
+
     ctx.clearRect(0, 0, width, height);
 
-    // 1. Draw Nebula Gas
+    // Deep space black void base
+    ctx.fillStyle = "#010309";
+    ctx.fillRect(0, 0, width, height);
+
+    // A. DRAW DRIFTING VOLUMETRIC NEBULAE
     nebulae.forEach(n => {
       n.x += n.vx;
       n.y += n.vy;
-      if(n.x < -100) n.x = width + 100;
-      if(n.x > width + 100) n.x = -100;
-      if(n.y < -100) n.y = height + 100;
-      if(n.y > height + 100) n.y = -100;
+      if(n.x < -150) n.x = width + 150;
+      if(n.x > width + 150) n.x = -150;
+      if(n.y < -150) n.y = height + 150;
+      if(n.y > height + 150) n.y = -150;
 
-      const grad = ctx.createRadialGradient(n.x, n.y, 10, n.x, n.y, n.r);
+      const px = n.x + curParallaxX * 12;
+      const py = n.y + curParallaxY * 12;
+      const pulseR = n.r * (1 + 0.06 * Math.sin(t * 0.6 + n.x));
+
+      const grad = ctx.createRadialGradient(px, py, 15, px, py, pulseR);
       grad.addColorStop(0, n.color);
+      grad.addColorStop(0.55, n.color.replace(/[\d\.]+\)$/, "0.06)"));
       grad.addColorStop(1, "transparent");
+
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.arc(px, py, pulseR, 0, Math.PI * 2);
       ctx.fill();
     });
 
-    // 2. Draw Stars
-    stars.forEach(s => {
-      s.x += s.speedX;
-      s.y += s.speedY;
+    // B. DRAW CELESTIAL PLANET & MOON
+    // 1. Ringed Gas Giant ("Aetheria") in top right
+    const planetX = width * 0.85 + curParallaxX * 16;
+    const planetY = height * 0.22 + curParallaxY * 16;
+    const planetR = Math.min(width, height) > 768 ? 72 : 46;
+    const ringAngle = -0.38;
+
+    // Back half of planet rings
+    ctx.save();
+    ctx.translate(planetX, planetY);
+    ctx.rotate(ringAngle);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, planetR * 2.35, planetR * 0.44, 0, Math.PI, Math.PI * 2);
+    ctx.lineWidth = planetR * 0.42;
+    const ringGradBack = ctx.createLinearGradient(-planetR * 2.35, 0, planetR * 2.35, 0);
+    ringGradBack.addColorStop(0, "rgba(56, 189, 248, 0.0)");
+    ringGradBack.addColorStop(0.25, "rgba(192, 132, 252, 0.25)");
+    ringGradBack.addColorStop(0.5, "rgba(250, 204, 21, 0.35)");
+    ringGradBack.addColorStop(0.75, "rgba(56, 189, 248, 0.25)");
+    ringGradBack.addColorStop(1, "rgba(56, 189, 248, 0.0)");
+    ctx.strokeStyle = ringGradBack;
+    ctx.stroke();
+    ctx.restore();
+
+    // Planet Atmospheric Corona Glow
+    const atmosGrad = ctx.createRadialGradient(planetX, planetY, planetR * 0.85, planetX, planetY, planetR * 1.5);
+    atmosGrad.addColorStop(0, "rgba(56, 189, 248, 0.35)");
+    atmosGrad.addColorStop(0.4, "rgba(99, 102, 241, 0.15)");
+    atmosGrad.addColorStop(1, "transparent");
+    ctx.fillStyle = atmosGrad;
+    ctx.beginPath();
+    ctx.arc(planetX, planetY, planetR * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Planet Globe Body
+    const globeGrad = ctx.createRadialGradient(
+      planetX - planetR * 0.35, planetY - planetR * 0.35, planetR * 0.08,
+      planetX, planetY, planetR
+    );
+    globeGrad.addColorStop(0, "#7dd3fc");   // Cyan sunlit highlight
+    globeGrad.addColorStop(0.25, "#38bdf8"); // Upper atmosphere
+    globeGrad.addColorStop(0.55, "#1d4ed8"); // Deep azure storm bands
+    globeGrad.addColorStop(0.82, "#0f172a"); // Shadow terminator
+    globeGrad.addColorStop(1, "#020617");    // Night hemisphere
+
+    ctx.fillStyle = globeGrad;
+    ctx.beginPath();
+    ctx.arc(planetX, planetY, planetR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Front half of planet rings (over globe)
+    ctx.save();
+    ctx.translate(planetX, planetY);
+    ctx.rotate(ringAngle);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, planetR * 2.35, planetR * 0.44, 0, 0, Math.PI);
+    ctx.lineWidth = planetR * 0.42;
+    const ringGradFront = ctx.createLinearGradient(-planetR * 2.35, 0, planetR * 2.35, 0);
+    ringGradFront.addColorStop(0, "rgba(56, 189, 248, 0.0)");
+    ringGradFront.addColorStop(0.2, "rgba(192, 132, 252, 0.35)");
+    ringGradFront.addColorStop(0.5, "rgba(250, 204, 21, 0.45)");
+    ringGradFront.addColorStop(0.8, "rgba(56, 189, 248, 0.35)");
+    ringGradFront.addColorStop(1, "rgba(56, 189, 248, 0.0)");
+    ctx.strokeStyle = ringGradFront;
+    ctx.stroke();
+
+    // Delicate Ring Gap (Cassini Division)
+    ctx.beginPath();
+    ctx.ellipse(0, 0, planetR * 2.05, planetR * 0.38, 0, 0, Math.PI);
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "rgba(1, 3, 9, 0.75)";
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. Distant Crescent Moon ("Selene-IX") in upper left
+    const moonX = width * 0.12 + curParallaxX * 10;
+    const moonY = height * 0.18 + curParallaxY * 10;
+    const moonR = Math.min(width, height) > 768 ? 24 : 16;
+
+    // Moon Soft Corona
+    const moonCorona = ctx.createRadialGradient(moonX, moonY, moonR * 0.6, moonX, moonY, moonR * 1.8);
+    moonCorona.addColorStop(0, "rgba(192, 132, 252, 0.28)");
+    moonCorona.addColorStop(1, "transparent");
+    ctx.fillStyle = moonCorona;
+    ctx.beginPath();
+    ctx.arc(moonX, moonY, moonR * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Moon Crescent
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+    ctx.fillStyle = "#e0e7ff";
+    ctx.shadowColor = "#c084fc";
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    // Dark side cutout
+    ctx.beginPath();
+    ctx.arc(moonX + moonR * 0.55, moonY - moonR * 0.15, moonR * 0.92, 0, Math.PI * 2);
+    ctx.fillStyle = "#010309";
+    ctx.shadowBlur = 0;
+    ctx.fill();
+    ctx.restore();
+
+    // C. DRAW 3D PARALLAX STARFIELDS
+    // 1. Far Stars (slow drift, tiny, soft twinkle)
+    starsFar.forEach(s => {
+      s.x += s.driftX;
+      s.y += s.driftY;
       if(s.x < 0) s.x = width;
       if(s.x > width) s.x = 0;
       if(s.y < 0) s.y = height;
       if(s.y > height) s.y = 0;
 
-      const curAlpha = s.alpha + Math.sin(t * 3 * s.twinkleSpeed + s.twinkleOffset) * 0.25;
-      const alphaClamped = Math.max(0.1, Math.min(1, curAlpha));
+      const px = s.x + curParallaxX * 8;
+      const py = s.y + curParallaxY * 8;
+      const a = s.alpha + Math.sin(t * 3 * s.twinkleSpeed + s.offset) * 0.22;
+      const clampedA = Math.max(0.12, Math.min(0.9, a));
 
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.baseRadius, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(224, 242, 254, ${alphaClamped})`;
-      ctx.shadowBlur = s.hasFlare ? 10 : 3;
+      ctx.arc(px, py, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(224, 242, 254, ${clampedA})`;
+      ctx.fill();
+    });
+
+    // 2. Midfield Stars (medium drift, multi-spectral colors)
+    starsMid.forEach(s => {
+      s.x += s.driftX;
+      s.y += s.driftY;
+      if(s.x < 0) s.x = width;
+      if(s.x > width) s.x = 0;
+      if(s.y < 0) s.y = height;
+      if(s.y > height) s.y = 0;
+
+      const px = s.x + curParallaxX * 22;
+      const py = s.y + curParallaxY * 22;
+      const a = s.alpha + Math.sin(t * 4 * s.twinkleSpeed + s.offset) * 0.28;
+      const clampedA = Math.max(0.2, Math.min(1.0, a));
+
+      ctx.beginPath();
+      ctx.arc(px, py, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${s.col.r}, ${s.col.g}, ${s.col.b}, ${clampedA})`;
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = `rgb(${s.col.r}, ${s.col.g}, ${s.col.b})`;
+      ctx.fill();
+    });
+
+    // 3. Near Stars (pronounced 4-point cross diffraction spikes)
+    starsNear.forEach(s => {
+      const px = s.x + curParallaxX * 42;
+      const py = s.y + curParallaxY * 42;
+      const a = s.alpha + Math.sin(t * 4.5 * s.twinkleSpeed + s.offset) * 0.32;
+      const clampedA = Math.max(0.35, Math.min(1.0, a));
+
+      ctx.beginPath();
+      ctx.arc(px, py, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${clampedA})`;
+      ctx.shadowBlur = 12;
       ctx.shadowColor = "#38bdf8";
       ctx.fill();
 
-      // Subtle diffraction spike on brightest stars
-      if(s.hasFlare && alphaClamped > 0.65){
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alphaClamped * 0.4})`;
+      // Sharp 4-Point Cross Diffraction Spikes
+      if(clampedA > 0.55){
+        const spike = s.spikeSize * clampedA;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${clampedA * 0.55})`;
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(px - spike, py);
+        ctx.lineTo(px + spike, py);
+        ctx.moveTo(px, py - spike);
+        ctx.lineTo(px, py + spike);
+        ctx.stroke();
+
+        const diagSpike = spike * 0.45;
+        ctx.strokeStyle = `rgba(56, 189, 248, ${clampedA * 0.35})`;
         ctx.lineWidth = 0.7;
         ctx.beginPath();
-        ctx.moveTo(s.x - 5, s.y);
-        ctx.lineTo(s.x + 5, s.y);
-        ctx.moveTo(s.x, s.y - 5);
-        ctx.lineTo(s.x, s.y + 5);
+        ctx.moveTo(px - diagSpike, py - diagSpike);
+        ctx.lineTo(px + diagSpike, py + diagSpike);
+        ctx.moveTo(px - diagSpike, py + diagSpike);
+        ctx.lineTo(px + diagSpike, py - diagSpike);
         ctx.stroke();
       }
     });
 
-    // 3. Draw Shooting Stars
+    // D. ZERO-G COSMIC DUST MOTES
+    dustMotes.forEach(d => {
+      d.x += d.vx;
+      d.y += d.vy;
+      if(d.x < 0) d.x = width;
+      if(d.x > width) d.x = 0;
+      if(d.y < 0) d.y = height;
+      if(d.y > height) d.y = 0;
+
+      const px = d.x + curParallaxX * 18;
+      const py = d.y + curParallaxY * 18;
+      const pulseA = d.alpha * (0.6 + 0.4 * Math.sin(t * 1.5 + d.pulse));
+
+      ctx.beginPath();
+      ctx.arc(px, py, d.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(186, 230, 253, ${pulseA})`;
+      ctx.shadowBlur = 5;
+      ctx.shadowColor = "#38bdf8";
+      ctx.fill();
+    });
+
+    // E. DRAW SHOOTING STARS & METEOR EMBERS
     for(let i = shootingStars.length - 1; i >= 0; i--){
       const ss = shootingStars[i];
       ss.x += ss.vx;
       ss.y += ss.vy;
       ss.life -= ss.decay;
 
-      if(ss.life <= 0 || ss.x > width || ss.y > height){
+      // Spawn falling embers along trail
+      if(Math.random() > 0.45 && meteorEmbers.length < 50){
+        meteorEmbers.push({
+          x: ss.x,
+          y: ss.y,
+          vx: (Math.random() - 0.5) * 1.2,
+          vy: Math.random() * 1.5 + 0.5,
+          life: 1.0,
+          decay: Math.random() * 0.04 + 0.03,
+          r: Math.random() * 1.4 + 0.6
+        });
+      }
+
+      if(ss.life <= 0 || ss.x > width + 200 || ss.y > height + 200){
         shootingStars.splice(i, 1);
         continue;
       }
 
-      const grad = ctx.createLinearGradient(ss.x, ss.y, ss.x - ss.vx * 3, ss.y - ss.vy * 3);
+      const tailX = ss.x - ss.vx * 3.5;
+      const tailY = ss.y - ss.vy * 3.5;
+      const grad = ctx.createLinearGradient(ss.x, ss.y, tailX, tailY);
       grad.addColorStop(0, `rgba(255, 255, 255, ${ss.life})`);
-      grad.addColorStop(0.3, `rgba(56, 189, 248, ${ss.life * 0.7})`);
+      grad.addColorStop(0.25, `rgba(56, 189, 248, ${ss.life * 0.85})`);
+      grad.addColorStop(0.65, `rgba(192, 132, 252, ${ss.life * 0.5})`);
       grad.addColorStop(1, "transparent");
 
       ctx.strokeStyle = grad;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.4;
       ctx.beginPath();
       ctx.moveTo(ss.x, ss.y);
-      ctx.lineTo(ss.x - ss.vx * 2.5, ss.y - ss.vy * 2.5);
+      ctx.lineTo(tailX, tailY);
       ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(ss.x, ss.y, 2.8 * ss.life, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${ss.life})`;
+      ctx.shadowColor = "#38bdf8";
+      ctx.shadowBlur = 10;
+      ctx.fill();
     }
 
-    // 4. Draw Mouse Stardust
-    for(let i = stardust.length - 1; i >= 0; i--){
-      const p = stardust[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life -= 0.025;
-
-      if(p.life <= 0){
-        stardust.splice(i, 1);
+    // Meteor Falling Embers
+    for(let i = meteorEmbers.length - 1; i >= 0; i--){
+      const e = meteorEmbers[i];
+      e.x += e.vx;
+      e.y += e.vy;
+      e.life -= e.decay;
+      if(e.life <= 0){
+        meteorEmbers.splice(i, 1);
         continue;
       }
 
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
-      ctx.fillStyle = p.color + (p.life * 0.8) + ")";
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = "#38bdf8";
+      ctx.arc(e.x, e.y, e.r * e.life, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(250, 204, 21, ${e.life * 0.8})`;
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = "#facc15";
       ctx.fill();
     }
 

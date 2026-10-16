@@ -913,3 +913,26 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
 - **Binder Cards & Rarity Filters**:
   - Authentic gaming HUD badge for HP (`.card-hp-badge`) with glowing red/pink capsule design.
   - Distinctive active glowing underglow for all rarity filter buttons (Common Slate, Rare Blue, Epic Violet, Legendary Amber, Mythic Rose, Divine Cyan, Transcendent Ruby).
+
+### Deep Space Cosmos Engine & Zero-G Space Immersion ("Make it Look Like Space")
+- **3D Parallax Deep Space Atmosphere (`#ambientCosmosCanvas`)**:
+  - Implemented an immersive 60fps Deep Space Canvas engine rendered on an obsidian black celestial void (`#010309`).
+  - **Dynamic Mouse-Reactive 3D Star Parallax**:
+    - **Deep Layer (280 stars)**: Tiny pinpricks of light drifting slowly across cosmic coordinates with soft twinkling oscillations.
+    - **Midfield Layer (140 stars)**: Vivid multi-spectral starfield containing Blue Giants, Cyan dwarfs, Yellow suns, Red dwarfs, and Amethyst stars.
+    - **Foreground Luminous Stars (36 stars)**: Brilliant celestial beacons featuring 4-point cross diffraction spikes and rotating diffraction flares.
+    - Pointer movement smoothly shifts parallax perspective across all 3 layers with realistic stereoscopic depth.
+  - **Majestic Ringed Gas Giant Planet ("Aetheria")**:
+    - Floating in the upper right cosmos with realistic spherical lighting gradients, cyan atmospheric corona, and 3D tilted planetary rings with Cassini division dust banding.
+  - **Ethereal Crescent Moon ("Selene-IX")**:
+    - Radiant amethyst and starlight crescent moon with soft corona in the upper left stellar expanse.
+  - **Drifting Volumetric Emission Nebulae (5 Clouds)**:
+    - Orion Violet, Carina Cyan, Cygnus Rose, Astral Cobalt, and Pillars of Creation Amber clouds drifting organically with sinusoidal breathing expansion.
+  - **Frequent Meteors & Falling Stardust Embers**:
+    - High-velocity meteors streaking across the void every 2.5–4.5 seconds with glowing gradient tails and falling golden spark embers.
+  - **Microscopic Space Dust Motes**:
+    - 40 microscopic particles drifting in zero gravity.
+- **Zero-G Orbital Drift for Binder Cards (`@keyframes spaceCardFloat`)**:
+  - Collection cards in the binder hover and float weightlessly in microgravity with subtle organic multi-axis orbital trajectories and staggered animation delays.
+- **Deep Space Orbital Outpost Theming**:
+  - Updated navigation and hero headers with Deep Space Orbital Station telemetry, `● DEEP SPACE OBSERVATORY` live radar beacon, and crystalline space-glass UI surfaces.
