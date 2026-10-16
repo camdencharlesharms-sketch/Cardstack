@@ -25,9 +25,15 @@
 
 <header>
   <div class="brand">
-    <div class="brand-icon">🃏</div>
+    <div class="brand-icon-wrapper">
+      <div class="brand-icon">🃏</div>
+      <div class="brand-icon-glow"></div>
+    </div>
     <div>
-      <h1>Card Stack</h1>
+      <div style="display:flex;align-items:center;gap:8px">
+        <h1>Card Stack</h1>
+        <span class="brand-badge">EDITION VI</span>
+      </div>
     </div>
   </div>
   <div id="headerAudioVisualizer" class="header-audio-visualizer" title="🎵 Reactive Audio Visualizer — Click to Play 8-Bit Music or Open Sound Studio">
@@ -413,7 +419,10 @@
           <span id="playerHpText" style="font-size:12px;font-weight:800">100 / 100 HP</span>
         </div>
 
-        <div style="font-size:32px;font-weight:900;color:#ef4444">VS</div>
+        <div class="arena-vs-emblem">
+          <div class="arena-vs-energy-ring"></div>
+          <div class="arena-vs-glow-text">VS</div>
+        </div>
 
         <div class="fighter-card" id="aiFighterCard">
           <span style="font-size:12px;font-weight:900;color:#f43f5e" id="oppLabelTag">OPPONENT</span>

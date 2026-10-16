@@ -1016,7 +1016,7 @@ function render(){
       <div class="face ${cardFaceRarity}">
         <div class="card-top">
           <span class="rarity">${displayedRarity}${unreleasedBadge}${enchantBadge}${isRainbowCard ? '<span class="rainbow-edition-tag">🌈 RAINBOW</span>' : (isGoldCard ? '<span class="gold-edition-tag">✨ GOLD</span>' : '')}</span>
-          <span style="font-size:11px;font-weight:800;color:#fca5a5">${displayedHp}</span>
+          <span class="card-hp-badge">❤️ ${displayedHp}</span>
         </div>
         <div class="card-art-frame">
           <img class="card-art-img" src="${c.image}" alt="${c.name}">
@@ -1037,6 +1037,13 @@ function render(){
     if(has){
       el.style.cursor = "pointer";
       el.setAttribute("title", `Click to inspect ${c.name} in 3D!`);
+      el.addEventListener("pointerenter", () => {
+        const now = Date.now();
+        if(now - (window._lastBinderCardHoverSfx || 0) > 130){
+          window._lastBinderCardHoverSfx = now;
+          if(typeof playChaosSfx === "function") playChaosSfx("cardSlide");
+        }
+      });
       el.addEventListener("click", (e) => {
         if(e.target.tagName.toLowerCase() === "button") return;
         openCardDetailModal(c);
@@ -3579,6 +3586,7 @@ window.claimDailyReward = claimDailyReward;
 function initSuperCoolDom(){
   initAmbientCosmosCanvas();
   initStardustTrailCanvas();
+  initPackCards3D();
 
   const headerViz = document.getElementById("headerAudioVisualizer");
   if(headerViz){
@@ -3838,7 +3846,60 @@ function initStardustTrailCanvas(){
   }
 
   requestAnimationFrame(renderTrail);
+
+  // Combat Arena explosive hit sparks listener
+  window.addEventListener("cardstackCombatHit", (e) => {
+    if(!e || !e.detail) return;
+    const { x, y, isCrit } = e.detail;
+    const count = isCrit ? 32 : 18;
+    const speed = isCrit ? 4.2 : 2.5;
+    spawnMote(x, y, count, speed, isCrit ? 1.5 : 1.2);
+  });
 }
+
+window.spawnCombatSparks = function(targetEl, isCrit = false){
+  if(!targetEl) return;
+  const rect = targetEl.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  window.dispatchEvent(new CustomEvent("cardstackCombatHit", {
+    detail: { x: centerX, y: centerY, isCrit }
+  }));
+};
+
+function initPackCards3D(){
+  let lastPackHoverSound = 0;
+  document.querySelectorAll(".pack-card").forEach(card => {
+    card.addEventListener("pointerenter", () => {
+      const now = Date.now();
+      if(now - lastPackHoverSound > 140){
+        lastPackHoverSound = now;
+        if(typeof playChaosSfx === "function") playChaosSfx("cardSlide");
+      }
+    });
+
+    card.addEventListener("pointermove", (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const rotX = ((y - centerY) / centerY) * -12;
+      const rotY = ((x - centerX) / centerX) * 12;
+
+      card.style.transform = `perspective(800px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) translateY(-8px) scale3d(1.025, 1.025, 1.025)`;
+      card.style.setProperty("--glare-x", `${Math.round((x / rect.width) * 100)}%`);
+      card.style.setProperty("--glare-y", `${Math.round((y / rect.height) * 100)}%`);
+      card.style.setProperty("--glare-opacity", "0.85");
+    });
+
+    card.addEventListener("pointerleave", () => {
+      card.style.transform = "";
+      card.style.setProperty("--glare-opacity", "0");
+    });
+  });
+}
+window.initPackCards3D = initPackCards3D;
 
 function updateHeaderVisualizer(isPlaying, trackName = "Soundtrack"){
   const viz = document.getElementById("headerAudioVisualizer");

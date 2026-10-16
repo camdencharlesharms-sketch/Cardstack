@@ -664,7 +664,26 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
 
   playerAttacks.forEach((atk) => {
     const btn = document.createElement("button");
-    btn.className = "attack-btn";
+    const nameLower = (atk.name || "").toLowerCase();
+    let atkIcon = "⚔️";
+    let atkTheme = "attack-theme-phys";
+    if(/fire|flame|burn|inferno|blaze|pyro|lava|magma/.test(nameLower)){
+      atkIcon = "🔥";
+      atkTheme = "attack-theme-fire";
+    } else if(/ice|frost|freeze|blizzard|glacial|cold|cryo/.test(nameLower)){
+      atkIcon = "❄️";
+      atkTheme = "attack-theme-ice";
+    } else if(/thunder|bolt|lightning|spark|electric|plasma|shock/.test(nameLower)){
+      atkIcon = "⚡";
+      atkTheme = "attack-theme-lightning";
+    } else if(/void|shadow|dark|abyss|chaos|nightmare|eclipse/.test(nameLower)){
+      atkIcon = "🌌";
+      atkTheme = "attack-theme-void";
+    } else if(/heal|light|holy|divine|solar|radiant|sun|celestial/.test(nameLower)){
+      atkIcon = "✨";
+      atkTheme = "attack-theme-light";
+    }
+    btn.className = `attack-btn ${atkTheme}`;
     const isInf = (typeof isInfiniteValue === "function" && isInfiniteValue(atk.dmg)) || atk.dmg === "Infinity";
     let calcDmg = atk.dmg;
     if(!isInf && typeof calcDmg === "number"){
@@ -673,7 +692,7 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
     }
     const effectiveAtk = { ...atk, dmg: calcDmg };
     const dmgLabel = isInf ? "∞ INFINITE DMG" : (typeof formatDmg === "function" ? formatDmg(calcDmg) : `${calcDmg} DMG`);
-    btn.innerHTML = `<span>⚔️ <b>${atk.name}</b></span> <span style="color:${isInf ? "#f43f5e;font-weight:900" : "#fbbf24"}">${dmgLabel}</span>`;
+    btn.innerHTML = `<span>${atkIcon} <b>${atk.name}</b></span> <span style="color:${isInf ? "#f43f5e;font-weight:900" : "#fbbf24"}">${dmgLabel}</span>`;
     btn.onclick = () => performPlayerAttack(effectiveAtk);
     attacksContainer.appendChild(btn);
   });
@@ -705,8 +724,18 @@ function updateBattleHpBars(){
   const playerPct = isPlayerInf ? (battlePlayerHp > 0 ? 100 : 0) : Math.max(0, (battlePlayerHp / maxPlayerHp) * 100);
   const oppPct = isOppInf ? (battleOppHp > 0 ? 100 : 0) : Math.max(0, (battleOppHp / maxOppHp) * 100);
 
-  document.getElementById("playerHpBar").style.width = playerPct + "%";
-  document.getElementById("aiHpBar").style.width = oppPct + "%";
+  const playerBar = document.getElementById("playerHpBar");
+  const aiBar = document.getElementById("aiHpBar");
+  if(playerBar){
+    playerBar.style.width = playerPct + "%";
+    if(playerPct > 0 && playerPct <= 25) playerBar.classList.add("critical");
+    else playerBar.classList.remove("critical");
+  }
+  if(aiBar){
+    aiBar.style.width = oppPct + "%";
+    if(oppPct > 0 && oppPct <= 25) aiBar.classList.add("critical");
+    else aiBar.classList.remove("critical");
+  }
 
   document.getElementById("playerHpText").textContent = isPlayerInf
     ? (battlePlayerHp > 0 ? "∞ / ∞ HP" : "0 / ∞ HP")
@@ -726,7 +755,7 @@ function appendBattleLog(msg){
   log.scrollTop = log.scrollHeight;
 }
 
-function triggerBattleAnimation(attacker, defender){
+function triggerBattleAnimation(attacker, defender, isCrit = false){
   const atkEl = attacker === "player" ? document.getElementById("playerFighterCard") : document.getElementById("aiFighterCard");
   const defEl = defender === "player" ? document.getElementById("playerFighterCard") : document.getElementById("aiFighterCard");
 
@@ -744,6 +773,7 @@ function triggerBattleAnimation(attacker, defender){
   setTimeout(()=>{
     defEl.classList.add("hit-shake");
     if(typeof playChaosSfx === "function") playChaosSfx("hit");
+    if(typeof window.spawnCombatSparks === "function") window.spawnCombatSparks(defEl, isCrit);
   }, 120);
 
   setTimeout(()=>{
@@ -939,7 +969,8 @@ function resolveSkillMeterStrike(){
 function performPlayerAttackWithMultiplier(attackObj, multiplier, tierLabel, tierColor){
   if(battlePlayerHp <= 0 || battleOppHp <= 0) return;
 
-  triggerBattleAnimation("player", "ai");
+  const isCritHit = (multiplier === 1.0);
+  triggerBattleAnimation("player", "ai", isCritHit);
   if(typeof playChaosSfx === "function"){
     if(multiplier === 1.0) playChaosSfx("critical");
     else playChaosSfx("laser");

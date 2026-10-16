@@ -887,3 +887,29 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
   - Opening booster packs now triggers a cinematic energy shockwave ring expanding across the screen upon unsealing, accompanied by laser tear sizzles and golden spark confetti.
 - **Summoner Rank Badge Shimmer Sweep**:
   - Summoner rank badge in the header features a continuous metallic light-sweep animation (`@keyframes rankShimmer`), glowing hover elevation, and immediate access to the Mastery Modal.
+
+### Comprehensive Visual & Combat Experience Overhaul ("Game Look Cooler")
+- **Booster Pack 3D Parallax & Foil Glare Engine (`.pack-card`)**:
+  - Interactive cursor tracking in 3D perspective (`perspective(800px) rotateX(...) rotateY(...) scale3d(1.025, 1.025, 1.025)`).
+  - Dynamic cursor-following specular foil glare sweep rendered via CSS radial gradients with `--glare-x`, `--glare-y`, and `--glare-opacity`.
+  - Tactile card-slide SFX (`playChaosSfx("cardSlide")`) upon hovering over packs and binder cards.
+  - Thematic rarity ambient back-glows on hover for all pack tiers (Common, Rare, Epic, Legendary, Mythic, Divine, Transcendent).
+- **Brand & Header Cyber Elevation**:
+  - Holographic `<h1>Card Stack</h1>` iridescent light-shimmer sweep (`@keyframes brandTextShimmer`).
+  - Brand icon with breathing neon aura (`.brand-icon-glow`) and interactive hover tilt.
+  - Sleek `EDITION VI` cyber badge next to the brand title.
+  - Glassmorphic Coin & Card counters (`.stat`) with glowing amber coins and cyan border hover lifts.
+- **Hero Booster Outpost Cyber Grid**:
+  - Futuristic perspective grid overlay (`.hero::before`) with radial sci-fi lighting.
+  - Live pulsating cyan radar beacon dot in `.hero-tag` (`@keyframes heroRadarPulse`).
+- **Combat Arena Holographic Stadium Overhaul**:
+  - Obsidian hex-grid stadium background on `.battleBox` with glowing cyan energy lines and perimeter depth.
+  - High-Voltage Electric VS Emblem (`.arena-vs-emblem`): Rotating dashed energy ring (`@keyframes vsRingSpin`) and pulsing multi-color combat logo.
+  - Player Fighter Card (`#playerFighterCard`): Radiant cyan energy shield border and ambient illumination.
+  - Rival Champion Card (`#aiFighterCard`): Blazing crimson battle aura and shadow illumination.
+  - Dynamic Elemental Attack Buttons: Automatically detects and displays elemental icons (🔥 Fire, ❄️ Ice, ⚡ Lightning, 🌌 Void, ✨ Light, ⚔️ Physical) with themed glowing borders.
+  - Explosive Combat Hit Sparks: Directly integrated with `#stardustTrailCanvas`, emitting radial spark showers upon attack hits and critical strikes (`window.spawnCombatSparks`).
+  - Critical HP Strobe Alert: Health bars strobe red (`.health-bar.critical`) when card health drops below 25%.
+- **Binder Cards & Rarity Filters**:
+  - Authentic gaming HUD badge for HP (`.card-hp-badge`) with glowing red/pink capsule design.
+  - Distinctive active glowing underglow for all rarity filter buttons (Common Slate, Rare Blue, Epic Violet, Legendary Amber, Mythic Rose, Divine Cyan, Transcendent Ruby).
