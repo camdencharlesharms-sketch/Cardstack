@@ -195,7 +195,7 @@ main{max-width:1250px;margin:auto;padding:32px 24px}
   --glare-y: 50%;
   --glare-opacity: 0;
   background:linear-gradient(170deg, rgba(26, 36, 68, 0.7) 0%, rgba(13, 19, 39, 0.85) 100%);
-  animation: packCardFloat 3.8s ease-in-out infinite;
+
   border:1px solid rgba(120, 150, 220, 0.28);
   border-radius:22px;
   padding:22px;
@@ -210,9 +210,7 @@ main{max-width:1250px;margin:auto;padding:32px 24px}
   transition:transform 0.15s ease-out, border-color 0.3s ease, box-shadow 0.3s ease;
   box-shadow:0 14px 32px rgba(0,0,0,0.38);
 }
-.pack-card:nth-child(2n) { animation-duration: 4.4s; animation-delay: -1.2s; }
-.pack-card:nth-child(3n) { animation-duration: 4.8s; animation-delay: -2.3s; }
-.pack-card:nth-child(5n) { animation-duration: 4.1s; animation-delay: -3.1s; }
+
 
 .pack-card::before{
   content:'';
@@ -384,35 +382,26 @@ button:active{transform:translateY(0)}
 }
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:24px}
-@keyframes spaceCardFloat {
-  0% { transform: translateY(0px) rotate(0deg) scale(1); }
-  25% { transform: translateY(-13px) rotate(1.8deg) scale(1.02); }
-  50% { transform: translateY(-4px) rotate(-1.2deg) scale(0.995); }
-  75% { transform: translateY(-11px) rotate(-1.6deg) scale(1.015); }
-  100% { transform: translateY(0px) rotate(0deg) scale(1); }
-}
 .card{
   height:380px;
   border-radius:20px;
   position:relative;
   transition:transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
-  animation: spaceCardFloat 4.2s ease-in-out infinite;
-}
-.card:nth-child(2n){
-  animation-duration: 4.8s;
-  animation-delay: -1.2s;
-}
-.card:nth-child(3n){
-  animation-duration: 5.4s;
-  animation-delay: -2.3s;
-}
-.card:nth-child(5n){
-  animation-duration: 4.5s;
-  animation-delay: -3.1s;
 }
 .card:hover{
-  animation-play-state: paused;
   transform: translateY(-6px);
+}
+.card.zero-g-drifting-card{
+  z-index: 50 !important;
+  will-change: transform;
+  pointer-events: auto;
+  cursor: grab;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75), 0 0 30px rgba(56, 189, 248, 0.5) !important;
+}
+.card.zero-g-drifting-card.is-dragging{
+  cursor: grabbing !important;
+  z-index: 100 !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 45px rgba(56, 189, 248, 0.85) !important;
 }
 
 .face{
@@ -646,20 +635,27 @@ button:active{transform:translateY(0)}
   }
 }
 
+@keyframes packEnterStage {
+  0% { transform: translateY(-80px) scale(0.65) rotate(-8deg); opacity: 0; filter: brightness(2.2); }
+  65% { transform: translateY(10px) scale(1.04) rotate(1.5deg); opacity: 1; }
+  100% { transform: translateY(0px) scale(1) rotate(0deg); opacity: 1; }
+}
+
 .pack-model{
-  width:200px;
-  height:280px;
-  border-radius:24px;
+  width:220px;
+  height:310px;
+  border-radius:20px;
   display:flex;
   flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 30px 70px rgba(0,0,0,0.9), inset 0 0 25px rgba(255,255,255,0.2);
-  border:3px solid rgba(255,255,255,0.3);
+  justify-content:space-between;
+  box-shadow:0 30px 80px rgba(0,0,0,0.92), inset 0 0 30px rgba(255,255,255,0.22);
+  border:3px solid rgba(255,255,255,0.35);
   position:relative;
-  animation:packHover 2.4s ease-in-out infinite;
+  animation:packHover 2.6s ease-in-out infinite;
+  transform-style:preserve-3d;
 }
-.pack-model.shaking{animation:packRumble 0.5s ease-in-out infinite}
+.pack-model.entering{animation:packEnterStage 0.65s cubic-bezier(0.18, 0.9, 0.32, 1.25) forwards}
+.pack-model.shaking{animation:packRumble 0.45s ease-in-out infinite}
 .pack-model.burst{animation:packBurst 0.65s cubic-bezier(0.1, 0.9, 0.2, 1) forwards}
 
 .reveal-cards-container{
@@ -1370,24 +1366,11 @@ body.disco-mode-active header {
   100% { transform: translate3d(-12px, 20px, 0) rotate(3deg); }
 }
 
-body.zero-gravity-active .card,
 body.zero-gravity-active .pack-card,
 body.zero-gravity-active .adminCard,
 body.zero-gravity-active header,
 body.zero-gravity-active .battleBox {
   animation: zeroGravityFloatA 7s ease-in-out infinite alternate !important;
-}
-body.zero-gravity-active #grid .card:nth-child(2n) {
-  animation: zeroGravityFloatB 8.2s ease-in-out infinite alternate !important;
-  animation-delay: -2s !important;
-}
-body.zero-gravity-active #grid .card:nth-child(3n) {
-  animation: zeroGravityFloatC 6.6s ease-in-out infinite alternate !important;
-  animation-delay: -4s !important;
-}
-body.zero-gravity-active #grid .card:nth-child(5n) {
-  animation: zeroGravityFloatD 9s ease-in-out infinite alternate !important;
-  animation-delay: -1.5s !important;
 }
 
 /* 80s Retro CRT Effect - Mac WebKit Safe, Zero Blackout */
@@ -1864,19 +1847,41 @@ body.turbo-speed-active * {
 .mastery-chip.chip-divine { border-left: 3px solid #facc15; }
 .mastery-chip.chip-transcendent { border-left: 3px solid #f43f5e; }
 
-/* Physical 3D Booster Pack Wrapper */
-.pack-model {
-  width: 220px;
-  height: 310px;
-  border-radius: 18px;
+/* Physical 3D Booster Pack Wrapper Elements */
+.pack-crimp-top {
   position: relative;
-  overflow: hidden;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), inset 0 0 25px rgba(255, 255, 255, 0.2);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: transform 0.3s ease;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  z-index: 6;
+  transform-origin: top center;
+  transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.pack-model.unsealing .pack-crimp-top,
+.pack-model.shaking .pack-crimp-top {
+  transform: perspective(500px) rotateX(-55deg) translateY(-4px);
+  filter: drop-shadow(0 6px 15px rgba(56, 189, 248, 0.8));
+}
+.pack-light-beam {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%) scaleY(0);
+  width: 140px;
+  height: 520px;
+  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(56,189,248,0.3) 45%, rgba(250,204,21,0.7) 85%, #ffffff 100%);
+  filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  transform-origin: bottom center;
+}
+.pack-model.unsealing .pack-light-beam,
+.pack-model.shaking .pack-light-beam {
+  opacity: 1;
+  animation: beamShoot 0.9s ease-out forwards;
+}
+@keyframes beamShoot {
+  0% { transform: translateX(-50%) translateY(0) scaleY(0) scaleX(0.2); opacity: 0; }
+  35% { transform: translateX(-50%) translateY(-100%) scaleY(1) scaleX(1); opacity: 0.95; }
+  100% { transform: translateX(-50%) translateY(-100%) scaleY(1.4) scaleX(2.0); opacity: 0; }
 }
 .pack-crimp {
   height: 18px;
@@ -1933,18 +1938,20 @@ body.turbo-speed-active * {
 }
 .pack-tear-line {
   position: absolute;
-  top: 50%;
+  top: 18px;
   left: 0;
   right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #38bdf8, #fff, #38bdf8, transparent);
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #38bdf8, #ffffff, #facc15, #38bdf8, transparent);
   opacity: 0;
-  z-index: 5;
-  box-shadow: 0 0 12px #38bdf8;
+  z-index: 10;
+  box-shadow: 0 0 18px #38bdf8, 0 0 32px #facc15;
+  pointer-events: none;
 }
-.pack-model.unsealing .pack-tear-line {
+.pack-model.unsealing .pack-tear-line,
+.pack-model.shaking .pack-tear-line {
   opacity: 1;
-  animation: packLaserTear 0.6s ease-in-out forwards;
+  animation: packLaserTear 0.75s ease-in-out forwards;
 }
 @keyframes packLaserTear {
   0% { transform: scaleX(0); opacity: 0; }

@@ -6165,6 +6165,94 @@ function launchChaosZeroG(isRemote = false){
     cardsContainer.push(cardObj);
   });
 
+  // Capture all binder cards currently rendered in #grid so they physically detach and drift across the entire screen!
+  const binderCards = Array.from(document.querySelectorAll("#grid .card"));
+  binderCards.forEach((gridCardEl) => {
+    gridCardEl.classList.add("zero-g-drifting-card");
+    const speed = Math.random() * 3.8 + 2.2;
+    const angle = Math.random() * Math.PI * 2;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+    const rotX = (Math.random() - 0.5) * 22;
+    const rotY = (Math.random() - 0.5) * 22;
+    const rotZ = (Math.random() - 0.5) * 45;
+    const vrotX = (Math.random() - 0.5) * 0.8;
+    const vrotY = (Math.random() - 0.5) * 0.8;
+    const vrotZ = (Math.random() - 0.5) * 1.5;
+
+    const binderObj = {
+      el: gridCardEl,
+      isBinderCard: true,
+      offsetX: 0,
+      offsetY: 0,
+      vx, vy,
+      rotX, rotY, rotZ,
+      vrotX, vrotY, vrotZ,
+      isDragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      cardStartOffsetX: 0,
+      cardStartOffsetY: 0,
+      lastDragX: 0,
+      lastDragY: 0,
+      dragVx: 0,
+      dragVy: 0
+    };
+
+    const onBinderPointerDown = (e) => {
+      if(e.button !== undefined && e.button !== 0) return;
+      const pointer = e.touches ? e.touches[0] : e;
+      binderObj.isDragging = true;
+      binderObj.dragStartX = pointer.clientX;
+      binderObj.dragStartY = pointer.clientY;
+      binderObj.lastDragX = pointer.clientX;
+      binderObj.lastDragY = pointer.clientY;
+      binderObj.cardStartOffsetX = binderObj.offsetX;
+      binderObj.cardStartOffsetY = binderObj.offsetY;
+      binderObj.dragVx = 0;
+      binderObj.dragVy = 0;
+      gridCardEl.classList.add("is-dragging");
+
+      const onBinderPointerMove = (ev) => {
+        if(!binderObj.isDragging) return;
+        const p = ev.touches ? ev.touches[0] : ev;
+        const dx = p.clientX - binderObj.dragStartX;
+        const dy = p.clientY - binderObj.dragStartY;
+        binderObj.offsetX = binderObj.cardStartOffsetX + dx;
+        binderObj.offsetY = binderObj.cardStartOffsetY + dy;
+        binderObj.dragVx = (p.clientX - binderObj.lastDragX) * 0.85;
+        binderObj.dragVy = (p.clientY - binderObj.lastDragY) * 0.85;
+        binderObj.lastDragX = p.clientX;
+        binderObj.lastDragY = p.clientY;
+        gridCardEl.style.transform = `translate3d(${binderObj.offsetX}px, ${binderObj.offsetY}px, 0) perspective(700px) rotateX(${binderObj.rotX}deg) rotateY(${binderObj.rotY}deg) rotateZ(${binderObj.rotZ}deg) scale3d(1.08, 1.08, 1.08)`;
+      };
+
+      const onBinderPointerUp = () => {
+        if(!binderObj.isDragging) return;
+        binderObj.isDragging = false;
+        gridCardEl.classList.remove("is-dragging");
+        binderObj.vx = Math.max(-18, Math.min(18, binderObj.dragVx || (Math.random() - 0.5) * 6));
+        binderObj.vy = Math.max(-18, Math.min(18, binderObj.dragVy || (Math.random() - 0.5) * 6));
+        binderObj.vrotZ = (Math.random() - 0.5) * 3;
+        try { playChaosSfx("laser"); } catch(err){}
+        window.removeEventListener("mousemove", onBinderPointerMove);
+        window.removeEventListener("mouseup", onBinderPointerUp);
+        window.removeEventListener("touchmove", onBinderPointerMove);
+        window.removeEventListener("touchend", onBinderPointerUp);
+      };
+
+      window.addEventListener("mousemove", onBinderPointerMove);
+      window.addEventListener("mouseup", onBinderPointerUp);
+      window.addEventListener("touchmove", onBinderPointerMove, { passive: false });
+      window.addEventListener("touchend", onBinderPointerUp);
+    };
+
+    gridCardEl.addEventListener("mousedown", onBinderPointerDown);
+    gridCardEl.addEventListener("touchstart", onBinderPointerDown, { passive: false });
+
+    cardsContainer.push(binderObj);
+  });
+
   zeroGCardsList = cardsContainer;
 
   function updatePhysics(){
@@ -6178,6 +6266,46 @@ function launchChaosZeroG(isRemote = false){
 
     zeroGCardsList.forEach(c => {
       if(c.isDragging) return;
+
+      if(c.isBinderCard){
+        if(vCenter){
+          const rect = c.el.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          const dx = vCenter.x - cx;
+          const dy = vCenter.y - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const force = Math.min(9, 320 / dist);
+          c.vx += (dx / dist) * force * 0.12 * timeScale;
+          c.vy += (dy / dist) * force * 0.12 * timeScale;
+          c.vrotZ += 0.3 * timeScale;
+        }
+
+        c.offsetX += c.vx * timeScale;
+        c.offsetY += c.vy * timeScale;
+        c.rotX += c.vrotX * timeScale;
+        c.rotY += c.vrotY * timeScale;
+        c.rotZ += c.vrotZ * timeScale;
+
+        const bRect = c.el.getBoundingClientRect();
+        if(bRect.left < 5 && c.vx < 0){
+          c.vx = Math.abs(c.vx) * 0.95;
+          c.vrotZ *= -0.8;
+        } else if(bRect.right > window.innerWidth - 5 && c.vx > 0){
+          c.vx = -Math.abs(c.vx) * 0.95;
+          c.vrotZ *= -0.8;
+        }
+        if(bRect.top < 5 && c.vy < 0){
+          c.vy = Math.abs(c.vy) * 0.95;
+          c.vrotX *= -0.8;
+        } else if(bRect.bottom > window.innerHeight - 5 && c.vy > 0){
+          c.vy = -Math.abs(c.vy) * 0.95;
+          c.vrotX *= -0.8;
+        }
+
+        c.el.style.transform = `translate3d(${c.offsetX}px, ${c.offsetY}px, 0) perspective(700px) rotateX(${c.rotX}deg) rotateY(${c.rotY}deg) rotateZ(${c.rotZ}deg) scale3d(1.02, 1.02, 1.02)`;
+        return;
+      }
 
       if(vCenter){
         // Singularity gravitational pull
@@ -6277,7 +6405,16 @@ function clearChaosPhysics(isRemote = false){
   if(zeroGAnimId) cancelAnimationFrame(zeroGAnimId);
   zeroGAnimId = null;
   zeroGCardsList.forEach(c => {
-    if(c.el) c.el.remove();
+    if(c.isBinderCard && c.el){
+      c.el.style.transition = "transform 0.85s cubic-bezier(0.2, 0.8, 0.2, 1)";
+      c.el.style.transform = "";
+      c.el.classList.remove("zero-g-drifting-card", "is-dragging");
+      setTimeout(() => {
+        if(c.el) c.el.style.transition = "";
+      }, 900);
+    } else if(c.el){
+      c.el.remove();
+    }
   });
   zeroGCardsList = [];
 

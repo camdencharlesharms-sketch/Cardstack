@@ -969,3 +969,20 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
   - **Massive Double-Layer Energy Shockwave**: Scaled `.pack-energy-shockwave` from 3.2x to 5.8x diameter with luminous celestial cyan, gold, and magenta concentric rings.
   - **Detonation Fireworks & Spark Explosions**: Simultaneous detonation of 110 celebratory confetti flakes and 68 radial high-velocity stardust sparks upon unsealing.
   - **Dynamic 3D Card Pop Reveal (`@keyframes cardPop`)**: Pulled cards burst upward into view with a 3D perspective arc, rotational overshoot, and glowing cyan drop-shadow.
+
+### Pack Animations Enhancement, Zero-G Binder Drift, and Binder Shake Removal
+- **No Shaking in Collection Binder**:
+  - Removed persistent `@keyframes spaceCardFloat` from `.card` elements in normal mode.
+  - Binder cards now sit completely still, stable, and crisp in their grid slots, only engaging 3D perspective depth and lenticular specular tilt on mouse hover.
+- **Cinematic Pack Opening Sequence Overhaul**:
+  - **Phase 1 (Entrance)**: Pack smoothly drops down into the center of the viewport (`@keyframes packEnterStage`) with celestial flare and ambient warp sound.
+  - **Phase 2 (Laser Incision & Beam)**: Electric laser beam (`.pack-tear-line`) cuts directly beneath the top crimp (`top: 18px`). The top crimp peels back in 3D perspective (`transform: perspective(500px) rotateX(-55deg)`), and a brilliant skyward celestial light beam (`.pack-light-beam`) shoots out of the opened foil.
+  - **Phase 3 (Power Surge Rumble)**: Pack vibrates violently (`@keyframes packRumble`) with multi-color lightning strobing and combat sparks leaking from the seam.
+  - **Phase 4 (Supernova Detonation)**: Pack expands up to 3.2x before dissolving (`@keyframes packBurst`), triggering the 5.8x circular shockwave, 120 confetti pieces, and 68 high-velocity sparks.
+  - **Phase 5 (Staggered 3D Card Reveal)**: Cards pop into view with staggered 3D arcs and anticipation glow.
+  - Consolidated duplicate `.pack-model` styles in `css/styles.css` to fix cascading override issues.
+- **Full Zero-Gravity Viewport Drift Physics for All Binder Cards**:
+  - In Low Gravity / Zero-G mode (`launchChaosZeroG` / `toggleZeroGravityBtn`), all `.card` elements in `#grid` detach from their grid slots and drift freely across the entire screen!
+  - Equipped with multi-axis 3D tumble physics (`vrotX`, `vrotY`, `vrotZ`), elastic viewport boundary bounces, and singularity gravitational vortex attraction.
+  - Full touch and mouse drag-and-fling mechanics: players can grab any drifting binder card and throw it across space.
+  - On gravity restoration (`clearChaosPhysics`), all binder cards smoothly glide back into their exact grid slots in a coordinated 0.85s recall animation.

@@ -595,18 +595,28 @@ function startPackOpening(tierKey){
   stage.style.display = "flex";
   results.style.display = "none";
   overlay.classList.add("show");
-  status.textContent = "Unsealing Pack Foil...";
-  model.classList.add("unsealing");
-  if(typeof playChaosSfx === "function") playChaosSfx("packTear");
+  status.textContent = "✨ Aligning Holographic Seal...";
+  model.className = "pack-model entering";
+  if(typeof playChaosSfx === "function") playChaosSfx("warp");
 
   setTimeout(()=>{
-    model.classList.add("shaking");
-    status.textContent = "Releasing Infused Relics...";
-  }, 400);
+    model.className = "pack-model unsealing";
+    status.textContent = "⚡ Slicing Pack Foil...";
+    if(typeof playChaosSfx === "function") playChaosSfx("packTear");
+  }, 650);
 
   setTimeout(()=>{
-    model.classList.remove("shaking");
-    model.classList.add("burst");
+    model.className = "pack-model shaking";
+    status.textContent = "🔥 Power Surge: Releasing Infused Artifacts...";
+    if(typeof playChaosSfx === "function") playChaosSfx("laser");
+    if(typeof window.spawnCombatSparks === "function"){
+      window.spawnCombatSparks(model, false);
+    }
+  }, 1450);
+
+  setTimeout(()=>{
+    model.className = "pack-model burst";
+    status.textContent = "💥 Detonating Relic Matrix...";
 
     const shockwave = document.getElementById("packEnergyShockwave");
     if(shockwave){
@@ -618,8 +628,8 @@ function startPackOpening(tierKey){
 
     if(typeof confetti === "function"){
       confetti({
-        particleCount: 110,
-        spread: 120,
+        particleCount: 120,
+        spread: 135,
         origin: { y: 0.48 },
         colors: ["#38bdf8", "#facc15", "#c084fc", "#f43f5e", "#ffffff"]
       });
