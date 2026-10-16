@@ -1044,23 +1044,36 @@ function handleIncomingAdminDispatch(actionData, targetUser){
   }
 
   if(actionData.type === "gift_foil"){
-    if(myUser && accounts && accounts[myUser]){
+    const targetUser = myUser || (typeof currentUser !== "undefined" ? currentUser : null);
+    let targetAcc = (typeof getUserAccount === "function" && targetUser) ? getUserAccount(targetUser) : (accounts && targetUser ? accounts[targetUser] : null);
+    if(!targetAcc && accounts && targetUser){
+      accounts[targetUser] = { password: "", owned: [0], coins: 100, hasPlayed: true, lastActive: Date.now() };
+      targetAcc = accounts[targetUser];
+    }
+    if(targetAcc){
       if(Array.isArray(actionData.owned)){
-        accounts[myUser].owned = Array.from(new Set([...(accounts[myUser].owned || []), ...actionData.owned]));
-        if(typeof owned !== "undefined") window.owned = accounts[myUser].owned;
+        targetAcc.owned = Array.from(new Set([...(targetAcc.owned || []), ...actionData.owned]));
+        if(typeof owned !== "undefined") window.owned = targetAcc.owned;
       }
       if(Array.isArray(actionData.goldCards)){
-        accounts[myUser].goldCards = actionData.goldCards;
-        if(typeof goldCards !== "undefined") window.goldCards = actionData.goldCards;
+        targetAcc.goldCards = actionData.goldCards;
       }
       if(Array.isArray(actionData.rainbowCards)){
-        accounts[myUser].rainbowCards = actionData.rainbowCards;
-        if(typeof rainbowCards !== "undefined") window.rainbowCards = actionData.rainbowCards;
+        targetAcc.rainbowCards = actionData.rainbowCards;
       }
+      targetAcc.lastAdminActionTime = Date.now();
+      targetAcc.adminRevision = (targetAcc.adminRevision || 0) + 1;
       localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
     }
+    if(typeof setLocalFoilCards === "function"){
+      setLocalFoilCards(actionData.goldCards || (targetAcc ? targetAcc.goldCards : []), actionData.rainbowCards || (targetAcc ? targetAcc.rainbowCards : []));
+    } else {
+      if(typeof goldCards !== "undefined") window.goldCards = actionData.goldCards;
+      if(typeof rainbowCards !== "undefined") window.rainbowCards = actionData.rainbowCards;
+    }
+    if(typeof save === "function") save();
     if(typeof confetti === "function"){
-      confetti({ particleCount: 100, spread: 90, colors: ["#fbbf24", "#f43f5e", "#a855f7", "#3b82f6", "#10b981", "#ec4899"] });
+      confetti({ particleCount: 120, spread: 90, colors: ["#fbbf24", "#f43f5e", "#a855f7", "#3b82f6", "#10b981", "#ec4899"] });
     }
     if(typeof playChaosSfx === "function") playChaosSfx("triumph");
     if(typeof showLiveToast === "function"){

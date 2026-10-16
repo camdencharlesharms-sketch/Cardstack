@@ -51,9 +51,20 @@ if(typeof window !== "undefined") window.findVaultCardByIdOrName = findVaultCard
 
 let goldCards = [];
 let rainbowCards = [];
+function setLocalFoilCards(newGold, newRainbow){
+  if(Array.isArray(newGold)){
+    goldCards = Array.from(new Set(newGold.map(x => parseInt(x, 10)).filter(n => !isNaN(n))));
+    if(typeof window !== "undefined") window.goldCards = goldCards;
+  }
+  if(Array.isArray(newRainbow)){
+    rainbowCards = Array.from(new Set(newRainbow.map(x => parseInt(x, 10)).filter(n => !isNaN(n))));
+    if(typeof window !== "undefined") window.rainbowCards = rainbowCards;
+  }
+}
 if(typeof window !== "undefined"){
   window.goldCards = goldCards;
   window.rainbowCards = rainbowCards;
+  window.setLocalFoilCards = setLocalFoilCards;
 }
 
 // Helper: check if a vault card is owned by user
@@ -74,16 +85,27 @@ function save(){
   const activeOwned = (typeof owned !== "undefined" && Array.isArray(owned)) ? owned : (window.owned || []);
   const isCoinsInfinite = (typeof isInfiniteValue === "function" && isInfiniteValue(coins)) || coins === Infinity;
   const persistCoins = isCoinsInfinite ? "Infinity" : coins;
-  const activeGold = (typeof goldCards !== "undefined" && Array.isArray(goldCards)) ? goldCards : (window.goldCards || []);
-  const activeRainbow = (typeof rainbowCards !== "undefined" && Array.isArray(rainbowCards)) ? rainbowCards : (window.rainbowCards || []);
-  const cleanGold = activeGold.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
-  const cleanRainbow = activeRainbow.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+
+  const targetAccGold = (targetAcc && Array.isArray(targetAcc.goldCards)) ? targetAcc.goldCards : [];
+  const targetAccRainbow = (targetAcc && Array.isArray(targetAcc.rainbowCards)) ? targetAcc.rainbowCards : [];
+  const winGold = (typeof window !== "undefined" && Array.isArray(window.goldCards)) ? window.goldCards : [];
+  const winRainbow = (typeof window !== "undefined" && Array.isArray(window.rainbowCards)) ? window.rainbowCards : [];
+
+  const cleanGold = Array.from(new Set([...goldCards, ...winGold, ...targetAccGold])).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+  const cleanRainbow = Array.from(new Set([...rainbowCards, ...winRainbow, ...targetAccRainbow])).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+
+  goldCards = cleanGold;
+  rainbowCards = cleanRainbow;
+  if(typeof window !== "undefined"){
+    window.goldCards = cleanGold;
+    window.rainbowCards = cleanRainbow;
+  }
 
   if(targetAcc){
     targetAcc.owned = activeOwned.map(x => parseInt(x, 10)).filter(n => !isNaN(n));
     targetAcc.coins = persistCoins;
-    targetAcc.goldCards = Array.from(new Set(cleanGold));
-    targetAcc.rainbowCards = Array.from(new Set(cleanRainbow));
+    targetAcc.goldCards = cleanGold;
+    targetAcc.rainbowCards = cleanRainbow;
     if(Array.isArray(targetAcc.unreleasedOwned)){
       targetAcc.unreleasedOwned = Array.from(new Set(targetAcc.unreleasedOwned));
     }
@@ -316,6 +338,15 @@ function loadAccount(username){
       accounts["Cam"].coins = "Infinity";
       if(!accounts["Cam"].unreleasedOwned || accounts["Cam"].unreleasedOwned.length === 0){
         accounts["Cam"].unreleasedOwned = ["vault_card_1", "vault_card_2"];
+      }
+      if(Array.isArray(accounts["Cam"].goldCards) && accounts["Cam"].goldCards.length > 0){
+        goldCards = accounts["Cam"].goldCards;
+      }
+      if(Array.isArray(accounts["Cam"].rainbowCards) && accounts["Cam"].rainbowCards.length > 0){
+        rainbowCards = accounts["Cam"].rainbowCards;
+      }
+      if(typeof setLocalFoilCards === "function"){
+        setLocalFoilCards(goldCards, rainbowCards);
       }
     }
   }
@@ -941,6 +972,13 @@ function render(){
       const cIdx = cards.indexOf(c);
       return rainbowCards.includes(cIdx) || (userAcc && Array.isArray(userAcc.rainbowCards) && userAcc.rainbowCards.includes(cIdx));
     }
+    if(filter === "foil-both"){
+      if(!has) return false;
+      const cIdx = cards.indexOf(c);
+      const hasG = goldCards.includes(cIdx) || (userAcc && Array.isArray(userAcc.goldCards) && userAcc.goldCards.includes(cIdx));
+      const hasR = rainbowCards.includes(cIdx) || (userAcc && Array.isArray(userAcc.rainbowCards) && userAcc.rainbowCards.includes(cIdx));
+      return hasG && hasR;
+    }
     if(filter.startsWith("rarity-")){
       const rTarget = filter.replace("rarity-", "").toLowerCase();
       return (c.rarity || "").toLowerCase() === rTarget;
@@ -978,11 +1016,13 @@ function render(){
     }
     const cardIndexInDeck = cards.indexOf(c);
     const isRainbowCard = has && (rainbowCards.includes(cardIndexInDeck) || (userAcc && Array.isArray(userAcc.rainbowCards) && userAcc.rainbowCards.includes(cardIndexInDeck)));
-    const isGoldCard = has && !isRainbowCard && (goldCards.includes(cardIndexInDeck) || (userAcc && Array.isArray(userAcc.goldCards) && userAcc.goldCards.includes(cardIndexInDeck)));
+    const isGoldCard = has && (goldCards.includes(cardIndexInDeck) || (userAcc && Array.isArray(userAcc.goldCards) && userAcc.goldCards.includes(cardIndexInDeck)));
+    const isDualFoil = isRainbowCard && isGoldCard;
 
     const el = document.createElement("div");
     let cardClasses = "card" + (has ? "" : " locked");
-    if(isRainbowCard) cardClasses += " rainbow-edition-card";
+    if(isDualFoil) cardClasses += " dual-foil-card rainbow-edition-card gold-edition-card";
+    else if(isRainbowCard) cardClasses += " rainbow-edition-card";
     else if(isGoldCard) cardClasses += " gold-edition-card";
     el.className = cardClasses;
 
@@ -1037,7 +1077,7 @@ function render(){
     el.innerHTML = `
       <div class="face ${cardFaceRarity}">
         <div class="card-top">
-          <span class="rarity">${displayedRarity}${unreleasedBadge}${enchantBadge}${isRainbowCard ? '<span class="rainbow-edition-tag">🌈 RAINBOW</span>' : (isGoldCard ? '<span class="gold-edition-tag">✨ GOLD</span>' : '')}</span>
+          <span class="rarity">${displayedRarity}${unreleasedBadge}${enchantBadge}${isDualFoil ? '<span class="dual-foil-tag">👑 RAINBOW & GOLD</span>' : (isRainbowCard ? '<span class="rainbow-edition-tag">🌈 RAINBOW</span>' : (isGoldCard ? '<span class="gold-edition-tag">✨ GOLD</span>' : ''))}</span>
           <span class="card-hp-badge">❤️ ${displayedHp}</span>
         </div>
         <div class="card-art-frame">
@@ -2093,13 +2133,16 @@ function setupAndLoadCamAccount(newPassword){
     ? unreleasedCards.map(c => c.id || c.name)
     : ["vault_card_1", "vault_card_2"];
 
-  const activePass = newPassword || (accounts["Cam"] && accounts["Cam"].password) || localStorage.getItem("cardCollectorCamPass") || "12345";
+  const existingCam = (accounts && accounts["Cam"]) || {};
+  const activePass = newPassword || existingCam.password || localStorage.getItem("cardCollectorCamPass") || "12345";
 
   accounts["Cam"] = {
     password: activePass,
     owned: allCardIndices,
     ownedAll: true,
     coins: "Infinity",
+    goldCards: Array.isArray(existingCam.goldCards) ? existingCam.goldCards : (Array.isArray(window.goldCards) ? window.goldCards : []),
+    rainbowCards: Array.isArray(existingCam.rainbowCards) ? existingCam.rainbowCards : (Array.isArray(window.rainbowCards) ? window.rainbowCards : []),
     unreleasedOwned: allVaultCards,
     googleEmail: "camden.charles.harms@gmail.com",
     googleName: "Camden Harms",
@@ -2891,11 +2934,14 @@ function openCardDetailModal(card){
   // Build the 3D card preview
   const inspectIdx = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.indexOf(card) : -1;
   const isDetailRainbow = (typeof rainbowCards !== "undefined" && rainbowCards.includes(inspectIdx));
-  const isDetailGold = !isDetailRainbow && (typeof goldCards !== "undefined" && goldCards.includes(inspectIdx));
+  const isDetailGold = (typeof goldCards !== "undefined" && goldCards.includes(inspectIdx));
 
   let foilDetailClass = "foil-standard";
   let foilDetailTag = "";
-  if(isDetailRainbow){
+  if(isDetailRainbow && isDetailGold){
+    foilDetailClass = "dual-foil-card rainbow-edition-card gold-edition-card";
+    foilDetailTag = '<span class="dual-foil-tag">👑 DUAL FOIL: RAINBOW & GOLD (+40% Combat Stats)</span>';
+  } else if(isDetailRainbow){
     foilDetailClass = "rainbow-edition-card";
     foilDetailTag = '<span class="rainbow-edition-tag">🌈 RAINBOW EDITION (+25% Combat Stats)</span>';
   } else if(isDetailGold){
@@ -4015,6 +4061,18 @@ window.addEventListener("storage", (e) => {
       const myUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : localStorage.getItem("cardCollectorCurrentUser");
       if(myUser && updatedAccounts && updatedAccounts[myUser]){
         const userAcc = updatedAccounts[myUser];
+        if(Array.isArray(userAcc.goldCards) || Array.isArray(userAcc.rainbowCards)){
+          if(typeof setLocalFoilCards === "function"){
+            setLocalFoilCards(userAcc.goldCards || [], userAcc.rainbowCards || []);
+          }
+        }
+        if(Array.isArray(userAcc.owned) && typeof owned !== "undefined"){
+          owned = userAcc.owned;
+          if(typeof window !== "undefined") window.owned = owned;
+        }
+        if(typeof render === "function") render();
+        if(typeof updateDisplay === "function") updateDisplay();
+
         if(userAcc.banned && !(typeof isCamUsername === "function" && isCamUsername(myUser))){
           if(!userAcc.banExpires || Date.now() < userAcc.banExpires){
             if(typeof showBannedScreen === "function") showBannedScreen(userAcc, myUser);

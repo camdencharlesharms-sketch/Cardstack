@@ -859,7 +859,7 @@ function getTargetPlayer(inputId, selectId){
     if(freshAccounts && typeof freshAccounts === "object") accounts = freshAccounts;
   } catch(e){}
 
-  const rawName = selected || typed;
+  const rawName = typed || selected;
   if(!rawName) return "";
 
   // Case-insensitive lookup against registered accounts
@@ -1383,27 +1383,33 @@ if(maxAccBtn){
 // ========================================================
 window.giftPlayerAllRainbows = function(targetUser){
   if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift all Rainbow cards.");
-  const target = targetUser || getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+  const target = targetUser || getTargetPlayer("skinPlayerInput", "skinPlayerSelect") || (typeof currentUser !== "undefined" ? currentUser : "Cam");
   if(!target) return alert("Type or select a target player username first.");
   
-  if(!accounts[target]){
-    accounts[target] = { password: "", owned: [0], coins: 1000, hasPlayed: true, lastActive: Date.now() };
+  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === target.toLowerCase()) || target;
+  if(!accounts[matchKey]){
+    accounts[matchKey] = { password: "", owned: [0], coins: 1000, hasPlayed: true, lastActive: Date.now() };
   }
-  const acc = accounts[target];
+  const acc = accounts[matchKey];
   const allCardIndices = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.map((_, i) => i) : Array.from({length: 210}, (_, i) => i);
   
   // Unlock all cards in collection and set all cards as Rainbow Edition
   acc.owned = Array.from(new Set([...(acc.owned || []), ...allCardIndices]));
+  acc.ownedAll = true;
   acc.rainbowCards = [...allCardIndices];
   acc.lastAdminActionTime = Date.now();
   acc.adminRevision = (acc.adminRevision || 0) + 1;
   
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(matchKey, true, true);
   
-  if(target.toLowerCase() === (currentUser || "").toLowerCase()){
-    if(typeof owned !== "undefined") owned = acc.owned;
-    if(typeof rainbowCards !== "undefined") window.rainbowCards = acc.rainbowCards;
+  if(matchKey.toLowerCase() === (currentUser || "").toLowerCase()){
+    if(typeof owned !== "undefined") window.owned = acc.owned;
+    if(typeof setLocalFoilCards === "function"){
+      setLocalFoilCards(acc.goldCards || [], acc.rainbowCards);
+    } else {
+      if(typeof rainbowCards !== "undefined") window.rainbowCards = acc.rainbowCards;
+    }
     if(typeof save === "function") save();
     if(typeof render === "function") render();
     if(typeof updateDisplay === "function") updateDisplay();
@@ -1432,27 +1438,33 @@ window.giftPlayerAllRainbows = function(targetUser){
 
 window.giftPlayerAllGolds = function(targetUser){
   if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift all Gold cards.");
-  const target = targetUser || getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+  const target = targetUser || getTargetPlayer("skinPlayerInput", "skinPlayerSelect") || (typeof currentUser !== "undefined" ? currentUser : "Cam");
   if(!target) return alert("Type or select a target player username first.");
   
-  if(!accounts[target]){
-    accounts[target] = { password: "", owned: [0], coins: 1000, hasPlayed: true, lastActive: Date.now() };
+  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === target.toLowerCase()) || target;
+  if(!accounts[matchKey]){
+    accounts[matchKey] = { password: "", owned: [0], coins: 1000, hasPlayed: true, lastActive: Date.now() };
   }
-  const acc = accounts[target];
+  const acc = accounts[matchKey];
   const allCardIndices = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.map((_, i) => i) : Array.from({length: 210}, (_, i) => i);
   
   // Unlock all cards in collection and set all cards as Gold Edition
   acc.owned = Array.from(new Set([...(acc.owned || []), ...allCardIndices]));
+  acc.ownedAll = true;
   acc.goldCards = [...allCardIndices];
   acc.lastAdminActionTime = Date.now();
   acc.adminRevision = (acc.adminRevision || 0) + 1;
   
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(matchKey, true, true);
   
-  if(target.toLowerCase() === (currentUser || "").toLowerCase()){
-    if(typeof owned !== "undefined") owned = acc.owned;
-    if(typeof goldCards !== "undefined") window.goldCards = acc.goldCards;
+  if(matchKey.toLowerCase() === (currentUser || "").toLowerCase()){
+    if(typeof owned !== "undefined") window.owned = acc.owned;
+    if(typeof setLocalFoilCards === "function"){
+      setLocalFoilCards(acc.goldCards, acc.rainbowCards || []);
+    } else {
+      if(typeof goldCards !== "undefined") window.goldCards = acc.goldCards;
+    }
     if(typeof save === "function") save();
     if(typeof render === "function") render();
     if(typeof updateDisplay === "function") updateDisplay();
@@ -1481,29 +1493,35 @@ window.giftPlayerAllGolds = function(targetUser){
 
 window.giftPlayerAllRainbowsAndGolds = function(targetUser){
   if(!isMasterAdmin()) return alert("Only Master Admin Cam can gift all Rainbow and Gold cards.");
-  const target = targetUser || getTargetPlayer("skinPlayerInput", "skinPlayerSelect");
+  const target = targetUser || getTargetPlayer("skinPlayerInput", "skinPlayerSelect") || (typeof currentUser !== "undefined" ? currentUser : "Cam");
   if(!target) return alert("Type or select a target player username first.");
   
-  if(!accounts[target]){
-    accounts[target] = { password: "", owned: [0], coins: 1000, hasPlayed: true, lastActive: Date.now() };
+  const matchKey = Object.keys(accounts).find(k => k.toLowerCase() === target.toLowerCase()) || target;
+  if(!accounts[matchKey]){
+    accounts[matchKey] = { password: "", owned: [0], coins: 1000, hasPlayed: true, lastActive: Date.now() };
   }
-  const acc = accounts[target];
+  const acc = accounts[matchKey];
   const allCardIndices = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.map((_, i) => i) : Array.from({length: 210}, (_, i) => i);
   
   // Unlock all cards in collection and set all cards as BOTH Rainbow AND Gold Edition
   acc.owned = Array.from(new Set([...(acc.owned || []), ...allCardIndices]));
+  acc.ownedAll = true;
   acc.rainbowCards = [...allCardIndices];
   acc.goldCards = [...allCardIndices];
   acc.lastAdminActionTime = Date.now();
   acc.adminRevision = (acc.adminRevision || 0) + 1;
   
   localStorage.setItem("cardCollectorAccounts", JSON.stringify(accounts));
-  if(typeof syncAccountToCloud === "function") syncAccountToCloud(target, true, true);
+  if(typeof syncAccountToCloud === "function") syncAccountToCloud(matchKey, true, true);
   
-  if(target.toLowerCase() === (currentUser || "").toLowerCase()){
-    if(typeof owned !== "undefined") owned = acc.owned;
-    if(typeof rainbowCards !== "undefined") window.rainbowCards = acc.rainbowCards;
-    if(typeof goldCards !== "undefined") window.goldCards = acc.goldCards;
+  if(matchKey.toLowerCase() === (currentUser || "").toLowerCase()){
+    if(typeof owned !== "undefined") window.owned = acc.owned;
+    if(typeof setLocalFoilCards === "function"){
+      setLocalFoilCards(acc.goldCards, acc.rainbowCards);
+    } else {
+      if(typeof rainbowCards !== "undefined") window.rainbowCards = acc.rainbowCards;
+      if(typeof goldCards !== "undefined") window.goldCards = acc.goldCards;
+    }
     if(typeof save === "function") save();
     if(typeof render === "function") render();
     if(typeof updateDisplay === "function") updateDisplay();
@@ -6180,9 +6198,12 @@ function launchChaosZeroG(isRemote = false){
     const vrotY = (Math.random() - 0.5) * 0.8;
     const vrotZ = (Math.random() - 0.5) * 1.5;
 
+    const initRect = gridCardEl.getBoundingClientRect();
     const binderObj = {
       el: gridCardEl,
       isBinderCard: true,
+      baseX: initRect.left,
+      baseY: initRect.top,
       offsetX: 0,
       offsetY: 0,
       vx, vy,
@@ -6268,17 +6289,19 @@ function launchChaosZeroG(isRemote = false){
       if(c.isDragging) return;
 
       if(c.isBinderCard){
+        const curX = c.baseX + c.offsetX;
+        const curY = c.baseY + c.offsetY;
+
         if(vCenter){
-          const rect = c.el.getBoundingClientRect();
-          const cx = rect.left + rect.width / 2;
-          const cy = rect.top + rect.height / 2;
+          const cx = curX + curCardW / 2;
+          const cy = curY + curCardH / 2;
           const dx = vCenter.x - cx;
           const dy = vCenter.y - cy;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const force = Math.min(9, 320 / dist);
-          c.vx += (dx / dist) * force * 0.12 * timeScale;
-          c.vy += (dy / dist) * force * 0.12 * timeScale;
-          c.vrotZ += 0.3 * timeScale;
+          const force = Math.min(10, 360 / dist);
+          c.vx += (dx / dist) * force * 0.15 * timeScale;
+          c.vy += (dy / dist) * force * 0.15 * timeScale;
+          c.vrotZ += 0.4 * timeScale;
         }
 
         c.offsetX += c.vx * timeScale;
@@ -6287,18 +6310,20 @@ function launchChaosZeroG(isRemote = false){
         c.rotY += c.vrotY * timeScale;
         c.rotZ += c.vrotZ * timeScale;
 
-        const bRect = c.el.getBoundingClientRect();
-        if(bRect.left < 5 && c.vx < 0){
+        const nextX = c.baseX + c.offsetX;
+        const nextY = c.baseY + c.offsetY;
+
+        if(nextX < 5 && c.vx < 0){
           c.vx = Math.abs(c.vx) * 0.95;
           c.vrotZ *= -0.8;
-        } else if(bRect.right > window.innerWidth - 5 && c.vx > 0){
+        } else if(nextX + curCardW > window.innerWidth - 5 && c.vx > 0){
           c.vx = -Math.abs(c.vx) * 0.95;
           c.vrotZ *= -0.8;
         }
-        if(bRect.top < 5 && c.vy < 0){
+        if(nextY < 5 && c.vy < 0){
           c.vy = Math.abs(c.vy) * 0.95;
           c.vrotX *= -0.8;
-        } else if(bRect.bottom > window.innerHeight - 5 && c.vy > 0){
+        } else if(nextY + curCardH > window.innerHeight - 5 && c.vy > 0){
           c.vy = -Math.abs(c.vy) * 0.95;
           c.vrotX *= -0.8;
         }
@@ -6365,35 +6390,89 @@ window.launchChaosZeroG = launchChaosZeroG;
 
 function spawnChaosSingularity(isRemote = false){
   let vortex = document.getElementById("chaosSingularityVortex");
+  const singBtn = document.getElementById("chaosSingularityBtn");
   if(vortex){
     vortex.remove();
     playChaosSfx("warp");
+    const gravStatus = document.getElementById("chaosGravityStatus");
+    if(gravStatus) gravStatus.textContent = "Singularity collapsed. Normal gravity field.";
+    if(singBtn){
+      singBtn.style.background = "rgba(168,85,247,0.15)";
+      singBtn.style.color = "#d8b4fe";
+    }
+    if(!isRemote && typeof broadcastChaosFx === "function"){
+      broadcastChaosFx({ type: "singularity", active: false });
+    }
     return;
   }
-  vortex = document.createElement("div");
-  vortex.id = "chaosSingularityVortex";
-  document.body.appendChild(vortex);
-  playChaosSfx("detonation");
 
-  // If zero-G is not running, start it so singularity has cards to pull!
+  // Ensure zero-G cards are floating FIRST so clearChaosPhysics does not destroy the new vortex!
   if(zeroGCardsList.length === 0){
     launchChaosZeroG(true);
   }
 
+  vortex = document.createElement("div");
+  vortex.id = "chaosSingularityVortex";
+  vortex.innerHTML = '<div class="singularity-event-horizon"></div><div class="singularity-accretion-disk"></div>';
+  document.body.appendChild(vortex);
+  playChaosSfx("detonation");
+
+  if(singBtn){
+    singBtn.style.background = "linear-gradient(135deg, #a855f7, #7c3aed)";
+    singBtn.style.color = "#fff";
+  }
+
   const gravStatus = document.getElementById("chaosGravityStatus");
-  if(gravStatus) gravStatus.textContent = "🕳️ Cosmic Singularity Black Hole active in screen center!";
+  if(gravStatus) gravStatus.textContent = "🕳️ Cosmic Singularity Black Hole active! Pulling all cards inward!";
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast("🕳️ <b>COSMIC SINGULARITY OPENED!</b> Event horizon pulling all cards inward!", true);
+  }
 
   if(!isRemote && typeof broadcastChaosFx === "function"){
-    broadcastChaosFx({ type: "singularity" });
+    broadcastChaosFx({ type: "singularity", active: true });
   }
 }
 window.spawnChaosSingularity = spawnChaosSingularity;
 
 function toggleMatrixSlomo(isRemote = false){
   const active = document.body.classList.toggle("matrix-slomo-active");
-  playChaosSfx("laser");
+  playChaosSfx(active ? "warp" : "laser");
+
+  // If activating and Zero-G is not running, float cards in slow motion!
+  if(active && zeroGCardsList.length === 0){
+    launchChaosZeroG(true);
+  }
+
+  let hud = document.getElementById("matrixSlomoHud");
+  if(active){
+    if(!hud){
+      hud = document.createElement("div");
+      hud.id = "matrixSlomoHud";
+      hud.innerHTML = `
+        <div class="matrix-slomo-badge">
+          <span class="matrix-slomo-icon">⏳</span>
+          <span class="matrix-slomo-text">BULLET-TIME ACTIVE (0.3x DILATION)</span>
+        </div>
+      `;
+      document.body.appendChild(hud);
+    }
+  } else {
+    if(hud) hud.remove();
+  }
+
   const gravStatus = document.getElementById("chaosGravityStatus");
   if(gravStatus) gravStatus.textContent = active ? "⏳ Matrix Bullet-Time engaged (0.3x time speed)." : "Normal time speed.";
+
+  const slomoBtn = document.getElementById("chaosSlomoBtn");
+  if(slomoBtn){
+    slomoBtn.style.background = active ? "linear-gradient(135deg, #10b981, #059669)" : "rgba(16,185,129,0.15)";
+    slomoBtn.style.color = active ? "#fff" : "#6ee7b7";
+  }
+
+  if(typeof showLiveToast === "function"){
+    showLiveToast(active ? "⏳ <b>MATRIX BULLET-TIME ENGAGED!</b> Slow motion 0.3x active." : "⏱️ Normal time speed restored.", true);
+  }
 
   if(!isRemote && typeof broadcastChaosFx === "function"){
     broadcastChaosFx({ type: "slomo", active });
@@ -6421,10 +6500,27 @@ function clearChaosPhysics(isRemote = false){
   const vortex = document.getElementById("chaosSingularityVortex");
   if(vortex) vortex.remove();
 
+  const hud = document.getElementById("matrixSlomoHud");
+  if(hud) hud.remove();
+
   document.body.classList.remove("matrix-slomo-active", "zero-gravity-active");
+
+  const slomoBtn = document.getElementById("chaosSlomoBtn");
+  if(slomoBtn){
+    slomoBtn.style.background = "rgba(16,185,129,0.15)";
+    slomoBtn.style.color = "#6ee7b7";
+  }
+
+  const singBtn = document.getElementById("chaosSingularityBtn");
+  if(singBtn){
+    singBtn.style.background = "rgba(168,85,247,0.15)";
+    singBtn.style.color = "#d8b4fe";
+  }
 
   const gravStatus = document.getElementById("chaosGravityStatus");
   if(gravStatus) gravStatus.textContent = "Standard Earth gravity (1.0G).";
+
+  if(typeof updateRealityWarpBadge === "function") updateRealityWarpBadge();
 
   if(!isRemote && typeof broadcastChaosFx === "function"){
     broadcastChaosFx({ type: "clear_physics" });
@@ -7889,16 +7985,43 @@ if(document.readyState === "complete" || document.readyState === "interactive"){
 
 function updateRealityWarpBadge(){
   const badge = document.getElementById("realityWarpBadge");
-  if(!badge) return;
   const activeCount = [
     document.body.classList.contains("zero-gravity-active"),
     document.body.classList.contains("turbo-speed-active"),
     document.body.classList.contains("crt-arcade-active"),
-    document.body.classList.contains("mirror-dimension-active")
+    document.body.classList.contains("mirror-dimension-active"),
+    document.body.classList.contains("matrix-slomo-active")
   ].filter(Boolean).length;
 
-  badge.textContent = activeCount > 0 ? `WARPED (${activeCount} MODS)` : "NORMAL SPACE";
-  badge.style.background = activeCount > 0 ? "#e879f9" : "#475569";
+  if(badge){
+    badge.textContent = activeCount > 0 ? `WARPED (${activeCount} MODS)` : "NORMAL SPACE";
+    badge.style.background = activeCount > 0 ? "#e879f9" : "#475569";
+  }
+
+  const zgBtn = document.getElementById("toggleZeroGravityBtn");
+  if(zgBtn){
+    const isZG = document.body.classList.contains("zero-gravity-active");
+    zgBtn.style.background = isZG ? "linear-gradient(135deg, #38bdf8, #0284c7)" : "";
+    zgBtn.style.color = isZG ? "#fff" : "";
+  }
+  const turboBtn = document.getElementById("toggleTurboSpeedBtn");
+  if(turboBtn){
+    const isTurbo = document.body.classList.contains("turbo-speed-active");
+    turboBtn.style.background = isTurbo ? "linear-gradient(135deg, #f59e0b, #d97706)" : "";
+    turboBtn.style.color = isTurbo ? "#fff" : "";
+  }
+  const crtBtn = document.getElementById("toggleCrtArcadeBtn");
+  if(crtBtn){
+    const isCrt = document.body.classList.contains("crt-arcade-active");
+    crtBtn.style.background = isCrt ? "linear-gradient(135deg, #10b981, #059669)" : "";
+    crtBtn.style.color = isCrt ? "#fff" : "";
+  }
+  const mirrorBtn = document.getElementById("toggleMirrorWorldBtn");
+  if(mirrorBtn){
+    const isMirror = document.body.classList.contains("mirror-dimension-active");
+    mirrorBtn.style.background = isMirror ? "linear-gradient(135deg, #a855f7, #7c3aed)" : "";
+    mirrorBtn.style.color = isMirror ? "#fff" : "";
+  }
 }
 window.updateRealityWarpBadge = updateRealityWarpBadge;
 

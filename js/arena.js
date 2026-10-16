@@ -626,26 +626,34 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
   document.getElementById("oppLabelTag").textContent = oppTitle;
 
   const cardIdx = (typeof cards !== "undefined" && Array.isArray(cards)) ? cards.indexOf(battlePlayerCard) : -1;
-  const isPlayerRainbow = (typeof rainbowCards !== "undefined" && Array.isArray(rainbowCards) && rainbowCards.includes(cardIdx));
-  const isPlayerGold = !isPlayerRainbow && (typeof goldCards !== "undefined" && Array.isArray(goldCards) && goldCards.includes(cardIdx));
+  const curAcc = (typeof getUserAccount === "function" && typeof currentUser !== "undefined") ? getUserAccount(currentUser) : null;
+  const isPlayerRainbow = (typeof rainbowCards !== "undefined" && Array.isArray(rainbowCards) && rainbowCards.includes(cardIdx)) || (curAcc && Array.isArray(curAcc.rainbowCards) && curAcc.rainbowCards.includes(cardIdx));
+  const isPlayerGold = (typeof goldCards !== "undefined" && Array.isArray(goldCards) && goldCards.includes(cardIdx)) || (curAcc && Array.isArray(curAcc.goldCards) && curAcc.goldCards.includes(cardIdx));
+  const isPlayerDual = isPlayerRainbow && isPlayerGold;
 
   let foilSuffix = "";
-  if(isPlayerRainbow){
+  if(isPlayerDual){
+    foilSuffix = " [👑 DUAL FOIL +40%]";
+    if(pCard){
+      pCard.classList.add("dual-foil-card", "rainbow-edition-card", "gold-edition-card");
+    }
+    if(Number.isFinite(battlePlayerHp)) battlePlayerHp = Math.round(battlePlayerHp * 1.40);
+  } else if(isPlayerRainbow){
     foilSuffix = " [🌈 RAINBOW +25%]";
     if(pCard){
       pCard.classList.add("rainbow-edition-card");
-      pCard.classList.remove("gold-edition-card");
+      pCard.classList.remove("gold-edition-card", "dual-foil-card");
     }
     if(Number.isFinite(battlePlayerHp)) battlePlayerHp = Math.round(battlePlayerHp * 1.25);
   } else if(isPlayerGold){
     foilSuffix = " [✨ GOLD +15%]";
     if(pCard){
       pCard.classList.add("gold-edition-card");
-      pCard.classList.remove("rainbow-edition-card");
+      pCard.classList.remove("rainbow-edition-card", "dual-foil-card");
     }
     if(Number.isFinite(battlePlayerHp)) battlePlayerHp = Math.round(battlePlayerHp * 1.15);
   } else if(pCard){
-    pCard.classList.remove("rainbow-edition-card", "gold-edition-card");
+    pCard.classList.remove("rainbow-edition-card", "gold-edition-card", "dual-foil-card");
   }
 
   document.getElementById("playerBattleImg").src = battlePlayerCard.image || "";
@@ -687,7 +695,8 @@ function setupCombatInterface(playerTitle, oppTitle, playerStartsFirst){
     const isInf = (typeof isInfiniteValue === "function" && isInfiniteValue(atk.dmg)) || atk.dmg === "Infinity";
     let calcDmg = atk.dmg;
     if(!isInf && typeof calcDmg === "number"){
-      if(isPlayerRainbow) calcDmg = Math.round(calcDmg * 1.25);
+      if(isPlayerDual) calcDmg = Math.round(calcDmg * 1.40);
+      else if(isPlayerRainbow) calcDmg = Math.round(calcDmg * 1.25);
       else if(isPlayerGold) calcDmg = Math.round(calcDmg * 1.15);
     }
     const effectiveAtk = { ...atk, dmg: calcDmg };

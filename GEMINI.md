@@ -986,3 +986,24 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
   - Equipped with multi-axis 3D tumble physics (`vrotX`, `vrotY`, `vrotZ`), elastic viewport boundary bounces, and singularity gravitational vortex attraction.
   - Full touch and mouse drag-and-fling mechanics: players can grab any drifting binder card and throw it across space.
   - On gravity restoration (`clearChaosPhysics`), all binder cards smoothly glide back into their exact grid slots in a coordinated 0.85s recall animation.
+
+### Matrix Bullet-Time, Cosmic Singularity, & Supreme Foil Gifting Overhaul
+- **Matrix Bullet-Time Engine Overhaul ("Bullet Time and Others Dont Work")**:
+  - **Dynamic Time Dilation (0.3x Slow-Motion)**: Engaging Matrix Bullet-Time (`toggleMatrixSlomo` / `#chaosSlomoBtn`) automatically transitions physics and cards into dramatic 0.3x slow-motion.
+  - **Auto-Floating Initialization**: If cards are not already floating when Bullet-Time is triggered, Zero-G physics activates automatically so the user immediately experiences the slow-motion drift.
+  - **Matrix Chronos HUD Badge (`#matrixSlomoHud`)**: Injects a high-tech glowing Chronos HUD badge at the top of the screen (`⏳ BULLET-TIME ACTIVE (0.3x DILATION)`) with drop-in animation and emerald glow.
+  - **Global CSS Time Dilation**: Applied global slow-motion CSS transition and animation rules (`body.matrix-slomo-active *`) so interactive cards, packs, and particle storms move in dreamlike slow motion.
+  - **Cosmic Singularity Black Hole Fix**: Fixed race condition where `launchChaosZeroG` called `clearChaosPhysics` immediately destroying `#chaosSingularityVortex`. The singularity now safely initializes Zero-G first before creating the event horizon. Enhanced the vortex with a 260px pulsing event horizon, 140% rotating accretion disk, and gravitational pull formula that cleanly spirals all floating cards toward viewport center.
+  - **Gravity Restoration Fix (`clearChaosPhysics`)**: Seamlessly resets all drifting cards back to their grid slots with 0.85s easing, cleans up HUD badges, removes singularity vortices, and restores normal 1.0x Earth gravity.
+  - **God Realm Reality Warp Synchronization**: Synced reality warp buttons (`toggleZeroGravityBtn`, `toggleTurboSpeedBtn`, `toggleCrtArcadeBtn`, `toggleMirrorWorldBtn`) with active color state indicators and accurate multi-mod counter badge.
+
+- **Foil Gifting & Dual-Foil Architecture ("Gifting All Gold and Rainbow Cards Isn't Working")**:
+  - **Local vs Window Scope Synchronization**: Resolved variable shadowing between script-scoped `let goldCards` / `rainbowCards` in `js/app.js` and global `window.goldCards` / `window.rainbowCards`. Implemented `window.setLocalFoilCards(newGold, newRainbow)` to cleanly update both scopes simultaneously.
+  - **Safe Persistence & Account Preservation**: Updated `save()` and `loadAccount("Cam")` to prevent foil array wiping. In `setupAndLoadCamAccount`, preserved `existingCam.goldCards` and `existingCam.rainbowCards`.
+  - **Admin Player Target Resolution**: Fixed `getTargetPlayer` in `js/admin.js` to evaluate `typed || selected` instead of `selected || typed`, ensuring user-typed player names are honored even if a default dropdown option is selected, and defaulted to `currentUser || "Cam"`.
+  - **Dual-Foil Visual Styling (`.dual-foil-card` & `.dual-foil-tag`)**: Decoupled `isGoldCard` from `!isRainbowCard`. When a card is both Gold and Rainbow, it now receives the dual-foil presentation:
+    - 24K pure gold border gleam combined with Prismatic Rainbow interior foil sheen.
+    - Official `👑 RAINBOW & GOLD` foil tag on the card top bar and holographic inspect modal.
+    - New `👑 Dual Foil` binder filter button in the collection controls.
+    - +40% Combat Health and +40% Attack Damage stat multiplier in the Multiplayer Arena (`js/arena.js`).
+  - **Live Presence & Cross-Tab Sync**: Updated `js/presence.js` and storage event listeners to immediately synchronize foil gifts across multiple tabs and live sessions with celebratory confetti and sound effects.

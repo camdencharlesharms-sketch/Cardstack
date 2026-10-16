@@ -2319,47 +2319,88 @@ body.turbo-speed-active * {
   box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 25px rgba(245, 158, 11, 0.8), inset 0 0 12px rgba(253, 224, 71, 0.4) !important;
 }
 
+.chaos-zero-g-card.dual-foil-card {
+  border-color: #fbbf24 !important;
+  animation: rainbowBorderCycle 3.5s linear infinite;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.6), 0 0 35px rgba(251, 191, 36, 0.9), 0 0 50px rgba(236, 72, 153, 0.6) !important;
+}
+
 /* Cosmic Singularity (Black Hole) */
 #chaosSingularityVortex {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 220px;
-  height: 220px;
+  width: 260px;
+  height: 260px;
   border-radius: 50%;
-  background: radial-gradient(circle, #000 45%, #3b0764 70%, transparent 85%);
-  box-shadow: 0 0 60px 20px #8b5cf6, inset 0 0 40px #000;
+  background: radial-gradient(circle, #000 45%, #2e0854 65%, rgba(139, 92, 246, 0.4) 80%, transparent 92%);
+  box-shadow: 0 0 90px 30px rgba(168, 85, 247, 0.8), 0 0 140px 60px rgba(59, 130, 246, 0.4), inset 0 0 60px #000;
   z-index: 99980;
   pointer-events: none;
-  animation: singularitySpin 4s linear infinite;
+  animation: singularitySpin 3.5s linear infinite;
 }
 #chaosSingularityVortex::after {
   content: '';
   position: absolute;
-  top: -15%;
-  left: -15%;
-  width: 130%;
-  height: 130%;
+  top: -20%;
+  left: -20%;
+  width: 140%;
+  height: 140%;
   border-radius: 50%;
-  border: 4px dashed rgba(236, 72, 153, 0.75);
-  animation: singularityAccretion 2.5s linear infinite reverse;
+  border: 5px dashed rgba(236, 72, 153, 0.85);
+  box-shadow: 0 0 30px rgba(236, 72, 153, 0.6);
+  animation: singularityAccretion 2s linear infinite reverse;
 }
 @keyframes singularitySpin {
   0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
-  50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.08); }
+  50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.1); }
   100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
 }
 @keyframes singularityAccretion {
-  0% { transform: rotate(0deg); opacity: 0.8; }
-  50% { transform: rotate(180deg); opacity: 0.4; }
-  100% { transform: rotate(360deg); opacity: 0.8; }
+  0% { transform: rotate(0deg); opacity: 0.9; }
+  50% { transform: rotate(180deg); opacity: 0.5; }
+  100% { transform: rotate(360deg); opacity: 0.9; }
 }
 
-/* Bullet-Time Matrix Slomo Overlay */
+/* Bullet-Time Matrix Slomo Overlay & Slowdown */
 .matrix-slomo-active {
-  filter: contrast(1.15) brightness(0.9) hue-rotate(90deg) !important;
   transition: filter 0.5s ease-out;
+}
+body.matrix-slomo-active #grid .card,
+body.matrix-slomo-active .pack-card,
+body.matrix-slomo-active .chaos-zero-g-card,
+body.matrix-slomo-active .chaos-rain-card {
+  animation-duration: 4.5s !important;
+  transition-duration: 1.2s !important;
+}
+#matrixSlomoHud {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999999;
+  pointer-events: none;
+  animation: slomoHudDrop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.matrix-slomo-badge {
+  background: rgba(6, 78, 59, 0.9);
+  border: 1.5px solid #10b981;
+  color: #a7f3d0;
+  padding: 8px 20px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+  backdrop-filter: blur(8px);
+}
+@keyframes slomoHudDrop {
+  0% { transform: translate(-50%, -30px); opacity: 0; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
 }
 
 /* ========================================================
@@ -2706,6 +2747,46 @@ body.shader-prismatic #realmScreenShaderOverlay {
   align-items: center;
   gap: 3px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Dual Foil: Rainbow & Gold */
+.dual-foil-card {
+  border: 2px solid transparent !important;
+  background-image: linear-gradient(rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.96)), linear-gradient(135deg, #fbbf24, #f59e0b, #ec4899, #8b5cf6, #3b82f6, #10b981, #fbbf24) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  box-shadow: 0 0 35px rgba(251, 191, 36, 0.8), 0 0 60px rgba(236, 72, 153, 0.5), inset 0 0 25px rgba(245, 158, 11, 0.4) !important;
+  position: relative;
+  animation: goldFoilGleam 3.5s infinite ease-in-out;
+}
+.dual-foil-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 15%, rgba(251, 191, 36, 0.4) 30%, rgba(244, 63, 94, 0.35) 45%, rgba(168, 85, 247, 0.35) 60%, rgba(59, 130, 246, 0.35) 75%, transparent 95%);
+  background-size: 250% 250%;
+  animation: rainbowFoilGlare 5s infinite linear;
+  pointer-events: none;
+  border-radius: inherit;
+  mix-blend-mode: color-dodge;
+  z-index: 5;
+}
+.dual-foil-tag {
+  background: linear-gradient(135deg, #fbbf24, #ec4899, #8b5cf6, #3b82f6);
+  background-size: 200% 200%;
+  animation: rainbowFoilGlare 3s infinite linear;
+  color: #fff;
+  font-weight: 900;
+  font-size: 8.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.7);
+  margin-left: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 /* ========================================================
