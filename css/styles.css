@@ -186,13 +186,17 @@ main{max-width:1250px;margin:auto;padding:32px 24px}
   50% { transform: translateY(-8px); }
   100% { transform: translateY(0px); }
 }
+@keyframes packHoloSweep {
+  0% { transform: translateX(-150%) rotate(25deg); }
+  100% { transform: translateX(250%) rotate(25deg); }
+}
 .pack-card{
   --glare-x: 50%;
   --glare-y: 50%;
   --glare-opacity: 0;
   background:linear-gradient(170deg, rgba(26, 36, 68, 0.7) 0%, rgba(13, 19, 39, 0.85) 100%);
-  animation: packCardFloat 4s ease-in-out infinite;
-  border:1px solid rgba(120, 150, 220, 0.25);
+  animation: packCardFloat 3.8s ease-in-out infinite;
+  border:1px solid rgba(120, 150, 220, 0.28);
   border-radius:22px;
   padding:22px;
   display:flex;
@@ -206,6 +210,34 @@ main{max-width:1250px;margin:auto;padding:32px 24px}
   transition:transform 0.15s ease-out, border-color 0.3s ease, box-shadow 0.3s ease;
   box-shadow:0 14px 32px rgba(0,0,0,0.38);
 }
+.pack-card:nth-child(2n) { animation-duration: 4.4s; animation-delay: -1.2s; }
+.pack-card:nth-child(3n) { animation-duration: 4.8s; animation-delay: -2.3s; }
+.pack-card:nth-child(5n) { animation-duration: 4.1s; animation-delay: -3.1s; }
+
+.pack-card::before{
+  content:'';
+  position:absolute;
+  top:-60%;
+  left:-60%;
+  width:220%;
+  height:220%;
+  background:linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.08) 45%,
+    rgba(56, 189, 248, 0.25) 50%,
+    rgba(192, 132, 252, 0.25) 55%,
+    rgba(255, 255, 255, 0.12) 60%,
+    transparent 65%,
+    transparent 100%
+  );
+  animation:packHoloSweep 4s ease-in-out infinite;
+  pointer-events:none;
+  z-index:3;
+}
+.pack-card:nth-child(2n)::before{ animation-delay: -1.4s; }
+.pack-card:nth-child(3n)::before{ animation-delay: -2.7s; }
 .pack-card::after{
   content:'';
   position:absolute;
@@ -575,27 +607,60 @@ button:active{transform:translateY(0)}
 }
 #packOverlay.show{display:flex}
 
+@keyframes packHover {
+  0% { transform: translateY(0px) rotate(0deg) scale(1); filter: drop-shadow(0 15px 35px rgba(0,0,0,0.85)); }
+  50% { transform: translateY(-14px) rotate(2deg) scale(1.035); filter: drop-shadow(0 25px 60px rgba(56,189,248,0.55)); }
+  100% { transform: translateY(0px) rotate(0deg) scale(1); filter: drop-shadow(0 15px 35px rgba(0,0,0,0.85)); }
+}
+
+@keyframes packRumble {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.05); filter: brightness(1.2) drop-shadow(0 0 30px rgba(56, 189, 248, 0.6)); }
+  15% { transform: translate(-10px, -6px) rotate(-6deg) scale(1.1); filter: brightness(1.7) drop-shadow(0 0 50px #38bdf8); }
+  30% { transform: translate(10px, 6px) rotate(6deg) scale(1.15); filter: brightness(2.2) drop-shadow(0 0 65px #facc15); }
+  45% { transform: translate(-8px, 5px) rotate(-4deg) scale(1.2); filter: brightness(2.6) drop-shadow(0 0 85px #f43f5e); }
+  60% { transform: translate(8px, -5px) rotate(5deg) scale(1.24); filter: brightness(3.0) drop-shadow(0 0 100px #fff); }
+  75% { transform: translate(-10px, 4px) rotate(-5deg) scale(1.28); filter: brightness(3.5) drop-shadow(0 0 115px #38bdf8); }
+  90% { transform: translate(10px, -4px) rotate(5deg) scale(1.32); filter: brightness(4.0) drop-shadow(0 0 135px #facc15); }
+}
+
+@keyframes packBurst {
+  0% {
+    transform: scale(1.25) rotate(0deg);
+    opacity: 1;
+    filter: brightness(3.5) drop-shadow(0 0 80px #fff);
+  }
+  35% {
+    transform: scale(1.65) rotate(-8deg);
+    opacity: 1;
+    filter: brightness(5) drop-shadow(0 0 120px #facc15) drop-shadow(0 0 160px #38bdf8);
+  }
+  70% {
+    transform: scale(2.3) rotate(10deg);
+    opacity: 0.7;
+    filter: brightness(7) drop-shadow(0 0 180px #fff);
+  }
+  100% {
+    transform: scale(3.2) rotate(-14deg);
+    opacity: 0;
+    filter: brightness(9) drop-shadow(0 0 240px #fff);
+  }
+}
+
 .pack-model{
-  width:180px;
-  height:260px;
+  width:200px;
+  height:280px;
   border-radius:24px;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  box-shadow:0 30px 70px rgba(0,0,0,0.9), inset 0 0 20px rgba(255,255,255,0.15);
-  border:3px solid rgba(255,255,255,0.25);
+  box-shadow:0 30px 70px rgba(0,0,0,0.9), inset 0 0 25px rgba(255,255,255,0.2);
+  border:3px solid rgba(255,255,255,0.3);
   position:relative;
-  animation:packHover 2.5s ease-in-out infinite;
+  animation:packHover 2.4s ease-in-out infinite;
 }
-.pack-model.shaking{animation:packRumble 0.8s ease-in-out infinite}
-.pack-model.burst{animation:packBurst 0.6s cubic-bezier(0.1, 0.9, 0.2, 1) forwards}
-
-@keyframes packRumble{
-  0%,100%{transform:translate(0,0) rotate(0deg) scale(1.02)}
-  25%{transform:translate(-6px, -4px) rotate(-4deg) scale(1.06)}
-  75%{transform:translate(6px, 4px) rotate(4deg) scale(1.1)}
-}
+.pack-model.shaking{animation:packRumble 0.5s ease-in-out infinite}
+.pack-model.burst{animation:packBurst 0.65s cubic-bezier(0.1, 0.9, 0.2, 1) forwards}
 
 .reveal-cards-container{
   display:flex;
@@ -612,10 +677,14 @@ button:active{transform:translateY(0)}
   width:210px;
   height:360px;
   opacity:0;
-  transform:translateY(50px) scale(0.85);
-  animation:cardPop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform:translateY(65px) scale(0.7) rotate(-5deg);
+  animation:cardPop 0.65s cubic-bezier(0.18, 0.9, 0.28, 1.25) forwards;
 }
-@keyframes cardPop{to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes cardPop{
+  0%{opacity:0;transform:translateY(70px) scale(0.65) rotate(-6deg)}
+  65%{opacity:1;transform:translateY(-12px) scale(1.06) rotate(2deg);filter:drop-shadow(0 0 25px rgba(56,189,248,0.6))}
+  100%{opacity:1;transform:translateY(0) scale(1) rotate(0deg);filter:drop-shadow(0 15px 30px rgba(0,0,0,0.55))}
+}
 
 .reveal-badge{
   text-align:center;
@@ -2950,9 +3019,9 @@ body.shader-prismatic #realmScreenShaderOverlay {
   animation: shockwaveExpand 0.75s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
 }
 @keyframes shockwaveExpand {
-  0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; border-color: #38bdf8; }
-  50% { opacity: 0.9; border-color: #facc15; }
-  100% { transform: translate(-50%, -50%) scale(3.2); opacity: 0; border-width: 1px; }
+  0% { transform: translate(-50%, -50%) scale(0.1); opacity: 1; border-color: #fff; box-shadow: 0 0 60px #fff, 0 0 100px #38bdf8; }
+  45% { opacity: 1; border-color: #facc15; box-shadow: 0 0 90px #facc15, 0 0 150px #f43f5e; }
+  100% { transform: translate(-50%, -50%) scale(5.8); opacity: 0; border-width: 1px; box-shadow: 0 0 180px rgba(56,189,248,0); }
 }
 
 /* Sleek Summoner Rank Badge Shimmer */

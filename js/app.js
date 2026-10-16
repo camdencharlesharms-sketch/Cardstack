@@ -616,6 +616,18 @@ function startPackOpening(tierKey){
     }
     if(typeof playChaosSfx === "function") playChaosSfx("detonation");
 
+    if(typeof confetti === "function"){
+      confetti({
+        particleCount: 110,
+        spread: 120,
+        origin: { y: 0.48 },
+        colors: ["#38bdf8", "#facc15", "#c084fc", "#f43f5e", "#ffffff"]
+      });
+    }
+    if(typeof window.spawnCombatSparks === "function"){
+      window.spawnCombatSparks(model, true);
+    }
+
     setTimeout(()=>{
       stage.style.display = "none";
       results.style.display = "flex";

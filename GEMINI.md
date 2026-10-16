@@ -956,3 +956,16 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
 - **Accelerated Zero-G Floating Cadence**:
   - Card orbital floating travel increased to 13px with rotational sway up to 1.8° across faster 4.2s–5.4s cycles.
   - Brand holographic text shimmer accelerated to 2.8s and breathing emblem aura accelerated to 1.8s.
+
+### Upgraded & Enhanced Booster Pack Animations ("Pack Animations Look Cooler")
+- **Booster Outpost Holographic Foil Sweep (`.pack-card::before`)**:
+  - Implemented continuous diagonal prismatic holographic foil light sweeps (`@keyframes packHoloSweep`) across all booster packs in the outpost.
+  - Multi-tier ambient breathing float (`@keyframes packCardFloat`) with staggered wave delays across pack tiers.
+  - 3D perspective mouse-tilt responsive up to 18° with real-time specular foil glare sweep (`--glare-x`, `--glare-y`).
+- **Cinematic Pack Opening Stage Overhaul**:
+  - **Zero-G Pack Suspension Hover (`@keyframes packHover`)**: Pack model floats suspended in space with a 14px bob and breathing cyan/purple underglow.
+  - **Electric High-Voltage Pack Rumble (`@keyframes packRumble`)**: Violent 0.5s pre-detonation power surge scaling from 1.05x to 1.32x with rapid multi-color lightning strobing (`#38bdf8`, `#facc15`, `#f43f5e`, `#fff`).
+  - **Blinding Supernova Detonation Burst (`@keyframes packBurst`)**: High-intensity explosive burst scaling the pack up to 3.2x with blinding white and golden glare flashes before dissolving into pure stardust.
+  - **Massive Double-Layer Energy Shockwave**: Scaled `.pack-energy-shockwave` from 3.2x to 5.8x diameter with luminous celestial cyan, gold, and magenta concentric rings.
+  - **Detonation Fireworks & Spark Explosions**: Simultaneous detonation of 110 celebratory confetti flakes and 68 radial high-velocity stardust sparks upon unsealing.
+  - **Dynamic 3D Card Pop Reveal (`@keyframes cardPop`)**: Pulled cards burst upward into view with a 3D perspective arc, rotational overshoot, and glowing cyan drop-shadow.
