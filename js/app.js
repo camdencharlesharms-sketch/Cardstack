@@ -3169,13 +3169,8 @@ function initAmbientCosmosCanvas(){
   window.addEventListener("resize", resize);
   resize();
 
-  // Mouse Parallax Physics
-  let targetParallaxX = 0, targetParallaxY = 0;
+  // Deep Space Star Physics (steady celestial drift, stars do not follow cursor)
   let curParallaxX = 0, curParallaxY = 0;
-  window.addEventListener("pointermove", (e) => {
-    targetParallaxX = (e.clientX - width / 2) / (width / 2);
-    targetParallaxY = (e.clientY - height / 2) / (height / 2);
-  }, { passive: true });
 
   // 1. Far Deep Starfield (280 stars - subtle tiny pinpricks)
   const starsFar = [];
@@ -3286,9 +3281,9 @@ function initAmbientCosmosCanvas(){
   function loop(){
     t += 0.016;
 
-    // Smooth Parallax
-    curParallaxX += (targetParallaxX - curParallaxX) * 0.04;
-    curParallaxY += (targetParallaxY - curParallaxY) * 0.04;
+    // Steady Celestial Space Drift (stars do not follow cursor)
+    curParallaxX = 0;
+    curParallaxY = 0;
 
     ctx.clearRect(0, 0, width, height);
 
@@ -4135,15 +4130,8 @@ function initStardustTrailCanvas(){
     }
   }
 
-  // Pointer movement trail (multi-spark stardust stream)
-  window.addEventListener("pointermove", (e) => {
-    spawnMote(e.clientX, e.clientY, 3, 1.3, 1.2);
-  }, { passive: true });
-
-  // Click explosive sparkle burst (fireworks blast)
-  window.addEventListener("pointerdown", (e) => {
-    spawnMote(e.clientX, e.clientY, 28, 3.6, 1.5);
-  }, { passive: true });
+  // Cursor star trail removed per user request: stars do not follow cursor
+  // Combat hit sparks and programmatic particle effects remain active via cardstackCombatHit
 
   function renderTrail(){
     ctx.clearRect(0, 0, width, height);

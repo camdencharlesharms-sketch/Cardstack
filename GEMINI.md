@@ -1007,3 +1007,11 @@ The game features a procedural, zero-external-asset Web Audio synthesis engine w
     - New `👑 Dual Foil` binder filter button in the collection controls.
     - +40% Combat Health and +40% Attack Damage stat multiplier in the Multiplayer Arena (`js/arena.js`).
   - **Live Presence & Cross-Tab Sync**: Updated `js/presence.js` and storage event listeners to immediately synchronize foil gifts across multiple tabs and live sessions with celebratory confetti and sound effects.
+
+### Cursor Star Trail & Parallax Tracking Removal ("Stars Don't Follow Your Cursor")
+- **Removed Cursor Star Trail (`#stardustTrailCanvas`)**:
+  - Removed `pointermove` and `pointerdown` listeners from [`initStardustTrailCanvas`](file:///Users/camden/Documents/GitHub/Cardstack/js/app.js) that generated streams of stardust particles and 4-point flare stars following the user's mouse cursor everywhere.
+  - Preserved canvas support for combat impacts (`cardstackCombatHit`) and programmatic game explosions so arena combat hit sparks still work smoothly.
+- **Removed Cursor-Tracking Parallax Star Movement (`#ambientCosmosCanvas`)**:
+  - Removed mouse cursor pointer tracking (`targetParallaxX`, `targetParallaxY`) from [`initAmbientCosmosCanvas`](file:///Users/camden/Documents/GitHub/Cardstack/js/app.js).
+  - Background starfields, planets, nebulae, and dust motes now maintain an authentic, steady celestial deep-space drift without shifting, following, or reacting to cursor movement.
